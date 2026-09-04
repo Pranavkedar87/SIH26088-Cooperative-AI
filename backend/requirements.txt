@@ -12,10 +12,8 @@ httpx==0.28.1
 # ── Gemini AI (official Google SDK) ───────────────
 google-genai==1.19.0
 
-# ── Supabase (client only — schema in M3) ─────────
-# NOTE: supabase 2.7.4 requires httpx<0.28 which conflicts with google-genai.
-# Will be upgraded to a compatible supabase release in Milestone 3.
-# supabase==2.7.4
+# ── Supabase ──────────────────────────────────────
+supabase==2.31.0
 
 # ── Dev / testing ─────────────────────────────────
 pytest==8.3.3
