@@ -10,14 +10,15 @@ from pydantic import BaseModel, Field
 
 LanguageCode = Literal["en", "hi", "mr"]
 
-# ── Intent categories (extensible in future milestones) ──────────────────────
+# ── Intent categories ─────────────────────────────────────────────────────────
 
 IntentCode = Literal[
-    "COOPERATIVE_LAWS",
-    "BY_LAWS",
-    "SCHEMES",
-    "PACS",
+    "COOPERATIVE_LAW",
+    "COOPERATIVE_BYLAW",
+    "MINISTRY_SCHEME",
+    "PACS_SERVICE",
     "PMFBY",
+    "AGRICULTURAL_SUPPORT",
     "FINANCIAL_LITERACY",
     "GRIEVANCE",
     "GENERAL_COOPERATIVE",
