@@ -1,0 +1,59 @@
+/* ── Reset & base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Brand palette — deep government teal/navy with warm accents */
+  --color-primary:       #1a5f7a;
+  --color-primary-dark:  #124355;
+  --color-primary-light: #e8f4f8;
+  --color-accent:        #e67e22;
+  --color-accent-light:  #fdebd0;
+
+  /* Neutrals */
+  --color-surface:       #ffffff;
+  --color-bg:            #f0f4f8;
+  --color-border:        #d1dde6;
+  --color-text:          #1a2e3b;
+  --color-text-muted:    #5a7284;
+  --color-text-light:    #8fa8bb;
+
+  /* Feedback */
+  --color-error-bg:      #fdf0f0;
+  --color-error-border:  #e74c3c;
+  --color-error-text:    #c0392b;
+
+  /* Spacing */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  40px;
+
+  /* Radii */
+  --radius-sm:  6px;
+  --radius-md:  12px;
+  --radius-lg:  20px;
+  --radius-pill: 100px;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 4px rgba(0,0,0,.08);
+  --shadow-md:  0 4px 16px rgba(0,0,0,.12);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,.16);
+
+  /* Typography */
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-size-base: 15px;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
