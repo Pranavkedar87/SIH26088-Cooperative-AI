@@ -1,34 +1,44 @@
 """
-Query endpoint.
+Web Query endpoint.
 
 POST /api/query → QueryResponse
 
-Delegates to the injected AIProvider — no direct AI calls here.
+Delegates execution to the central shared service `services.query_service.process_user_query`.
+This ensures identical RAG, intent, grounding, and persistence behavior across Web, Voice, and Hardware.
 """
 from __future__ import annotations
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import sys
+
+from fastapi import APIRouter, HTTPException, status
 from app.schemas.query import QueryRequest, QueryResponse
-from app.dependencies import get_ai_provider
-from app.providers.ai_provider import AIProvider
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+))))
+
+from services.query_service import process_user_query
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["query"])
 
 
 @router.post("/query", response_model=QueryResponse)
-async def query(
-    body: QueryRequest,
-    provider: AIProvider = Depends(get_ai_provider),
-) -> QueryResponse:
+async def query(body: QueryRequest) -> QueryResponse:
     """
-    Accept a user question and return an AI-generated answer.
+    Accept a user text query and return a grounded RAG AI response with verified sources.
 
     - **message**: The user's question (1–2000 characters).
     - **language**: `en` | `hi` | `mr`
+    - **session_id**: Optional session UUID.
     """
     try:
-        return await provider.answer_query(body)
+        return await process_user_query(
+            message=body.message,
+            language=body.language,
+            session_id=body.session_id,
+        )
     except Exception as exc:
         logger.exception("Unexpected error in /api/query: %s", exc)
         raise HTTPException(

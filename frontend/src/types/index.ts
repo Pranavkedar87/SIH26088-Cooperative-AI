@@ -78,6 +78,13 @@ export const QUICK_TOPICS: QuickTopic[] = [
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 
+export interface SourceItem {
+  title: string;
+  source_name?: string | null;
+  source_url?: string | null;
+  document_id?: string | null;
+}
+
 export type MessageRole = "user" | "assistant";
 
 export interface ChatMessage {
@@ -86,6 +93,7 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   language: LanguageCode;
+  sources?: SourceItem[];
 }
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -93,6 +101,7 @@ export interface ChatMessage {
 export interface QueryRequest {
   message: string;
   language: LanguageCode;
+  session_id?: string | null;
 }
 
 export interface QueryResponse {
@@ -100,5 +109,8 @@ export interface QueryResponse {
   language: LanguageCode;
   intent: string;
   source: string | null;
+  sources?: SourceItem[];
   next_action: string | null;
+  session_id?: string | null;
+  conversation_id?: string | null;
 }

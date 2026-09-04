@@ -250,6 +250,57 @@
   text-align: right;
 }
 
+/* ── Source citations ─────────────────────────────────────────────────────── */
+
+.chat-message__sources {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-xs);
+  border-top: 1px dashed var(--color-border);
+  font-size: 0.78rem;
+}
+
+.sources-title {
+  display: block;
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  margin-bottom: 4px;
+}
+
+.sources-list {
+  list-style: none;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.source-item {
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.source-name {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.source-meta {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.source-link {
+  margin-left: 6px;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-size: 0.73rem;
+  font-weight: 600;
+}
+
+.source-link:hover {
+  text-decoration: underline;
+}
+
 /* ── Typing indicator ─────────────────────────────────────────────────────── */
 
 .chat-message__bubble--loading {

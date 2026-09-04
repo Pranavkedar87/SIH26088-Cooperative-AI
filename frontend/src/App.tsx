@@ -43,6 +43,8 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
   const addMessage = useCallback((msg: ChatMessage) => {
     setMessages((prev) => [...prev, msg]);
   }, []);
@@ -63,7 +65,15 @@ const App: React.FC = () => {
       setIsLoading(true);
 
       try {
-        const response = await sendQuery({ message: text, language });
+        const response = await sendQuery({
+          message: text,
+          language,
+          session_id: sessionId,
+        });
+
+        if (response.session_id) {
+          setSessionId(response.session_id);
+        }
 
         addMessage({
           id: uid(),
@@ -71,6 +81,7 @@ const App: React.FC = () => {
           content: response.answer,
           timestamp: new Date(),
           language: response.language,
+          sources: response.sources,
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : "Something went wrong.";
@@ -79,7 +90,7 @@ const App: React.FC = () => {
         setIsLoading(false);
       }
     },
-    [language, addMessage]
+    [language, sessionId, addMessage]
   );
 
   const handleTopicSelect = useCallback(
