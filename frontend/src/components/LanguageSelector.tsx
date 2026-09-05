@@ -1,6 +1,7 @@
 import React from "react";
-import type { Language, LanguageCode } from "../types";
+import type { LanguageCode } from "../types";
 import { LANGUAGES } from "../types";
+import { ChevronRightIcon } from "./Icons";
 
 interface Props {
   selected: LanguageCode;
@@ -9,23 +10,22 @@ interface Props {
 
 const LanguageSelector: React.FC<Props> = ({ selected, onChange }) => {
   return (
-    <div className="segmented-lang-bar" role="group" aria-label="Language Selector">
-      {LANGUAGES.map((lang: Language) => {
-        const isSelected = selected === lang.code;
-        const displayLabel = lang.code === "en" ? "EN" : lang.nativeLabel;
-
-        return (
-          <button
-            key={lang.code}
-            type="button"
-            className={`segmented-lang-segment ${isSelected ? "segmented-lang-segment--active" : ""}`}
-            onClick={() => onChange(lang.code)}
-            aria-pressed={isSelected}
-          >
-            {displayLabel}
-          </button>
-        );
-      })}
+    <div className="compact-lang-dropdown">
+      <select
+        className="lang-select-input"
+        value={selected}
+        onChange={(e) => onChange(e.target.value as LanguageCode)}
+        aria-label="Select Language"
+      >
+        {LANGUAGES.map((lang) => (
+          <option key={lang.code} value={lang.code}>
+            {lang.nativeLabel}
+          </option>
+        ))}
+      </select>
+      <span className="lang-select-arrow">
+        <ChevronRightIcon size={12} />
+      </span>
     </div>
   );
 };

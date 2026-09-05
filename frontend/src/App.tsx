@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect } from "react";
 import type { ChatMessage, LanguageCode, AppTab, HistoryItem } from "./types";
 import { sendQuery } from "./api/client";
 import { useTextToSpeech } from "./hooks/useTextToSpeech";
-import { useSpeechRecognition } from "./hooks/useSpeechRecognition";
 import LanguageSelector from "./components/LanguageSelector";
 import Navigation from "./components/Navigation";
 import AssistanceHub from "./components/AssistanceHub";
@@ -11,6 +10,7 @@ import ServicesDirectory from "./components/ServicesDirectory";
 import GrievanceWorkflow from "./components/GrievanceWorkflow";
 import ChatArea from "./components/ChatArea";
 import ChatInput from "./components/ChatInput";
+import VoiceModeView from "./components/VoiceModeView";
 import { SahkaarSetuLogo } from "./components/Icons";
 import "./App.css";
 
@@ -30,6 +30,9 @@ const App: React.FC = () => {
 
   // Active guided flow ID (e.g. "crop_damage", "pacs_help")
   const [activeGuidedFlow, setActiveGuidedFlow] = useState<string | null>(null);
+
+  // Dedicated Voice Mode Overlay state
+  const [isVoiceModeOpen, setIsVoiceModeOpen] = useState(false);
 
   // Local storage history
   const [history, setHistory] = useState<HistoryItem[]>(() => {
@@ -123,29 +126,6 @@ const App: React.FC = () => {
     [language, sessionId, addMessage, saveHistoryItem]
   );
 
-  // STT Hook for Homepage Voice shortcut
-  const handleVoiceTranscript = useCallback(
-    (text: string) => {
-      if (text.trim()) {
-        handleSendQuery(text.trim());
-      }
-    },
-    [handleSendQuery]
-  );
-
-  const { status: sttStatus, startListening, stopListening } = useSpeechRecognition({
-    language,
-    onTranscript: handleVoiceTranscript,
-  });
-
-  const handleMicClick = () => {
-    if (sttStatus === "listening") {
-      stopListening();
-    } else {
-      startListening();
-    }
-  };
-
   const handleStartGuided = (flowId: string) => {
     setActiveGuidedFlow(flowId);
   };
@@ -157,11 +137,11 @@ const App: React.FC = () => {
 
   return (
     <div className="platform-app">
-      {/* Clean Institutional Header (NO "Live" Badge, NO Emojis) */}
+      {/* Clean Institutional Header */}
       <header className="platform-header">
         <div className="header-brand-block">
           <div className="header-brand-row">
-            <SahkaarSetuLogo size={28} color="#176B5B" />
+            <SahkaarSetuLogo size={26} color="#126B62" />
             <h1 className="brand-name">SahkaarSetu</h1>
           </div>
           <span className="brand-tagline">
@@ -173,7 +153,7 @@ const App: React.FC = () => {
           </span>
         </div>
 
-        {/* Segmented Language Selector */}
+        {/* Compact Language Selector Dropdown */}
         <div className="header-controls">
           <LanguageSelector selected={language} onChange={setLanguage} />
         </div>
@@ -203,10 +183,8 @@ const App: React.FC = () => {
               if (query) handleSendQuery(query);
               else setActiveTab("ask");
             }}
+            onOpenVoiceMode={() => setIsVoiceModeOpen(true)}
             onSelectGuided={handleStartGuided}
-            onSelectService={() => setActiveTab("services")}
-            isListening={sttStatus === "listening"}
-            onMicClick={handleMicClick}
           />
         )}
 
@@ -254,8 +232,17 @@ const App: React.FC = () => {
         )}
       </main>
 
+      {/* Dedicated Voice Mode Overlay */}
+      {isVoiceModeOpen && (
+        <VoiceModeView
+          language={language}
+          onClose={() => setIsVoiceModeOpen(false)}
+          onNavigateToChat={() => setActiveTab("ask")}
+        />
+      )}
+
       {/* Single Sticky Input Bar (Shown during Ask Tab or when messages exist) */}
-      {(activeTab === "ask" || messages.length > 0) && (
+      {(activeTab === "ask" || messages.length > 0) && !isVoiceModeOpen && (
         <ChatInput
           language={language}
           isLoading={isLoading}
@@ -270,6 +257,7 @@ const App: React.FC = () => {
         activeTab={activeTab}
         onTabChange={(tab) => {
           setActiveGuidedFlow(null);
+          setIsVoiceModeOpen(false);
           setActiveTab(tab);
         }}
         language={language}
