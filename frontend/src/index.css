@@ -6,52 +6,47 @@
 }
 
 :root {
-  /* ── SAHKAARSETU Civic Public Service Palette ───────────────────────────── */
-  --color-primary:        #145A62;   /* Deep Teal */
-  --color-primary-dark:   #0E4147;
-  --color-primary-light:  #E8F2F3;
-  --color-navy:           #183B4A;   /* Dark Navy for headings */
+  /* ── SAHKAARSETU Exact Palette ─────────────────────────────────────────── */
+  --color-primary:        #176B5B;   /* Primary Cooperative Green */
+  --color-primary-dark:   #0F5960;   /* Secondary Deep Teal */
+  --color-primary-light:  #E8F2F0;
   
-  --color-accent:         #D89B3D;   /* Saffron Accent */
-  --color-accent-light:   #FDF6E9;
-  --color-accent-dark:    #B27B27;
+  --color-trust-blue:     #256B8A;   /* Trust Blue for info / citations */
+  --color-trust-light:    #E9F3F8;
   
-  --color-bg:             #F7F3EA;   /* Warm Cream background */
-  --color-bg-alt:         #EFEAE1;
-  --color-surface:        #FFFFFF;   /* Clean white cards */
+  --color-accent:         #D6A62A;   /* Harvest Gold */
+  --color-accent-light:   #FDF7E7;
+  --color-accent-highlight:#F1C75B;  /* Warm Gold Highlight */
   
-  --color-border:         #D8D3C8;   /* Subtle structural border */
-  --color-border-light:   #EAE5DC;
+  --color-bg:             #F7F4EC;   /* Warm Off-White / Cream Background */
+  --color-bg-alt:         #EFECE3;
+  --color-surface:        #FFFFFF;   /* Card White */
   
-  --color-text:           #24343B;   /* Dark readable text body */
-  --color-text-muted:     #68777D;   /* Secondary metadata */
-  --color-text-light:     #93A1A6;
+  --color-border:         #D9DED8;   /* Subtle structural border */
+  --color-border-light:   #EAEFE9;
+  
+  --color-text:           #17333A;   /* Primary Text */
+  --color-text-muted:     #64757A;   /* Secondary Text */
+  --color-text-light:     #8F9FA4;
 
   /* Feedback */
-  --color-green:          #2A7B4C;   /* Verified / Grounded */
-  --color-green-light:    #EDF7F1;
-  --color-error-bg:       #FDF2F2;
-  --color-error-border:   #E57373;
-  --color-error-text:     #A93226;
+  --color-success:        #2E8B57;   /* Success / Verified */
+  --color-success-light:  #EDF7F1;
+  --color-warning:        #C58A16;   /* Warning */
+  --color-warning-light:  #FDF6E9;
+  --color-error:          #B94A48;   /* Error */
+  --color-error-light:    #FDF0F0;
 
-  /* Spacing */
-  --space-xs:   4px;
-  --space-sm:   8px;
-  --space-md:   16px;
-  --space-lg:   24px;
-  --space-xl:   36px;
-
-  /* Moderate Civic Radii — NO PILL OVERLOAD */
-  --radius-xs:   4px;
-  --radius-sm:   6px;
-  --radius-md:   10px;   /* Standard card radius */
-  --radius-lg:   14px;   /* Container radius */
-  --radius-pill: 999px;  /* Used strictly for small status badges */
+  /* Radii per Design System */
+  --radius-card:   16px;   /* Cards: 16–20px */
+  --radius-btn:    12px;   /* Buttons: 10–14px */
+  --radius-sm:     8px;
+  --radius-pill:   999px;  /* Used strictly for small status indicators */
 
   /* Minimal Crisp Shadows */
-  --shadow-sm:   0 1px 3px rgba(0,0,0,0.05);
-  --shadow-md:   0 2px 6px rgba(0,0,0,0.08);
-  --shadow-card: 0 1px 4px rgba(24,59,74,0.06);
+  --shadow-sm:   0 1px 3px rgba(23,51,58,0.06);
+  --shadow-md:   0 3px 10px rgba(23,51,58,0.08);
+  --shadow-card: 0 2px 8px rgba(15,89,96,0.05);
 
   /* Typography */
   --font-sans: 'Segoe UI', system-ui, -apple-system, 'Noto Sans Devanagari', sans-serif;
@@ -59,10 +54,10 @@
   --font-size-sm:   13.5px;
   --font-size-lg:   17px;
   --font-size-xl:   20px;
-  --font-size-2xl:  24px;
+  --font-size-2xl:  26px;
 }
 
-/* ── Subtle Animations (No futuristic AI effects) ───────────────────────── */
+/* ── Subtle Animations ──────────────────────────────────────────────────────── */
 
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -70,14 +65,14 @@
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes subtleMicPulse {
-  0%   { border-color: var(--color-accent); }
-  50%  { border-color: var(--color-error-border); }
-  100% { border-color: var(--color-accent); }
+@keyframes pulseGold {
+  0%   { box-shadow: 0 0 0 0 rgba(214, 166, 42, 0.4); }
+  70%  { box-shadow: 0 0 0 10px rgba(214, 166, 42, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(214, 166, 42, 0); }
 }
 
 /* ── Reduced Motion ───────────────────────────────────────────────────────── */

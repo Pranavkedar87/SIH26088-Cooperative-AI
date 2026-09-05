@@ -9,6 +9,7 @@ interface Props {
   onSpeak?: (id: string, text: string, language: LanguageCode) => void;
   activeSpeakingId?: string | null;
   onFollowUp?: (prompt: string) => void;
+  onSimplify?: (prompt: string) => void;
 }
 
 // Rotating contextual loading messages
@@ -46,6 +47,7 @@ const ChatArea: React.FC<Props> = ({
   onSpeak,
   activeSpeakingId,
   onFollowUp,
+  onSimplify,
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
@@ -85,6 +87,7 @@ const ChatArea: React.FC<Props> = ({
           onSpeak={onSpeak}
           isSpeaking={activeSpeakingId === msg.id}
           onFollowUp={onFollowUp}
+          onSimplify={onSimplify}
         />
       ))}
 

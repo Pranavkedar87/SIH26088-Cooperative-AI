@@ -14,6 +14,10 @@ export const LANGUAGES: Language[] = [
   { code: "mr", label: "Marathi", nativeLabel: "मराठी" },
 ];
 
+// ── Application Navigation Tabs ───────────────────────────────────────────────
+
+export type AppTab = "home" | "ask" | "services" | "grievance" | "history";
+
 // ── Quick topics ──────────────────────────────────────────────────────────────
 
 export interface QuickTopic {
@@ -35,29 +39,29 @@ export const QUICK_TOPICS: QuickTopic[] = [
   {
     id: "by_laws",
     label: "By-laws",
-    labelHi: "उपनियम",
+    labelHi: "उप-नियम",
     labelMr: "उपविधी",
     prompt: "Explain the standard by-laws for a cooperative society.",
   },
   {
     id: "schemes",
-    label: "Schemes",
-    labelHi: "योजनाएं",
-    labelMr: "योजना",
+    label: "Government Schemes",
+    labelHi: "सरकारी योजनाएं",
+    labelMr: "सरकारी योजना",
     prompt: "What government schemes are available for cooperative societies?",
   },
   {
     id: "pacs",
-    label: "PACS",
-    labelHi: "पैक्स",
-    labelMr: "पॅक्स",
+    label: "PACS Services",
+    labelHi: "पैक्स (PACS)",
+    labelMr: "पॅक्स (PACS)",
     prompt: "How do Primary Agricultural Credit Societies (PACS) work?",
   },
   {
     id: "pmfby",
-    label: "PMFBY",
+    label: "PMFBY Crop Insurance",
     labelHi: "पीएमएफबीवाई",
-    labelMr: "पीएमएफबीवाय",
+    labelMr: "पीएमएफबीवाय (PMFBY)",
     prompt: "Explain the Pradhan Mantri Fasal Bima Yojana (PMFBY) scheme.",
   },
   {
@@ -69,14 +73,14 @@ export const QUICK_TOPICS: QuickTopic[] = [
   },
   {
     id: "grievance",
-    label: "Grievance",
-    labelHi: "शिकायत",
-    labelMr: "तक्रार",
+    label: "Grievance Redressal",
+    labelHi: "शिकायत निवारण",
+    labelMr: "तक्रार निवारण",
     prompt: "How do I file a grievance against a cooperative society?",
   },
 ];
 
-// ── Chat ──────────────────────────────────────────────────────────────────────
+// ── Chat & Sources ────────────────────────────────────────────────────────────
 
 export interface SourceItem {
   title: string;
@@ -94,9 +98,10 @@ export interface ChatMessage {
   timestamp: Date;
   language: LanguageCode;
   sources?: SourceItem[];
+  intent?: string;
 }
 
-// ── API ───────────────────────────────────────────────────────────────────────
+// ── API Contracts ─────────────────────────────────────────────────────────────
 
 export interface QueryRequest {
   message: string;
@@ -119,3 +124,14 @@ export interface QueryResponse {
 
 export type STTStatus = "idle" | "listening" | "processing" | "error" | "unsupported";
 
+// ── History & Guidance Items ─────────────────────────────────────────────────
+
+export interface HistoryItem {
+  id: string;
+  type: "query" | "grievance" | "guided";
+  title: string;
+  subtitle: string;
+  timestamp: string;
+  language: LanguageCode;
+  details?: string;
+}

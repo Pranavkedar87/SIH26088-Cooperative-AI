@@ -1,13 +1,17 @@
-import React, { useState, useCallback } from "react";
-import type { ChatMessage, LanguageCode } from "./types";
+import React, { useState, useCallback, useEffect } from "react";
+import type { ChatMessage, LanguageCode, AppTab, HistoryItem } from "./types";
 import { sendQuery } from "./api/client";
 import { useTextToSpeech } from "./hooks/useTextToSpeech";
+import { useSpeechRecognition } from "./hooks/useSpeechRecognition";
 import LanguageSelector from "./components/LanguageSelector";
-import QuickTopics from "./components/QuickTopics";
+import Navigation from "./components/Navigation";
+import AssistanceHub from "./components/AssistanceHub";
+import GuidedAssistance from "./components/GuidedAssistance";
+import ServicesDirectory from "./components/ServicesDirectory";
+import GrievanceWorkflow from "./components/GrievanceWorkflow";
+import HistoryDrawer from "./components/HistoryDrawer";
 import ChatArea from "./components/ChatArea";
 import ChatInput from "./components/ChatInput";
-import WelcomeHero from "./components/WelcomeHero";
-import DomainCards from "./components/DomainCards";
 import "./App.css";
 
 let _id = 0;
@@ -16,6 +20,7 @@ function uid(): string {
 }
 
 const App: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<AppTab>("home");
   const [language, setLanguage] = useState<LanguageCode>("en");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -23,15 +28,50 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
 
+  // Active guided flow ID (e.g. "crop_damage", "pacs_help")
+  const [activeGuidedFlow, setActiveGuidedFlow] = useState<string | null>(null);
+
+  // Local storage history
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("sahkaarsetu_history");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sahkaarsetu_history", JSON.stringify(history));
+    } catch {
+      // Ignore quota errors
+    }
+  }, [history]);
+
   const { activeId, speak } = useTextToSpeech();
 
   const addMessage = useCallback((msg: ChatMessage) => {
     setMessages((prev) => [...prev, msg]);
   }, []);
 
-  const handleSend = useCallback(
+  const saveHistoryItem = useCallback((title: string, subtitle: string, details?: string, type: "query" | "grievance" | "guided" = "query") => {
+    const newItem: HistoryItem = {
+      id: `hist-${Date.now()}`,
+      type,
+      title,
+      subtitle,
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      language,
+      details,
+    };
+    setHistory((prev) => [newItem, ...prev.slice(0, 19)]);
+  }, [language]);
+
+  const handleSendQuery = useCallback(
     async (text: string) => {
       setError(null);
+      setActiveTab("ask");
 
       addMessage({
         id: uid(),
@@ -42,6 +82,7 @@ const App: React.FC = () => {
       });
 
       setIsLoading(true);
+      saveHistoryItem(text.slice(0, 45) + (text.length > 45 ? "…" : ""), "User Query", undefined, "query");
 
       try {
         const response = await sendQuery({
@@ -61,6 +102,7 @@ const App: React.FC = () => {
           timestamp: new Date(),
           language: response.language,
           sources: response.sources,
+          intent: response.intent,
         });
       } catch (err) {
         const isNetwork =
@@ -75,99 +117,181 @@ const App: React.FC = () => {
         setIsLoading(false);
       }
     },
-    [language, sessionId, addMessage]
+    [language, sessionId, addMessage, saveHistoryItem]
   );
 
-  const handleTopicSelect = useCallback((prompt: string) => {
-    setInputValue(prompt);
-  }, []);
+  // STT Hook for Homepage Voice CTA
+  const handleVoiceTranscript = useCallback(
+    (text: string) => {
+      if (text.trim()) {
+        handleSendQuery(text.trim());
+      }
+    },
+    [handleSendQuery]
+  );
 
-  const handleFollowUp = useCallback((prompt: string) => {
-    setInputValue(prompt);
-  }, []);
+  const { status: sttStatus, startListening, stopListening } = useSpeechRecognition({
+    language,
+    onTranscript: handleVoiceTranscript,
+  });
 
-  const showWelcome = messages.length === 0 && !isLoading;
+  const handleMicClick = () => {
+    if (sttStatus === "listening") {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
+  const handleStartGuided = (flowId: string) => {
+    setActiveGuidedFlow(flowId);
+  };
+
+  const handleGuidedAskAI = (prompt: string) => {
+    setActiveGuidedFlow(null);
+    handleSendQuery(prompt);
+  };
+
+  const handleHistorySelect = (item: HistoryItem) => {
+    if (item.details) {
+      alert(`${item.title}\n\n${item.details}`);
+    } else {
+      handleSendQuery(item.title);
+    }
+  };
 
   return (
-    <div className="civic-app">
-      {/* Institutional Public Service Header */}
-      <header className="civic-header">
-        <div className="civic-header__brand">
-          <div className="civic-header__title-row">
-            <h1 className="civic-header__title">SAHKAARSETU</h1>
-            <span className="online-badge" title="Service active">
-              <span className="online-dot" /> Online
-            </span>
+    <div className="platform-app">
+      {/* Institutional Header */}
+      <header className="platform-header">
+        <div className="header-brand-block">
+          <div className="header-brand-row">
+            <span className="brand-logo-icon" aria-hidden="true">🤝</span>
+            <h1 className="brand-name">SahkaarSetu</h1>
+            <span className="online-pill">● Live</span>
           </div>
-          <p className="civic-header__subtitle">
-            AI-Powered Cooperative Assistance
-          </p>
+          <span className="brand-tagline">
+            {language === "hi"
+              ? "आपका सहकारी साथी"
+              : language === "mr"
+              ? "तुमचा सहकारी साथी"
+              : "Your Cooperative Companion"}
+          </span>
         </div>
-        <LanguageSelector selected={language} onChange={setLanguage} />
+
+        {/* Desktop Header Navigation & Language Switcher */}
+        <div className="header-controls">
+          <LanguageSelector selected={language} onChange={setLanguage} />
+        </div>
       </header>
 
-      {/* Main Workspace Container */}
-      <main className="civic-main">
-        {/* Welcome Section & Service Directory (Shown when no active chat) */}
-        {showWelcome && (
-          <div className="welcome-container">
-            <WelcomeHero language={language} onSelect={handleTopicSelect} />
-
-            <section className="services-section">
-              <h3 className="services-section__title">EXPLORE SERVICES</h3>
-              <DomainCards language={language} onSelect={handleTopicSelect} />
-            </section>
-          </div>
-        )}
-
-        {/* Quick topic navigation bar during active chat */}
-        {!showWelcome && (
-          <div className="active-topics-bar">
-            <QuickTopics language={language} onSelect={handleTopicSelect} />
-          </div>
-        )}
-
-        {/* Error Notification Bar */}
+      {/* Main Multi-Tab Viewport */}
+      <main className="platform-main">
+        {/* Error Alert Bar */}
         {error && (
-          <div className="civic-error-bar" role="alert">
+          <div className="platform-error-bar" role="alert">
             <span>⚠️ {error}</span>
             <button
               type="button"
-              className="civic-error-dismiss"
+              className="error-dismiss-btn"
               onClick={() => setError(null)}
-              aria-label="Dismiss message"
             >
               ×
             </button>
           </div>
         )}
 
-        {/* Conversation Viewport */}
-        {messages.length > 0 || isLoading ? (
-          <ChatArea
-            messages={messages}
-            isLoading={isLoading}
+        {/* Tab 1: HOME Assistance Hub */}
+        {activeTab === "home" && !activeGuidedFlow && (
+          <AssistanceHub
             language={language}
-            onSpeak={speak}
-            activeSpeakingId={activeId}
-            onFollowUp={handleFollowUp}
+            onStartAsk={(query) => {
+              if (query) handleSendQuery(query);
+              else setActiveTab("ask");
+            }}
+            onSelectGuided={handleStartGuided}
+            onSelectService={() => setActiveTab("services")}
+            isListening={sttStatus === "listening"}
+            onMicClick={handleMicClick}
           />
-        ) : null}
+        )}
+
+        {/* Guided Assistance Overlay/View */}
+        {activeGuidedFlow && (
+          <GuidedAssistance
+            flowType={activeGuidedFlow}
+            language={language}
+            onAskAI={handleGuidedAskAI}
+            onBack={() => setActiveGuidedFlow(null)}
+          />
+        )}
+
+        {/* Tab 2: ASK AI Chat Assistant */}
+        {activeTab === "ask" && (
+          <div className="chat-tab-container">
+            <ChatArea
+              messages={messages}
+              isLoading={isLoading}
+              language={language}
+              onSpeak={speak}
+              activeSpeakingId={activeId}
+              onFollowUp={(p) => setInputValue(p)}
+              onSimplify={(p) => handleSendQuery(p)}
+            />
+          </div>
+        )}
+
+        {/* Tab 3: SERVICES Domain Directory */}
+        {activeTab === "services" && (
+          <ServicesDirectory
+            language={language}
+            onAskAI={(prompt) => handleSendQuery(prompt)}
+          />
+        )}
+
+        {/* Tab 4: GRIEVANCE Workflow */}
+        {activeTab === "grievance" && (
+          <GrievanceWorkflow
+            language={language}
+            onSaveHistory={(title, sub, details) => {
+              saveHistoryItem(title, sub, details, "grievance");
+            }}
+          />
+        )}
+
+        {/* Tab 5: HISTORY My Assistance */}
+        {activeTab === "history" && (
+          <HistoryDrawer
+            history={history}
+            language={language}
+            onClear={() => setHistory([])}
+            onSelect={handleHistorySelect}
+          />
+        )}
       </main>
 
-      {/* Input Area & Quiet Footer */}
-      <footer className="civic-footer">
-        <ChatInput
-          language={language}
-          isLoading={isLoading}
-          onSend={handleSend}
-          value={inputValue}
-          onChange={setInputValue}
-        />
-        <div className="civic-footer__note">
-          SAHKAARSETU · Multilingual Cooperative Assistance Platform · Verified knowledge base · SIH 2026
+      {/* Chat Input Bar (Shown during Ask Tab or when input needed) */}
+      {(activeTab === "ask" || messages.length > 0) && (
+        <div className="platform-input-wrapper">
+          <ChatInput
+            language={language}
+            isLoading={isLoading}
+            onSend={handleSendQuery}
+            value={inputValue}
+            onChange={setInputValue}
+          />
         </div>
-      </footer>
+      )}
+
+      {/* Persistent Bottom & Top Navigation Bar */}
+      <Navigation
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          setActiveGuidedFlow(null);
+          setActiveTab(tab);
+        }}
+        language={language}
+      />
     </div>
   );
 };

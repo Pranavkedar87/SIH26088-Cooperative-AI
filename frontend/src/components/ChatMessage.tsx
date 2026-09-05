@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import type { ChatMessage as ChatMessageType, LanguageCode } from "../types";
 import { parseAnswer } from "../utils/parseAnswer";
 import StructuredAnswer from "./StructuredAnswer";
@@ -10,6 +10,7 @@ interface Props {
   onSpeak?: (id: string, text: string, language: LanguageCode) => void;
   isSpeaking?: boolean;
   onFollowUp?: (prompt: string) => void;
+  onSimplify?: (prompt: string) => void;
 }
 
 function formatTime(date: Date): string {
@@ -21,9 +22,11 @@ const ChatMessage: React.FC<Props> = ({
   onSpeak,
   isSpeaking = false,
   onFollowUp,
+  onSimplify,
 }) => {
   const isUser = message.role === "user";
   const hasSources = !isUser && message.sources && message.sources.length > 0;
+  const [showSimplifyOptions, setShowSimplifyOptions] = useState<boolean>(false);
 
   // Parse structured sections for assistant messages
   const sections = !isUser ? parseAnswer(message.content) : null;
@@ -36,9 +39,21 @@ const ChatMessage: React.FC<Props> = ({
     navigator.clipboard?.writeText(message.content).catch(() => {});
   }, [message.content]);
 
-  const handleFollowUp = useCallback(() => {
-    if (onFollowUp) onFollowUp("Can you provide more details about this service?");
-  }, [onFollowUp]);
+  const handleSimplifySelect = (mode: string) => {
+    if (!onSimplify) return;
+    let prompt = "";
+    if (mode === "simple") {
+      prompt = `Explain this in very simple language: "${message.content.slice(0, 150)}…"`;
+    } else if (mode === "step") {
+      prompt = `Break this down into numbered step-by-step actions: "${message.content.slice(0, 150)}…"`;
+    } else if (mode === "example") {
+      prompt = `Give a practical real-life example for a farmer/member explaining: "${message.content.slice(0, 150)}…"`;
+    } else if (mode === "detailed") {
+      prompt = `Explain the legal and technical clauses in detail for: "${message.content.slice(0, 150)}…"`;
+    }
+    onSimplify(prompt);
+    setShowSimplifyOptions(false);
+  };
 
   return (
     <div className={`chat-row chat-row--${message.role}`}>
@@ -50,54 +65,105 @@ const ChatMessage: React.FC<Props> = ({
           <StructuredAnswer sections={sections} />
         )}
 
-        {/* Grounded verification tag */}
-        {hasSources && (
-          <div className="grounded-tag" aria-label="Grounded answer">
-            <CheckVerifiedIcon size={12} color="#2A7B4C" />
-            <span>Grounded Answer</span>
+        {/* Source / Grounding Badge */}
+        {!isUser && (
+          <div className="grounding-badge-row">
+            {hasSources ? (
+              <div className="grounded-tag grounded-tag--verified">
+                <CheckVerifiedIcon size={13} color="#2E8B57" />
+                <span>🛡️ Source-backed guidance</span>
+              </div>
+            ) : (
+              <div className="grounded-tag grounded-tag--reference">
+                <span> Based on available official information</span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Sources Accordion */}
+        {/* Collapsible Source Drawer */}
         {hasSources && <SourcesAccordion sources={message.sources!} />}
 
-        {/* Action Controls for Assistant */}
+        {/* Assistant Action Controls & Simplify Bar */}
         {!isUser && (
-          <div className="chat-card__actions">
-            {onSpeak && (
-              <button
-                type="button"
-                className={`action-pill ${isSpeaking ? "action-pill--active" : ""}`}
-                onClick={handleSpeakClick}
-                aria-label={isSpeaking ? "Stop reading" : "Read aloud"}
-                title={isSpeaking ? "Stop reading" : "Read aloud"}
-              >
-                <SpeakerIcon size={14} />
-                <span>{isSpeaking ? "Stop" : "Read Aloud"}</span>
-              </button>
-            )}
-            {navigator.clipboard && (
-              <button
-                type="button"
-                className="action-pill"
-                onClick={handleCopy}
-                aria-label="Copy response"
-                title="Copy to clipboard"
-              >
-                <CopyIcon size={14} />
-                <span>Copy</span>
-              </button>
-            )}
-            {onFollowUp && (
-              <button
-                type="button"
-                className="action-pill"
-                onClick={handleFollowUp}
-                aria-label="Ask follow up"
-                title="Ask follow up"
-              >
-                <span>Ask Follow-up</span>
-              </button>
+          <div className="chat-card__footer-toolbar">
+            <div className="chat-card__actions">
+              {onSpeak && (
+                <button
+                  type="button"
+                  className={`action-pill ${isSpeaking ? "action-pill--active" : ""}`}
+                  onClick={handleSpeakClick}
+                  aria-label={isSpeaking ? "Stop reading" : "Read aloud"}
+                >
+                  <SpeakerIcon size={14} />
+                  <span>{isSpeaking ? "Stop" : "Read Aloud"}</span>
+                </button>
+              )}
+              {navigator.clipboard && (
+                <button
+                  type="button"
+                  className="action-pill"
+                  onClick={handleCopy}
+                  aria-label="Copy response"
+                >
+                  <CopyIcon size={14} />
+                  <span>Copy</span>
+                </button>
+              )}
+              {onFollowUp && (
+                <button
+                  type="button"
+                  className="action-pill"
+                  onClick={() => onFollowUp("Can you provide more details about this service?")}
+                  aria-label="Ask follow up"
+                >
+                  <span>Ask Follow-up</span>
+                </button>
+              )}
+              {onSimplify && (
+                <button
+                  type="button"
+                  className="action-pill action-pill--accent"
+                  onClick={() => setShowSimplifyOptions((s) => !s)}
+                >
+                  <span>💡 Explain This...</span>
+                </button>
+              )}
+            </div>
+
+            {/* Simplify Options Sub-bar */}
+            {showSimplifyOptions && (
+              <div className="simplify-bar">
+                <span className="simplify-bar__label">Explain as:</span>
+                <button
+                  type="button"
+                  className="simplify-btn"
+                  onClick={() => handleSimplifySelect("simple")}
+                >
+                  Simple
+                </button>
+                <button
+                  type="button"
+                  className="simplify-btn"
+                  onClick={() => handleSimplifySelect("step")}
+                >
+                  Step-by-step
+                </button>
+                <button
+                  type="button"
+                  className="simplify-btn"
+                  onClick={() => handleSimplifySelect("example")}
+                >
+                  Example
+                </button>
+                <button
+                  type="button"
+                  className="simplify-btn"
+                  onClick={() => handleSimplifySelect("detailed")}
+                >
+                  Detailed
+                </button>
+              </div>
             )}
           </div>
         )}
