@@ -129,19 +129,21 @@ export function useSpeechRecognition({
         } else if (err === "no-speech") {
           setStatus("error");
           setErrorMessage("No speech detected. Click mic to try speaking again.");
-        } else if (err === "service-not-allowed") {
-          setStatus("error");
-          setErrorMessage("Voice recognition service not enabled in browser. Check microphone/Siri settings or try Google Chrome.");
-        } else if (err === "language-not-supported") {
+        } else if (err === "language-not-supported" || err === "service-not-allowed") {
           if (langIndexRef.current < targetLangs.length - 1) {
             langIndexRef.current += 1;
-            console.info("Retrying STT with fallback language:", targetLangs[langIndexRef.current]);
+            console.info("Retrying STT with fallback language code:", targetLangs[langIndexRef.current]);
             setTimeout(() => startListening(), 100);
             return;
           }
           setStatus("error");
-          setErrorMessage("Selected language is not supported by your browser. Try typing or use Google Chrome.");
-        } else if (err === "audio-capture") {
+          if (err === "service-not-allowed") {
+            setErrorMessage("Safari requires Dictation enabled (System Settings → Keyboard → Dictation). For best multi-lingual voice support, use Google Chrome.");
+          } else {
+            setErrorMessage("Selected language is not supported by your browser's speech engine. Try Google Chrome or type your question.");
+          }
+        }
+ else if (err === "audio-capture") {
           setStatus("error");
           setErrorMessage("No microphone detected. Please connect a microphone and try again.");
         } else if (err === "aborted") {
