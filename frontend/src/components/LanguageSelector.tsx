@@ -9,7 +9,7 @@ interface Props {
 
 const LanguageSelector: React.FC<Props> = ({ selected, onChange }) => {
   return (
-    <div className="lang-selector" role="group" aria-label="Select language">
+    <div className="language-selector" role="group" aria-label="Select language">
       {LANGUAGES.map((lang: Language) => (
         <button
           key={lang.code}

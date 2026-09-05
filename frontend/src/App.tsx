@@ -6,27 +6,9 @@ import LanguageSelector from "./components/LanguageSelector";
 import QuickTopics from "./components/QuickTopics";
 import ChatArea from "./components/ChatArea";
 import ChatInput from "./components/ChatInput";
+import WelcomeHero from "./components/WelcomeHero";
+import DomainCards from "./components/DomainCards";
 import "./App.css";
-
-// ── Locale strings ────────────────────────────────────────────────────────────
-
-const WELCOME: Record<LanguageCode, { heading: string; subheading: string }> = {
-  en: {
-    heading: "Cooperative AI Assistant",
-    subheading:
-      "Get instant guidance on cooperative laws, government schemes, PACS, PMFBY, and more.",
-  },
-  hi: {
-    heading: "सहकारी AI सहायक",
-    subheading:
-      "सहकारी कानूनों, सरकारी योजनाओं, पैक्स, पीएमएफबीवाई और अन्य विषयों पर तुरंत मार्गदर्शन प्राप्त करें।",
-  },
-  mr: {
-    heading: "सहकारी AI सहाय्यक",
-    subheading:
-      "सहकारी कायदे, सरकारी योजना, पॅक्स, पीएमएफबीवाय आणि इतर विषयांवर त्वरित मार्गदर्शन मिळवा.",
-  },
-};
 
 // ── Unique ID helper ──────────────────────────────────────────────────────────
 
@@ -34,6 +16,28 @@ let _id = 0;
 function uid(): string {
   return `msg-${Date.now()}-${++_id}`;
 }
+
+// ── SAHKAARSETU logo SVG (inline, no external image needed) ──────────────────
+
+const LogoSVG: React.FC = () => (
+  <svg
+    className="header-logo-svg"
+    viewBox="0 0 36 36"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    {/* Cooperative circle */}
+    <circle cx="18" cy="18" r="16" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
+    {/* Handshake */}
+    <path d="M11 21 Q9 17 12 14 L16 11 Q18 10 20 13 L18 16" stroke="#fff" strokeWidth="2" strokeLinecap="round" fill="none" />
+    <path d="M25 21 Q27 17 24 14 L20 11 Q18 10 16 13 L18 16" stroke="rgba(255,200,100,0.9)" strokeWidth="2" strokeLinecap="round" fill="none" />
+    <ellipse cx="18" cy="18" rx="4" ry="3.5" fill="rgba(255,255,255,0.2)" stroke="#fff" strokeWidth="1.2" />
+    {/* Wheat dots */}
+    <circle cx="9" cy="23" r="1.5" fill="rgba(255,200,100,0.8)" />
+    <circle cx="27" cy="23" r="1.5" fill="rgba(255,200,100,0.8)" />
+  </svg>
+);
 
 // ── App ───────────────────────────────────────────────────────────────────────
 
@@ -43,7 +47,6 @@ const App: React.FC = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [sessionId, setSessionId] = useState<string | null>(null);
 
   const { activeId, speak } = useTextToSpeech();
@@ -56,7 +59,6 @@ const App: React.FC = () => {
     async (text: string) => {
       setError(null);
 
-      // Add user message immediately
       addMessage({
         id: uid(),
         role: "user",
@@ -87,7 +89,13 @@ const App: React.FC = () => {
           sources: response.sources,
         });
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Something went wrong.";
+        const isNetwork =
+          err instanceof TypeError && err.message.toLowerCase().includes("fetch");
+        const msg = isNetwork
+          ? "📡 Connection error — please check your internet connection and try again."
+          : err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.";
         setError(msg);
       } finally {
         setIsLoading(false);
@@ -96,24 +104,25 @@ const App: React.FC = () => {
     [language, sessionId, addMessage]
   );
 
-  const handleTopicSelect = useCallback(
-    (prompt: string) => {
-      setInputValue(prompt);
-    },
-    []
-  );
+  const handleTopicSelect = useCallback((prompt: string) => {
+    setInputValue(prompt);
+  }, []);
 
-  const locale = WELCOME[language];
+  const handleFollowUp = useCallback((prompt: string) => {
+    setInputValue(prompt);
+  }, []);
+
+  const showWelcome = messages.length === 0 && !isLoading;
 
   return (
     <div className="app">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <header className="app-header">
         <div className="header-brand">
-          <span className="header-logo" aria-hidden="true">🤝</span>
+          <LogoSVG />
           <div className="header-title-group">
-            <h1 className="header-title">{locale.heading}</h1>
-            <p className="header-subtitle">SIH 2026 — Cooperative Governance</p>
+            <h1 className="header-title">SAHKAARSETU</h1>
+            <p className="header-tagline">Ask · Understand · Act</p>
           </div>
         </div>
         <LanguageSelector selected={language} onChange={setLanguage} />
@@ -121,37 +130,53 @@ const App: React.FC = () => {
 
       {/* ── Main ───────────────────────────────────────────────────────── */}
       <main className="app-main">
-        {/* Welcome banner — shown only when no messages yet */}
-        {messages.length === 0 && (
-          <div className="welcome-banner">
-            <p className="welcome-text">{locale.subheading}</p>
-          </div>
+        {/* Welcome hero + domain cards — shown only before first message */}
+        {showWelcome && (
+          <>
+            <WelcomeHero language={language} onSelect={handleTopicSelect} />
+
+            <div className="domain-cards-section">
+              <p className="domain-cards-title">Explore Topics</p>
+              <DomainCards language={language} onSelect={handleTopicSelect} />
+            </div>
+          </>
         )}
 
-        {/* Quick topics */}
-        <QuickTopics language={language} onSelect={handleTopicSelect} />
+        {/* Quick topic chips — always visible */}
+        {!showWelcome && (
+          <div className="quick-topics-section">
+            <QuickTopics language={language} onSelect={handleTopicSelect} />
+          </div>
+        )}
 
         {/* Error bar */}
         {error && (
           <div className="error-bar" role="alert">
-            ⚠️ {error}
-            <button className="error-dismiss" onClick={() => setError(null)} aria-label="Dismiss error">
+            {error}
+            <button
+              className="error-dismiss"
+              onClick={() => setError(null)}
+              aria-label="Dismiss error"
+            >
               ×
             </button>
           </div>
         )}
 
         {/* Conversation */}
-        <ChatArea
-          messages={messages}
-          isLoading={isLoading}
-          language={language}
-          onSpeak={speak}
-          activeSpeakingId={activeId}
-        />
+        {messages.length > 0 || isLoading ? (
+          <ChatArea
+            messages={messages}
+            isLoading={isLoading}
+            language={language}
+            onSpeak={speak}
+            activeSpeakingId={activeId}
+            onFollowUp={handleFollowUp}
+          />
+        ) : null}
       </main>
 
-      {/* ── Input ──────────────────────────────────────────────────────── */}
+      {/* ── Footer / Input ──────────────────────────────────────────────── */}
       <footer className="app-footer">
         <ChatInput
           language={language}
@@ -161,7 +186,7 @@ const App: React.FC = () => {
           onChange={setInputValue}
         />
         <p className="footer-note">
-          Powered by Gemini AI · Government of India · SIH 2026
+          Powered by Gemini AI · Verified knowledge base · SIH 2026
         </p>
       </footer>
     </div>
