@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from "react";
 import type { ChatMessage as ChatMessageType, LanguageCode } from "../types";
-import { parseAnswer } from "../utils/parseAnswer";
-import StructuredAnswer from "./StructuredAnswer";
+import GuidanceRenderer from "./guidance/GuidanceRenderer";
 import SourcesAccordion from "./SourcesAccordion";
 import { SpeakerIcon, CopyIcon, ShieldCheckIcon } from "./Icons";
 
@@ -27,9 +26,6 @@ const ChatMessage: React.FC<Props> = ({
   const isUser = message.role === "user";
   const hasSources = !isUser && message.sources && message.sources.length > 0;
   const [showSimplifyOptions, setShowSimplifyOptions] = useState<boolean>(false);
-
-  // Parse structured sections for assistant messages
-  const sections = !isUser ? parseAnswer(message.content) : null;
 
   const handleSpeakClick = useCallback(() => {
     if (onSpeak) onSpeak(message.id, message.content, message.language);
@@ -58,11 +54,15 @@ const ChatMessage: React.FC<Props> = ({
   return (
     <div className={`chat-row chat-row--${message.role}`}>
       <div className="chat-card">
-        {/* User Prompt or Assistant Response */}
-        {isUser || !sections ? (
+        {/* User Prompt or Assistant Guidance Renderer */}
+        {isUser ? (
           <p className="chat-card__text">{message.content}</p>
         ) : (
-          <StructuredAnswer sections={sections} />
+          <GuidanceRenderer
+            rawContent={message.content}
+            language={message.language}
+            onFollowUp={onFollowUp}
+          />
         )}
 
         {/* Source / Grounding Badge */}
