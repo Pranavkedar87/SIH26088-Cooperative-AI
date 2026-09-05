@@ -1,9 +1,19 @@
 import React from "react";
 import type { LanguageCode } from "../types";
+import {
+  PacsIcon,
+  PmfbyIcon,
+  LawIcon,
+  BylawsIcon,
+  SchemesIcon,
+  FinanceIcon,
+  GrievanceIcon,
+  AgriIcon,
+} from "./Icons";
 
 interface DomainCard {
   id: string;
-  icon: string;
+  icon: React.FC<{ size?: number; color?: string }>;
   titleEn: string;
   titleHi: string;
   titleMr: string;
@@ -16,29 +26,29 @@ interface DomainCard {
 const DOMAIN_CARDS: DomainCard[] = [
   {
     id: "pacs",
-    icon: "🏦",
+    icon: PacsIcon,
     titleEn: "PACS",
-    titleHi: "पैक्स",
-    titleMr: "पॅक्स",
-    descEn: "Credit & banking for farmers",
-    descHi: "किसानों के लिए ऋण और बैंकिंग",
-    descMr: "शेतकऱ्यांसाठी कर्ज आणि बँकिंग",
+    titleHi: "पैक्स (PACS)",
+    titleMr: "पॅक्स (PACS)",
+    descEn: "Credit, banking & agricultural services",
+    descHi: "ऋण, बैंकिंग और कृषि सेवाएं",
+    descMr: "कर्ज, बँकिंग व कृषी सेवा",
     promptEn: "What services are available at PACS?",
   },
   {
     id: "pmfby",
-    icon: "🌾",
+    icon: PmfbyIcon,
     titleEn: "PMFBY",
     titleHi: "पीएमएफबीवाई",
-    titleMr: "पीएमएफबीवाय",
-    descEn: "Pradhan Mantri crop insurance",
-    descHi: "प्रधानमंत्री फसल बीमा योजना",
-    descMr: "प्रधानमंत्री पीक विमा योजना",
+    titleMr: "पीएमएफबीवाय (PMFBY)",
+    descEn: "Crop insurance & damage compensation",
+    descHi: "फसल बीमा और क्षति मुआवजा",
+    descMr: "पीक विमा व नुकसान भरपाई",
     promptEn: "Explain the Pradhan Mantri Fasal Bima Yojana (PMFBY) scheme.",
   },
   {
     id: "cooperative_law",
-    icon: "⚖️",
+    icon: LawIcon,
     titleEn: "Cooperative Law",
     titleHi: "सहकारी कानून",
     titleMr: "सहकारी कायदा",
@@ -49,58 +59,58 @@ const DOMAIN_CARDS: DomainCard[] = [
   },
   {
     id: "bylaws",
-    icon: "📜",
+    icon: BylawsIcon,
     titleEn: "By-laws",
-    titleHi: "उपनियम",
+    titleHi: "उप-नियम",
     titleMr: "उपविधी",
-    descEn: "Standard cooperative by-laws",
-    descHi: "मानक सहकारी उपनियम",
-    descMr: "मानक सहकारी उपविधी",
+    descEn: "Member rights & governance rules",
+    descHi: "सदस्य अधिकार एवं संचालन नियम",
+    descMr: "सदस्य हक्क व व्यवस्थापन नियम",
     promptEn: "Explain the standard by-laws for a cooperative society.",
   },
   {
     id: "schemes",
-    icon: "🏛️",
-    titleEn: "Schemes",
-    titleHi: "योजनाएं",
-    titleMr: "योजना",
-    descEn: "Government schemes for cooperatives",
-    descHi: "सहकारी समितियों के लिए सरकारी योजनाएं",
-    descMr: "सहकारींसाठी सरकारी योजना",
+    icon: SchemesIcon,
+    titleEn: "Government Schemes",
+    titleHi: "सरकारी योजनाएं",
+    titleMr: "सरकारी योजना",
+    descEn: "Welfare & development schemes",
+    descHi: "कल्याणकारी एवं विकास योजनाएं",
+    descMr: "कल्याणकारी व विकास योजना",
     promptEn: "What government schemes are available for cooperative societies?",
   },
   {
     id: "financial_literacy",
-    icon: "💰",
+    icon: FinanceIcon,
     titleEn: "Financial Literacy",
     titleHi: "वित्तीय साक्षरता",
     titleMr: "आर्थिक साक्षरता",
-    descEn: "Money management for members",
-    descHi: "सदस्यों के लिए धन प्रबंधन",
-    descMr: "सदस्यांसाठी आर्थिक व्यवस्थापन",
+    descEn: "Credit guidance & money management",
+    descHi: "ऋण मार्गदर्शन एवं धन प्रबंधन",
+    descMr: "कर्ज मार्गदर्शन व आर्थिक नियोजन",
     promptEn: "Give me basic financial literacy tips for cooperative members.",
   },
   {
     id: "grievance",
-    icon: "📋",
-    titleEn: "Grievance",
-    titleHi: "शिकायत",
-    titleMr: "तक्रार",
-    descEn: "File & track your complaint",
-    descHi: "अपनी शिकायत दर्ज करें और ट्रैक करें",
-    descMr: "तुमची तक्रार नोंदवा व ट्रॅक करा",
+    icon: GrievanceIcon,
+    titleEn: "Grievance Redressal",
+    titleHi: "शिकायत निवारण",
+    titleMr: "तक्रार निवारण",
+    descEn: "Complaint mechanisms & member rights",
+    descHi: "शिकायत प्रक्रिया एवं सदस्य अधिकार",
+    descMr: "तक्रार प्रक्रिया व सदस्य अधिकार",
     promptEn: "How do I file a grievance against a cooperative society?",
   },
   {
-    id: "digital_banking",
-    icon: "🏧",
-    titleEn: "Digital Banking",
-    titleHi: "डिजिटल बैंकिंग",
-    titleMr: "डिजिटल बँकिंग",
-    descEn: "Online banking for rural members",
-    descHi: "ग्रामीण सदस्यों के लिए ऑनलाइन बैंकिंग",
-    descMr: "ग्रामीण सदस्यांसाठी ऑनलाइन बँकिंग",
-    promptEn: "How can cooperative members use digital banking services?",
+    id: "agri_support",
+    icon: AgriIcon,
+    titleEn: "Agricultural Support",
+    titleHi: "कृषि सहायता",
+    titleMr: "शेती सहाय्य",
+    descEn: "Crop damage & farming assistance",
+    descHi: "फसल क्षति एवं कृषि सहायता",
+    descMr: "पीक नुकसान व शेती मदत",
+    promptEn: "What to do in case of heavy rain soybean crop damage?",
   },
 ];
 
@@ -123,21 +133,28 @@ const DomainCards: React.FC<Props> = ({ language, onSelect }) => {
   };
 
   return (
-    <div className="domain-cards" role="list" aria-label="Domain categories">
-      {DOMAIN_CARDS.map((card) => (
-        <button
-          key={card.id}
-          type="button"
-          className="domain-card"
-          role="listitem"
-          onClick={() => onSelect(card.promptEn)}
-          aria-label={`Ask about ${card.titleEn}`}
-        >
-          <span className="domain-card__icon" aria-hidden="true">{card.icon}</span>
-          <span className="domain-card__title">{getTitle(card)}</span>
-          <span className="domain-card__desc">{getDesc(card)}</span>
-        </button>
-      ))}
+    <div className="domain-cards-grid" role="list" aria-label="Explore Services">
+      {DOMAIN_CARDS.map((card) => {
+        const IconComponent = card.icon;
+        return (
+          <button
+            key={card.id}
+            type="button"
+            className="service-card"
+            role="listitem"
+            onClick={() => onSelect(card.promptEn)}
+            aria-label={`Select ${card.titleEn}`}
+          >
+            <div className="service-card__icon-box">
+              <IconComponent size={20} color="#145A62" />
+            </div>
+            <div className="service-card__content">
+              <span className="service-card__title">{getTitle(card)}</span>
+              <span className="service-card__desc">{getDesc(card)}</span>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 };

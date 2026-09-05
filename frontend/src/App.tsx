@@ -10,36 +10,10 @@ import WelcomeHero from "./components/WelcomeHero";
 import DomainCards from "./components/DomainCards";
 import "./App.css";
 
-// ── Unique ID helper ──────────────────────────────────────────────────────────
-
 let _id = 0;
 function uid(): string {
   return `msg-${Date.now()}-${++_id}`;
 }
-
-// ── SAHKAARSETU logo SVG (inline, no external image needed) ──────────────────
-
-const LogoSVG: React.FC = () => (
-  <svg
-    className="header-logo-svg"
-    viewBox="0 0 36 36"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
-  >
-    {/* Cooperative circle */}
-    <circle cx="18" cy="18" r="16" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
-    {/* Handshake */}
-    <path d="M11 21 Q9 17 12 14 L16 11 Q18 10 20 13 L18 16" stroke="#fff" strokeWidth="2" strokeLinecap="round" fill="none" />
-    <path d="M25 21 Q27 17 24 14 L20 11 Q18 10 16 13 L18 16" stroke="rgba(255,200,100,0.9)" strokeWidth="2" strokeLinecap="round" fill="none" />
-    <ellipse cx="18" cy="18" rx="4" ry="3.5" fill="rgba(255,255,255,0.2)" stroke="#fff" strokeWidth="1.2" />
-    {/* Wheat dots */}
-    <circle cx="9" cy="23" r="1.5" fill="rgba(255,200,100,0.8)" />
-    <circle cx="27" cy="23" r="1.5" fill="rgba(255,200,100,0.8)" />
-  </svg>
-);
-
-// ── App ───────────────────────────────────────────────────────────────────────
 
 const App: React.FC = () => {
   const [language, setLanguage] = useState<LanguageCode>("en");
@@ -92,10 +66,10 @@ const App: React.FC = () => {
         const isNetwork =
           err instanceof TypeError && err.message.toLowerCase().includes("fetch");
         const msg = isNetwork
-          ? "📡 Connection error — please check your internet connection and try again."
+          ? "Connection error — please check your network connection and try again."
           : err instanceof Error
           ? err.message
-          : "Something went wrong. Please try again.";
+          : "An unexpected error occurred. Please try again.";
         setError(msg);
       } finally {
         setIsLoading(false);
@@ -115,55 +89,60 @@ const App: React.FC = () => {
   const showWelcome = messages.length === 0 && !isLoading;
 
   return (
-    <div className="app">
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="app-header">
-        <div className="header-brand">
-          <LogoSVG />
-          <div className="header-title-group">
-            <h1 className="header-title">SAHKAARSETU</h1>
-            <p className="header-tagline">Ask · Understand · Act</p>
+    <div className="civic-app">
+      {/* Institutional Public Service Header */}
+      <header className="civic-header">
+        <div className="civic-header__brand">
+          <div className="civic-header__title-row">
+            <h1 className="civic-header__title">SAHKAARSETU</h1>
+            <span className="online-badge" title="Service active">
+              <span className="online-dot" /> Online
+            </span>
           </div>
+          <p className="civic-header__subtitle">
+            AI-Powered Cooperative Assistance
+          </p>
         </div>
         <LanguageSelector selected={language} onChange={setLanguage} />
       </header>
 
-      {/* ── Main ───────────────────────────────────────────────────────── */}
-      <main className="app-main">
-        {/* Welcome hero + domain cards — shown only before first message */}
+      {/* Main Workspace Container */}
+      <main className="civic-main">
+        {/* Welcome Section & Service Directory (Shown when no active chat) */}
         {showWelcome && (
-          <>
+          <div className="welcome-container">
             <WelcomeHero language={language} onSelect={handleTopicSelect} />
 
-            <div className="domain-cards-section">
-              <p className="domain-cards-title">Explore Topics</p>
+            <section className="services-section">
+              <h3 className="services-section__title">EXPLORE SERVICES</h3>
               <DomainCards language={language} onSelect={handleTopicSelect} />
-            </div>
-          </>
+            </section>
+          </div>
         )}
 
-        {/* Quick topic chips — always visible */}
+        {/* Quick topic navigation bar during active chat */}
         {!showWelcome && (
-          <div className="quick-topics-section">
+          <div className="active-topics-bar">
             <QuickTopics language={language} onSelect={handleTopicSelect} />
           </div>
         )}
 
-        {/* Error bar */}
+        {/* Error Notification Bar */}
         {error && (
-          <div className="error-bar" role="alert">
-            {error}
+          <div className="civic-error-bar" role="alert">
+            <span>⚠️ {error}</span>
             <button
-              className="error-dismiss"
+              type="button"
+              className="civic-error-dismiss"
               onClick={() => setError(null)}
-              aria-label="Dismiss error"
+              aria-label="Dismiss message"
             >
               ×
             </button>
           </div>
         )}
 
-        {/* Conversation */}
+        {/* Conversation Viewport */}
         {messages.length > 0 || isLoading ? (
           <ChatArea
             messages={messages}
@@ -176,8 +155,8 @@ const App: React.FC = () => {
         ) : null}
       </main>
 
-      {/* ── Footer / Input ──────────────────────────────────────────────── */}
-      <footer className="app-footer">
+      {/* Input Area & Quiet Footer */}
+      <footer className="civic-footer">
         <ChatInput
           language={language}
           isLoading={isLoading}
@@ -185,9 +164,9 @@ const App: React.FC = () => {
           value={inputValue}
           onChange={setInputValue}
         />
-        <p className="footer-note">
-          Powered by Gemini AI · Verified knowledge base · SIH 2026
-        </p>
+        <div className="civic-footer__note">
+          SAHKAARSETU · Multilingual Cooperative Assistance Platform · Verified knowledge base · SIH 2026
+        </div>
       </footer>
     </div>
   );

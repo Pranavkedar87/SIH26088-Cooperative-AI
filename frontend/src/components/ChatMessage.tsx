@@ -3,6 +3,7 @@ import type { ChatMessage as ChatMessageType, LanguageCode } from "../types";
 import { parseAnswer } from "../utils/parseAnswer";
 import StructuredAnswer from "./StructuredAnswer";
 import SourcesAccordion from "./SourcesAccordion";
+import { SpeakerIcon, CopyIcon, CheckVerifiedIcon } from "./Icons";
 
 interface Props {
   message: ChatMessageType;
@@ -36,78 +37,73 @@ const ChatMessage: React.FC<Props> = ({
   }, [message.content]);
 
   const handleFollowUp = useCallback(() => {
-    if (onFollowUp) onFollowUp("Can you explain more about the above?");
+    if (onFollowUp) onFollowUp("Can you provide more details about this service?");
   }, [onFollowUp]);
 
   return (
-    <div className={`chat-message chat-message--${message.role}`}>
-      <div className="chat-message__avatar" aria-hidden="true">
-        {isUser ? "👤" : "🤝"}
-      </div>
-
-      <div className="chat-message__bubble">
-        {/* Message content */}
+    <div className={`chat-row chat-row--${message.role}`}>
+      <div className="chat-card">
+        {/* User prompt or Assistant response */}
         {isUser || !sections ? (
-          <p className="chat-message__text">{message.content}</p>
+          <p className="chat-card__text">{message.content}</p>
         ) : (
           <StructuredAnswer sections={sections} />
         )}
 
-        {/* Grounded badge — only for assistant with sources */}
+        {/* Grounded verification tag */}
         {hasSources && (
-          <div className="grounded-badge" aria-label="Grounded answer">
-            🔎 Grounded Answer
+          <div className="grounded-tag" aria-label="Grounded answer">
+            <CheckVerifiedIcon size={12} color="#2A7B4C" />
+            <span>Grounded Answer</span>
           </div>
         )}
 
-        {/* Collapsible sources */}
-        {hasSources && (
-          <SourcesAccordion sources={message.sources!} />
-        )}
+        {/* Sources Accordion */}
+        {hasSources && <SourcesAccordion sources={message.sources!} />}
 
-        {/* Answer actions — only for assistant */}
+        {/* Action Controls for Assistant */}
         {!isUser && (
-          <div className="answer-actions">
+          <div className="chat-card__actions">
             {onSpeak && (
               <button
                 type="button"
-                className={`action-btn ${isSpeaking ? "action-btn--speaking" : ""}`}
+                className={`action-pill ${isSpeaking ? "action-pill--active" : ""}`}
                 onClick={handleSpeakClick}
-                aria-label={isSpeaking ? "Stop reading" : "Read answer aloud"}
+                aria-label={isSpeaking ? "Stop reading" : "Read aloud"}
                 title={isSpeaking ? "Stop reading" : "Read aloud"}
               >
-                {isSpeaking ? "⏹ Stop" : "🔊 Read"}
+                <SpeakerIcon size={14} />
+                <span>{isSpeaking ? "Stop" : "Read Aloud"}</span>
               </button>
             )}
             {navigator.clipboard && (
               <button
                 type="button"
-                className="action-btn"
+                className="action-pill"
                 onClick={handleCopy}
-                aria-label="Copy answer"
+                aria-label="Copy response"
                 title="Copy to clipboard"
               >
-                📋 Copy
+                <CopyIcon size={14} />
+                <span>Copy</span>
               </button>
             )}
             {onFollowUp && (
               <button
                 type="button"
-                className="action-btn"
+                className="action-pill"
                 onClick={handleFollowUp}
-                aria-label="Ask a follow-up question"
-                title="Ask a follow-up"
+                aria-label="Ask follow up"
+                title="Ask follow up"
               >
-                ↩ Follow up
+                <span>Ask Follow-up</span>
               </button>
             )}
           </div>
         )}
 
         {/* Timestamp */}
-        <div className="chat-message__footer">
-          <span className="chat-message__time">{formatTime(message.timestamp)}</span>
-        </div>
+        <div className="chat-card__time">{formatTime(message.timestamp)}</div>
       </div>
     </div>
   );

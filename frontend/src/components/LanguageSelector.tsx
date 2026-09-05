@@ -9,11 +9,12 @@ interface Props {
 
 const LanguageSelector: React.FC<Props> = ({ selected, onChange }) => {
   return (
-    <div className="language-selector" role="group" aria-label="Select language">
+    <div className="segmented-lang-control" role="group" aria-label="Select Language">
       {LANGUAGES.map((lang: Language) => (
         <button
           key={lang.code}
-          className={`lang-btn${selected === lang.code ? " lang-btn--active" : ""}`}
+          type="button"
+          className={`segmented-lang-btn ${selected === lang.code ? "segmented-lang-btn--selected" : ""}`}
           onClick={() => onChange(lang.code)}
           aria-pressed={selected === lang.code}
         >
