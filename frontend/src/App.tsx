@@ -108,13 +108,13 @@ const App: React.FC = () => {
           intent: response.intent,
         });
       } catch (err) {
-        const isNetwork =
-          err instanceof TypeError && err.message.toLowerCase().includes("fetch");
-        const msg = isNetwork
-          ? "Connection error — please check your network connection and try again."
-          : err instanceof Error
-          ? err.message
-          : "An unexpected error occurred. Please try again.";
+        console.error("sendQuery error:", err);
+        const msg =
+          language === "hi"
+            ? "सर्वर से संपर्क हो रहा है, कृपया पुनः प्रयास करें।"
+            : language === "mr"
+            ? "सर्व्हरशी संपर्क होत आहे, कृपया पुन्हा प्रयत्न करा."
+            : "Connecting to server… Please try again.";
         setError(msg);
       } finally {
         setIsLoading(false);
