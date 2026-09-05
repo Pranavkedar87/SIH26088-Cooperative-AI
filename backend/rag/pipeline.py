@@ -5,8 +5,10 @@ Coordinates Intent Detection -> Retrieval -> Grounded Generation -> Source Extra
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any, Optional
+
 
 from google import genai
 from google.genai import types as genai_types
@@ -110,29 +112,36 @@ class RAGPipeline:
         primary_source = sources_list[0]["title"] if sources_list else None
 
         # 5. Build grounded prompt & call Gemini
-        try:
-            client = self._get_client()
-            prompt = build_grounded_prompt(message, language, intent, chunks)
+        answer = None
+        client = self._get_client()
+        prompt = build_grounded_prompt(message, language, intent, chunks)
 
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(
-                    system_instruction=RAG_SYSTEM_INSTRUCTION,
-                    temperature=0.2,  # Low temperature for strict factual grounding
-                    max_output_tokens=1024,
-                ),
-            )
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=RAG_SYSTEM_INSTRUCTION,
+                        temperature=0.2,  # Low temperature for strict factual grounding
+                        max_output_tokens=1024,
+                    ),
+                )
+                if response and response.text:
+                    answer = response.text.strip()
+                    if answer:
+                        break
+            except Exception as exc:
+                is_rate_limit = "429" in str(exc) or "RESOURCE_EXHAUSTED" in str(exc) or "quota" in str(exc).lower()
+                if is_rate_limit and attempt < 2:
+                    logger.warning("Gemini rate limit hit (429). Retrying in 15s (attempt %d/3)...", attempt + 1)
+                    await asyncio.sleep(15.0)
+                    continue
+                logger.exception("Gemini API or generation error during RAG generation: %s", exc)
+                break
 
-            answer = response.text.strip() if response and response.text else None
-            if not answer:
-                logger.warning("Gemini returned empty response text during RAG generation.")
-                answer = _ERROR_ANSWER.get(language, _ERROR_ANSWER["en"])
-                sources_list = []
-                primary_source = None
-
-        except Exception as exc:
-            logger.exception("Gemini API or generation error during RAG generation: %s", exc)
+        if not answer:
+            logger.warning("Gemini returned empty response text or failed generation.")
             answer = _ERROR_ANSWER.get(language, _ERROR_ANSWER["en"])
             sources_list = []
             primary_source = None
@@ -147,4 +156,6 @@ class RAGPipeline:
         )
 
         return response_obj, sources_list
+
+
 

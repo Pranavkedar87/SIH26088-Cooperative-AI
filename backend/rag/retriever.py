@@ -44,14 +44,15 @@ def _cosine_similarity(v1: list[float], v2: list[float]) -> float:
 
 
 INTENT_ALLOWED_DOC_TYPES: dict[str, set[str]] = {
-    "PMFBY": {"scheme_guide", "guide", "pmfby_guide"},
-    "AGRICULTURAL_SUPPORT": {"scheme_guide", "guide", "pacs_guide"},
-    "COOPERATIVE_LAW": {"legal_act", "act", "guide"},
-    "COOPERATIVE_BYLAW": {"legal_act", "bylaw", "guide"},
-    "PACS_SERVICE": {"pacs_guide", "service_guide", "guide"},
-    "FINANCIAL_LITERACY": {"financial_guide", "guide"},
-    "GRIEVANCE": {"legal_act", "guide", "pacs_guide", "scheme_guide"},
+    "PMFBY": {"scheme_guide", "guide", "pmfby_guide", "policy_guide"},
+    "AGRICULTURAL_SUPPORT": {"scheme_guide", "policy_guide", "educational_guide", "guide", "pacs_guide"},
+    "COOPERATIVE_LAW": {"legal_act", "act", "guide", "policy_guide"},
+    "COOPERATIVE_BYLAW": {"legal_act", "bylaw", "guide", "policy_guide"},
+    "PACS_SERVICE": {"policy_guide", "pacs_guide", "service_guide", "educational_guide", "guide"},
+    "FINANCIAL_LITERACY": {"educational_guide", "financial_guide", "policy_guide", "guide"},
+    "GRIEVANCE": {"legal_act", "guide", "pacs_guide", "scheme_guide", "policy_guide", "educational_guide"},
 }
+
 
 
 def _is_doc_type_allowed(doc_type: Optional[str], intent: Optional[str]) -> bool:
