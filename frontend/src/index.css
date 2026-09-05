@@ -6,47 +6,47 @@
 }
 
 :root {
-  /* ── SAHKAARSETU Exact Palette ─────────────────────────────────────────── */
-  --color-primary:        #176B5B;   /* Primary Cooperative Green */
-  --color-primary-dark:   #0F5960;   /* Secondary Deep Teal */
-  --color-primary-light:  #E8F2F0;
-  
-  --color-trust-blue:     #256B8A;   /* Trust Blue for info / citations */
-  --color-trust-light:    #E9F3F8;
-  
-  --color-accent:         #D6A62A;   /* Harvest Gold */
-  --color-accent-light:   #FDF7E7;
+  /* ── SAHKAARSETU Refined Palette ─────────────────────────────────────────── */
+  --color-primary:        #126B62;   /* Primary Deep Teal */
+  --color-primary-dark:   #0E524B;
+  --color-primary-light:  #E8F3EF;   /* Soft Mint */
+
+  --color-trust-blue:     #238477;   /* Secondary Cooperative Green */
+  --color-trust-light:    #EAF3F7;   /* Soft Blue */
+
+  --color-accent:         #D4A72C;   /* Harvest Gold */
+  --color-accent-light:   #FFFDF5;
   --color-accent-highlight:#F1C75B;  /* Warm Gold Highlight */
-  
-  --color-bg:             #F7F4EC;   /* Warm Off-White / Cream Background */
+
+  --color-bg:             #F7F5EE;   /* Warm Ivory Background */
   --color-bg-alt:         #EFECE3;
   --color-surface:        #FFFFFF;   /* Card White */
-  
-  --color-border:         #D9DED8;   /* Subtle structural border */
-  --color-border-light:   #EAEFE9;
-  
-  --color-text:           #17333A;   /* Primary Text */
-  --color-text-muted:     #64757A;   /* Secondary Text */
+
+  --color-border:         #D6E0DC;   /* Light Border */
+  --color-border-light:   #E8EFEB;
+
+  --color-text:           #173C3A;   /* Dark Text */
+  --color-text-muted:     #667875;   /* Secondary Text */
   --color-text-light:     #8F9FA4;
 
   /* Feedback */
-  --color-success:        #2E8B57;   /* Success / Verified */
-  --color-success-light:  #EDF7F1;
-  --color-warning:        #C58A16;   /* Warning */
-  --color-warning-light:  #FDF6E9;
+  --color-success:        #238477;   /* Success / Verified */
+  --color-success-light:  #E8F3EF;
+  --color-warning:        #D4A72C;   /* Warning */
+  --color-warning-light:  #FFFDF5;
   --color-error:          #B94A48;   /* Error */
   --color-error-light:    #FDF0F0;
 
   /* Radii per Design System */
-  --radius-card:   16px;   /* Cards: 16–20px */
-  --radius-btn:    12px;   /* Buttons: 10–14px */
+  --radius-card:   14px;   /* Cards: 14–16px */
+  --radius-btn:    10px;   /* Assistance input bar & buttons: 10px */
   --radius-sm:     8px;
-  --radius-pill:   999px;  /* Used strictly for small status indicators */
+  --radius-pill:   999px;
 
   /* Minimal Crisp Shadows */
-  --shadow-sm:   0 1px 3px rgba(23,51,58,0.06);
-  --shadow-md:   0 3px 10px rgba(23,51,58,0.08);
-  --shadow-card: 0 2px 8px rgba(15,89,96,0.05);
+  --shadow-sm:   0 1px 3px rgba(23, 60, 58, 0.05);
+  --shadow-md:   0 3px 10px rgba(23, 60, 58, 0.07);
+  --shadow-card: 0 2px 8px rgba(18, 107, 98, 0.04);
 
   /* Typography */
   --font-sans: 'Segoe UI', system-ui, -apple-system, 'Noto Sans Devanagari', sans-serif;
@@ -70,9 +70,9 @@
 }
 
 @keyframes pulseGold {
-  0%   { box-shadow: 0 0 0 0 rgba(214, 166, 42, 0.4); }
-  70%  { box-shadow: 0 0 0 10px rgba(214, 166, 42, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(214, 166, 42, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(212, 167, 44, 0.4); }
+  70%  { box-shadow: 0 0 0 10px rgba(212, 167, 44, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(212, 167, 44, 0); }
 }
 
 /* ── Reduced Motion ───────────────────────────────────────────────────────── */

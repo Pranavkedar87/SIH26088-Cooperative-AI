@@ -6,7 +6,8 @@
  *
  * Guaranteed:
  * - NO raw Markdown syntax (###, **, *, ---, 1.) is ever exposed in the UI.
- * - Extracts summary, key facts/metrics, step timeline, warnings, checklists, and next steps.
+ * - Enforces BOUNDARY: CARDS = SHORT FACTS (<75 chars). Paragraphs = Descriptive text.
+ * - Extracts summary, key facts, step timeline, warnings, checklists, and next steps.
  * - Detects domain/type (PMFBY, PACS, LAW, GRIEVANCE, FINANCIAL, STEP_BY_STEP, INFORMATION).
  */
 
@@ -52,7 +53,7 @@ export interface StructuredGuidance {
 }
 
 /**
- * Strip all raw markdown symbols from a string.
+ * Strip all raw markdown symbols completely from a string.
  */
 export function cleanMarkdown(text: string): string {
   if (!text) return "";
@@ -141,7 +142,6 @@ function detectDomain(text: string): { domain: ResponseDomain; label: string } {
     return { domain: "FINANCIAL", label: "Cooperative Credit & Scheme / सहकार योजना" };
   }
 
-  // Count step occurrences
   const stepMatches = text.match(/(?:\d+\.|\bstep\s*\d+|टप्पा\s*\d+|चरण\s*\d+)/gi);
   if (stepMatches && stepMatches.length >= 2) {
     return { domain: "STEP_BY_STEP", label: "Guided Action Workflow / टप्पा-निहाय प्रक्रिया" };
@@ -333,17 +333,27 @@ export function parseGuidance(rawText: string, lang: string = "mr"): StructuredG
     ) {
       const factLabel = cleanMarkdown(factMatch[1]);
       const factVal = cleanMarkdown(factMatch[2]);
-      if (factLabel && factVal && factLabel.length <= 40) {
-        keyFacts.push({
-          label: factLabel,
-          value: factVal,
-          highlight:
-            factVal.includes("%") ||
-            /\d+/.test(factVal) ||
-            factVal.toLowerCase().includes("72") ||
-            factVal.toLowerCase().includes("तास"),
-        });
-        continue;
+      
+      // CRITICAL BOUNDARY RULE:
+      // CARDS = SHORT FACTS ONLY (val length <= 75 chars)
+      // Long text belongs in descriptive paragraphs!
+      if (factLabel && factVal) {
+        if (factVal.length <= 75 && factLabel.length <= 35) {
+          keyFacts.push({
+            label: factLabel,
+            value: factVal,
+            highlight:
+              factVal.includes("%") ||
+              /\d+/.test(factVal) ||
+              factVal.toLowerCase().includes("72") ||
+              factVal.toLowerCase().includes("तास"),
+          });
+          continue;
+        } else {
+          // Route long fact into clean descriptive paragraphs
+          cleanParagraphs.push(`${factLabel}: ${factVal}`);
+          continue;
+        }
       }
     }
 
@@ -443,7 +453,7 @@ export function parseGuidance(rawText: string, lang: string = "mr"): StructuredG
     domain,
     domainLabel,
     summary,
-    keyFacts: keyFacts.slice(0, 6),
+    keyFacts: keyFacts.slice(0, 4), // max 4 compact fact cards
     steps,
     checklist,
     warnings: uniqueWarnings,

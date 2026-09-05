@@ -1,7 +1,7 @@
 import React, { useRef, useCallback } from "react";
 import type { LanguageCode } from "../types";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
-import { MicIcon, SendIcon, PlusIcon } from "./Icons";
+import { MicIcon, SendIcon } from "./Icons";
 
 interface Props {
   language: LanguageCode;
@@ -12,9 +12,9 @@ interface Props {
 }
 
 const PLACEHOLDER: Record<LanguageCode, string> = {
-  en: "Ask anything about cooperatives, schemes, PACS, or laws…",
-  hi: "सहकारी, योजनाओं, पैक्स या कानूनों के बारे में कुछ भी पूछें…",
-  mr: "सहकारी संस्था, योजना, पॅक्स किंवा कायद्याबद्दल काहीही विचारा…",
+  en: "Ask about cooperative services, schemes or laws…",
+  hi: "सहकारी सेवाओं, योजनाओं या कानून के बारे में पूछें…",
+  mr: "सहकारी सेवा, योजना किंवा कायद्याबद्दल विचारा…",
 };
 
 const STT_STATUS_LABEL: Record<LanguageCode, { listening: string; processing: string }> = {
@@ -117,15 +117,6 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
       )}
 
       <div className="input-sticky-bar">
-        <button
-          type="button"
-          className="input-action-btn"
-          title="Guided Options"
-          aria-label="Guided Options"
-        >
-          <PlusIcon size={18} color="#66777A" />
-        </button>
-
         <textarea
           ref={textareaRef}
           className="input-textarea"
@@ -154,7 +145,7 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
               : "Click to speak"
           }
         >
-          <MicIcon size={18} color={status === "listening" ? "#B94A48" : "#176B5B"} />
+          <MicIcon size={18} color={status === "listening" ? "#B94A48" : "#126B62"} />
         </button>
 
         {/* Send Button */}

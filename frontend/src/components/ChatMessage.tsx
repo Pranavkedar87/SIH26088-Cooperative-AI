@@ -2,7 +2,9 @@ import React, { useCallback, useState } from "react";
 import type { ChatMessage as ChatMessageType, LanguageCode } from "../types";
 import GuidanceRenderer from "./guidance/GuidanceRenderer";
 import SourcesAccordion from "./SourcesAccordion";
-import { SpeakerIcon, CopyIcon, ShieldCheckIcon } from "./Icons";
+import { generateGuidancePdf } from "../utils/pdfGenerator";
+import { parseGuidance } from "../utils/guidanceParser";
+import { SpeakerIcon, PauseIcon, CopyIcon, ShieldCheckIcon, DownloadIcon } from "./Icons";
 
 interface Props {
   message: ChatMessageType;
@@ -23,11 +25,11 @@ const ChatMessage: React.FC<Props> = ({
   onSpeak,
   isSpeaking = false,
   onFollowUp,
-  onSimplify,
+  onSimplify: _onSimplify,
 }) => {
   const isUser = message.role === "user";
   const hasSources = !isUser && message.sources && message.sources.length > 0;
-  const [showSimplifyOptions, setShowSimplifyOptions] = useState<boolean>(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
 
   const handleSpeakClick = useCallback(() => {
     if (onSpeak) onSpeak(message.id, message.content, message.language);
@@ -37,21 +39,55 @@ const ChatMessage: React.FC<Props> = ({
     navigator.clipboard?.writeText(message.content).catch(() => {});
   }, [message.content]);
 
-  const handleSimplifySelect = (mode: string) => {
-    if (!onSimplify) return;
-    let prompt = "";
-    if (mode === "simple") {
-      prompt = `Explain this in very simple language: "${message.content.slice(0, 150)}…"`;
-    } else if (mode === "step") {
-      prompt = `Break this down into numbered step-by-step actions: "${message.content.slice(0, 150)}…"`;
-    } else if (mode === "example") {
-      prompt = `Give a practical real-life example for a farmer/member explaining: "${message.content.slice(0, 150)}…"`;
-    } else if (mode === "detailed") {
-      prompt = `Explain the legal and technical clauses in detail for: "${message.content.slice(0, 150)}…"`;
+  const handleDownloadPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const parsed = parseGuidance(message.content, message.language);
+      await generateGuidancePdf({
+        question: userQuestion,
+        language: message.language,
+        domainLabel: parsed.domainLabel,
+        summary: parsed.summary,
+        keyFacts: parsed.keyFacts,
+        steps: parsed.steps,
+        warnings: parsed.warnings,
+        nextSteps: parsed.nextSteps,
+        sources: message.sources?.map((s) => ({
+          title: s.title,
+          authority: s.source_name || undefined,
+          url: s.source_url || undefined,
+        })),
+      });
+    } catch (err) {
+      console.error("PDF download error:", err);
+    } finally {
+      setIsGeneratingPdf(false);
     }
-    onSimplify(prompt);
-    setShowSimplifyOptions(false);
   };
+
+  const pdfBtnLabel = isGeneratingPdf
+    ? message.language === "hi"
+      ? "पीडीएफ बन रहा है..."
+      : message.language === "en"
+      ? "Generating PDF..."
+      : "PDF तयार होत आहे..."
+    : message.language === "hi"
+    ? "मार्गदर्शन PDF डाउनलोड करें"
+    : message.language === "en"
+    ? "Download Guidance PDF"
+    : "मार्गदर्शन PDF डाउनलोड करा";
+
+  const speakBtnLabel = isSpeaking
+    ? message.language === "hi"
+      ? "रोकें"
+      : message.language === "en"
+      ? "Stop"
+      : "थांबवा"
+    : message.language === "hi"
+    ? "सुनें"
+    : message.language === "en"
+    ? "Read Aloud"
+    : "ऐकून घ्या";
 
   return (
     <div className={`chat-row chat-row--${message.role}`}>
@@ -74,7 +110,7 @@ const ChatMessage: React.FC<Props> = ({
           <div className="grounding-badge-row">
             {hasSources ? (
               <div className="grounded-tag grounded-tag--verified">
-                <ShieldCheckIcon size={14} color="#2F855A" />
+                <ShieldCheckIcon size={14} color="#238477" />
                 <span>Source-backed guidance</span>
               </div>
             ) : (
@@ -92,6 +128,19 @@ const ChatMessage: React.FC<Props> = ({
         {!isUser && (
           <div className="chat-card__footer-toolbar">
             <div className="chat-card__actions">
+              {/* Primary Action: Download Guidance PDF */}
+              <button
+                type="button"
+                className="action-btn action-btn--primary"
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                aria-label="Download guidance PDF"
+              >
+                <DownloadIcon size={14} color="#FFFFFF" />
+                <span>{pdfBtnLabel}</span>
+              </button>
+
+              {/* Voice Read Aloud CTA */}
               {onSpeak && (
                 <button
                   type="button"
@@ -99,10 +148,12 @@ const ChatMessage: React.FC<Props> = ({
                   onClick={handleSpeakClick}
                   aria-label={isSpeaking ? "Stop reading" : "Read aloud"}
                 >
-                  <SpeakerIcon size={14} />
-                  <span>{isSpeaking ? "Stop" : "Read Aloud"}</span>
+                  {isSpeaking ? <PauseIcon size={14} /> : <SpeakerIcon size={14} />}
+                  <span>{speakBtnLabel}</span>
                 </button>
               )}
+
+              {/* Copy CTA */}
               {navigator.clipboard && (
                 <button
                   type="button"
@@ -114,51 +165,7 @@ const ChatMessage: React.FC<Props> = ({
                   <span>Copy</span>
                 </button>
               )}
-              {onSimplify && (
-                <button
-                  type="button"
-                  className="action-btn action-btn--accent"
-                  onClick={() => setShowSimplifyOptions((s) => !s)}
-                >
-                  <span>Explain This…</span>
-                </button>
-              )}
             </div>
-
-            {/* Simplify Options Sub-bar */}
-            {showSimplifyOptions && (
-              <div className="simplify-bar">
-                <span className="simplify-bar__label">Explain as:</span>
-                <button
-                  type="button"
-                  className="simplify-btn"
-                  onClick={() => handleSimplifySelect("simple")}
-                >
-                  Simple
-                </button>
-                <button
-                  type="button"
-                  className="simplify-btn"
-                  onClick={() => handleSimplifySelect("step")}
-                >
-                  Step-by-step
-                </button>
-                <button
-                  type="button"
-                  className="simplify-btn"
-                  onClick={() => handleSimplifySelect("example")}
-                >
-                  Example
-                </button>
-                <button
-                  type="button"
-                  className="simplify-btn"
-                  onClick={() => handleSimplifySelect("detailed")}
-                >
-                  Detailed
-                </button>
-              </div>
-            )}
           </div>
         )}
 
