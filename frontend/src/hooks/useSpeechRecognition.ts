@@ -3,9 +3,10 @@ import type { LanguageCode, STTStatus } from "../types";
 
 const STT_LANG_MAP: Record<LanguageCode, string[]> = {
   en: ["en-IN", "en-US", "en"],
-  hi: ["hi-IN", "hi"],
-  mr: ["mr-IN", "mr", "hi-IN", "en-IN"], // Fallback languages if browser lacks Marathi STT pack
+  hi: ["hi-IN", "hi", "en-IN"],
+  mr: ["mr-IN", "mr", "hi-IN", "en-IN"],
 };
+
 
 interface UseSpeechRecognitionOptions {
   language: LanguageCode;
@@ -170,7 +171,22 @@ export function useSpeechRecognition({
 
   useEffect(() => {
     langIndexRef.current = 0;
+    setErrorMessage(null);
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (e) {
+        // Ignore abort on language change
+      }
+      recognitionRef.current = null;
+    }
+    setStatus("idle");
   }, [language]);
+
 
   useEffect(() => {
     return () => {
