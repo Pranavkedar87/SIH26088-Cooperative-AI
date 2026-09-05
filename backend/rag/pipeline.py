@@ -36,6 +36,26 @@ STRICT_KNOWLEDGE_INTENTS: set[str] = {
 
 
 
+def clean_speech_text(text: str) -> str:
+    """Strips markdown formatting, headings, bullet markers, URLs, and symbols for clean TTS playback."""
+    if not text:
+        return ""
+    # Strip URLs
+    cleaned = re.sub(r'https?://\S+', '', text)
+    # Strip markdown headings, bold, italics, code
+    cleaned = re.sub(r'#+\s*', '', cleaned)
+    cleaned = re.sub(r'\*+', '', cleaned)
+    cleaned = re.sub(r'_+', '', cleaned)
+    cleaned = re.sub(r'`+', '', cleaned)
+    cleaned = re.sub(r'^\s*[-*+]\s+', '', cleaned, flags=re.MULTILINE)
+    cleaned = re.sub(r'^\s*\d+\.\s+', '', cleaned, flags=re.MULTILINE)
+    # Strip markdown link syntax [label](url)
+    cleaned = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', cleaned)
+    # Normalize whitespace
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
+
+
 class RAGPipeline:
     """Orchestrates end-to-end grounded query answering."""
 
@@ -59,26 +79,36 @@ class RAGPipeline:
         """
         message = request.message.strip()
         language = request.language
+        resp_mode = getattr(request, "response_mode", "text") or "text"
 
         # 1. Intent classification
         intent = _classify_intent(message)
-        logger.info("RAG Pipeline | intent=%s | lang=%s | mode=%s | msg=%.60s", intent, language, getattr(request, "response_mode", "text"), message)
 
-        # FAST PATH FOR GREETINGS: No retrieval or LLM call required
-        if intent == "GREETING":
-            from rag.prompts import GREETING_RESPONSES
-            greeting_ans = GREETING_RESPONSES.get(language, GREETING_RESPONSES.get("mr", GREETING_RESPONSES["en"]))
+        # FAST PATH FOR CASUAL GREETINGS, THANKS, IDENTITY & UNCLEAR:
+        # MUST NOT TRIGGER VECTOR SEARCH OR RAG RETRIEVAL
+        CASUAL_INTENTS = {"CASUAL_GREETING", "CASUAL_THANKS", "CASUAL_IDENTITY", "UNCLEAR", "GREETING"}
+        if intent in CASUAL_INTENTS:
+            from rag.prompts import DIRECT_RESPONSES
+            mapped_intent = "CASUAL_GREETING" if intent == "GREETING" else intent
+            lang_dict = DIRECT_RESPONSES.get(mapped_intent, DIRECT_RESPONSES["CASUAL_GREETING"])
+            ans_text = lang_dict.get(language) or lang_dict.get("mr") or lang_dict["en"]
+
+            logger.info(
+                "[VOICE]\nTranscript: %s\nDetected language: %s\nQuery type: %s\nIntent: %s\nRAG triggered: false\nLLM: Direct Fast-Path\nResponse language: %s\nResponse mode: %s\nTTS language: %s",
+                message, language, intent, intent, language, resp_mode, language
+            )
+
             return QueryResponse(
-                answer=greeting_ans,
+                answer=ans_text,
                 language=language,
-                intent="GREETING",
-                source="SahkaarSetu Welcome",
+                intent=intent,
+                source="SahkaarSetu Direct Assistance",
                 sources=[],
                 next_action=None,
                 session_id=request.session_id,
             ), []
 
-        # 2. Knowledge Retrieval
+        # 2. Knowledge Retrieval (Domain Queries Only)
         try:
             chunks: list[RetrievedChunk] = retrieve_relevant_knowledge(
                 query=message,
@@ -95,7 +125,6 @@ class RAGPipeline:
 
         # 3. Handle No-Context for specific domain intents
         if not chunks and intent in STRICT_KNOWLEDGE_INTENTS:
-            # Check if general query vs specific factual query
             logger.info("No matching knowledge found for strict intent %s. Returning controlled fallback.", intent)
             fallback_text = NO_KNOWLEDGE_FALLBACK.get(language, NO_KNOWLEDGE_FALLBACK["en"])
 
@@ -127,8 +156,8 @@ class RAGPipeline:
 
         # 5. Build grounded prompt & call Gemini using fast candidate fallback
         answer = None
+        used_model = "fallback"
         client = self._get_client()
-        resp_mode = getattr(request, "response_mode", "text") or "text"
         prompt = build_grounded_prompt(message, language, intent, chunks, response_mode=resp_mode)
 
         model_candidates = [
@@ -154,6 +183,7 @@ class RAGPipeline:
                 if response and response.text:
                     answer = response.text.strip()
                     if answer:
+                        used_model = model_name
                         logger.info("RAG generation succeeded using model '%s'", model_name)
                         break
             except Exception as exc:
@@ -165,6 +195,14 @@ class RAGPipeline:
             answer = _ERROR_ANSWER.get(language, _ERROR_ANSWER["en"])
             sources_list = []
             primary_source = None
+
+        if resp_mode == "voice" and answer:
+            answer = clean_speech_text(answer)
+
+        logger.info(
+            "[VOICE]\nTranscript: %s\nDetected language: %s\nQuery type: DOMAIN\nIntent: %s\nRAG triggered: true\nRAG collection: %s\nRetrieved chunks: %d\nLLM model: %s\nResponse language: %s\nResponse mode: %s\nTTS language: %s",
+            message, language, intent, intent, len(chunks), used_model, language, resp_mode, language
+        )
 
         response_obj = QueryResponse(
             answer=answer,

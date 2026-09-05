@@ -2065,6 +2065,29 @@
   text-align: left;
 }
 
+.transcript-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.transcript-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.transcript-tag-lang, .transcript-tag-intent {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.18);
+  color: #FFFFFF;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
 .transcript-label {
   font-size: 11px;
   font-weight: 700;

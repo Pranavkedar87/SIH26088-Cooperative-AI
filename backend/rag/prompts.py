@@ -18,14 +18,31 @@ _LANG_NAME: dict[str, str] = {
     "ml": "Malayalam",
 }
 
-GREETING_RESPONSES: dict[str, str] = {
-    "mr": "नमस्कार! मी SahkaarSetu. सहकारी सेवा, योजना, पीक विमा किंवा कायद्याबद्दल तुम्ही मला विचारू शकता.",
-    "hi": "नमस्कार! मैं SahkaarSetu हूँ। सहकारी सेवाओं, योजनाओं, फसल बीमा या कानून के बारे में आप मुझसे पूछ सकते हैं।",
-    "en": "Hello! I am SahkaarSetu. You can ask me about cooperative services, schemes, crop insurance, or laws.",
-    "ta": "வணக்கம்! நான் SahkaarSetu. கூட்டுறவு சேவைகள், திட்டங்கள் அல்லது சட்டங்கள் பற்றி என்னிடம் கேட்கலாம்.",
-    "te": "నమస్కారం! నేను SahkaarSetu. మీరు సహకార సేవలు, పథకాలు లేదా చట్టాల గురించి నన్ను అడగవచ్చు.",
-    "kn": "ನಮಸ್ಕಾರ! ನಾನು SahkaarSetu. ನೀವು ಸಹಕಾರ ಸೇವೆಗಳು, ಯೋಜನೆಗಳು ಅಥವಾ ಕಾನೂನುಗಳ ಬಗ್ಗೆ ನನ್ನನ್ನು ಕೇಳಬಹುದು.",
-    "gu": "નમસ્તે! હું SahkaarSetu છું. તમે મને સહકારી સેવાઓ, યોજનાઓ અથવા કાયદા વિશે પૂછી શકો છો.",
+DIRECT_RESPONSES: dict[str, dict[str, str]] = {
+    "CASUAL_GREETING": {
+        "mr": "नमस्कार! मी SahkaarSetu आहे. सहकारी संस्था, पीक विमा, PACS, सरकारी योजना किंवा तक्रारींबद्दल तुम्ही मला विचारू शकता.",
+        "hi": "नमस्ते! मैं SahkaarSetu हूँ। आप मुझसे सहकारी संस्थाओं, फसल बीमा, PACS, सरकारी योजनाओं या शिकायतों के बारे में पूछ सकते हैं।",
+        "en": "Hello! I'm SahkaarSetu. You can ask me about cooperative services, crop insurance, government schemes, PACS, financial guidance, or grievances.",
+        "ta": "வணக்கம்! நான் SahkaarSetu. கூட்டுறவு சேவைகள், பயிர் காப்பீடு, PACS அல்லது திட்டங்கள் பற்றி கேட்கலாம்.",
+        "te": "నమస్కారం! నేను SahkaarSetu. మీరు సహకార సేవలు, పంట భీమా, PACS లేదా పథకాల గురించి అడగవచ్చు.",
+        "kn": "ನಮಸ್ಕಾರ! ನಾನು SahkaarSetu. ನೀವು ಸಹಕಾರ ಸೇವೆಗಳು, ಬೆಳೆ ವಿಮೆ, PACS ಅಥವಾ ಯೋಜನೆಗಳ ಬಗ್ಗೆ ಕೇಳಬಹುದು.",
+        "gu": "નમસ્તે! હું SahkaarSetu છું. તમે મને સહકારી સેવાઓ, પાક વીમો, PACS અથવા યોજનાઓ વિશે પૂછી શકો છો.",
+    },
+    "CASUAL_THANKS": {
+        "mr": "आपले स्वागत आहे! तुम्हाला आणखी काही मदत हवी असल्यास नक्की विचारू शकता.",
+        "hi": "आपका स्वागत है! यदि आपको किसी अन्य सहायता की आवश्यकता हो, तो अवश्य पूछें।",
+        "en": "You are most welcome! Feel free to ask if you need any more assistance.",
+    },
+    "CASUAL_IDENTITY": {
+        "mr": "मी SahkaarSetu आहे — सहकारी संस्था, पीक विमा, PACS सेवा आणि कायदेशीर मार्गदर्शनासाठी तुमचा डिजिटल साथी.",
+        "hi": "मैं SahkaarSetu हूँ — सहकारी संस्थाओं, फसल बीमा, PACS सेवाओं और कानूनी मार्गदर्शन के लिए आपका डिजिटल साथी।",
+        "en": "I am SahkaarSetu — your digital companion for cooperative services, crop insurance, PACS, and legal guidance.",
+    },
+    "UNCLEAR": {
+        "mr": "नक्की. तुम्हाला कशाबद्दल मदत हवी आहे? पीक विमा, PACS सेवा, सहकारी कायदे, सरकारी योजना, आर्थिक मार्गदर्शन किंवा तक्रार?",
+        "hi": "जी, आपको किस विषय में सहायता चाहिए? फसल बीमा, PACS सेवाएं, सहकारी कानून, सरकारी योजनाएं, वित्तीय मार्गदर्शन या शिकायत?",
+        "en": "Sure! What do you need help with? Crop insurance, PACS services, cooperative laws, government schemes, financial guidance, or grievances?",
+    },
 }
 
 RAG_SYSTEM_INSTRUCTION = """You are Sahakari AI Sahayak (सहकारी AI सहाय्यक), a trustworthy, multilingual cooperative governance and legal assistance assistant for India.

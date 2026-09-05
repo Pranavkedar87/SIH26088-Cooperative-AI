@@ -20,6 +20,11 @@ interface Props {
 }
 
 const INTENT_LABELS: Record<string, Record<string, string>> = {
+  CASUAL_GREETING: { mr: "SAHKAARSETU", hi: "SAHKAARSETU", en: "SAHKAARSETU" },
+  GREETING: { mr: "SAHKAARSETU", hi: "SAHKAARSETU", en: "SAHKAARSETU" },
+  CASUAL_THANKS: { mr: "SAHKAARSETU", hi: "SAHKAARSETU", en: "SAHKAARSETU" },
+  CASUAL_IDENTITY: { mr: "SAHKAARSETU", hi: "SAHKAARSETU", en: "SAHKAARSETU" },
+  UNCLEAR: { mr: "सामान्य मदत", hi: "सामान्य सहायता", en: "General Assistance" },
   PMFBY: { mr: "पीक विमा (PMFBY)", hi: "फसल बीमा (PMFBY)", en: "PMFBY Crop Insurance" },
   PACS_SERVICE: { mr: "पॅक्स सेवा (PACS)", hi: "पैक्स सेवाएं (PACS)", en: "PACS Services" },
   COOPERATIVE_LAW: { mr: "सहकारी कायदे", hi: "सहकारी कानून", en: "Cooperative Law" },
@@ -29,7 +34,19 @@ const INTENT_LABELS: Record<string, Record<string, string>> = {
   FINANCIAL_LITERACY: { mr: "आर्थिक साक्षरता", hi: "वित्तीय साक्षरता", en: "Financial Literacy" },
   AGRICULTURAL_SUPPORT: { mr: "कृषी सहाय्य", hi: "कृषि सहायता", en: "Agricultural Support" },
   GENERAL_COOPERATIVE: { mr: "सहकारी मार्गदर्शक", hi: "सहकारी मार्गदर्शक", en: "Cooperative Guidance" },
-  GREETING: { mr: "सहकारी स्वागत", hi: "सहकारी स्वागत", en: "Cooperative Welcome" },
+};
+
+const LANG_DISPLAY_NAMES: Record<string, string> = {
+  mr: "मराठी",
+  hi: "हिंदी",
+  en: "English",
+  ta: "தமிழ் (Tamil)",
+  te: "తెలుగు (Telugu)",
+  kn: "ಕನ್ನಡ (Kannada)",
+  gu: "ગુજરાતી (Gujarati)",
+  bn: "বাংলা (Bengali)",
+  pa: "ਪੰਜਾਬੀ (Punjabi)",
+  ml: "മലയാളം (Malayalam)",
 };
 
 export const VoiceModeView: React.FC<Props> = ({
@@ -180,33 +197,35 @@ export const VoiceModeView: React.FC<Props> = ({
   if (isProcessing) {
     statusLabel =
       activeLang === "hi"
-        ? "उत्तर तैयार हो रहा है..."
+        ? "समझ रहा हूँ..."
         : activeLang === "en"
-        ? "Preparing guidance..."
-        : "उत्तर तयार होत आहे...";
+        ? "Understanding query..."
+        : "समजून घेत आहे...";
   } else if (isSpeaking) {
     statusLabel =
       activeLang === "hi"
-        ? "बोल रहा हूँ..."
+        ? "उत्तर बता रहा हूँ..."
         : activeLang === "en"
         ? "SahkaarSetu Speaking..."
-        : "बोलत आहे...";
+        : "उत्तर सांगत आहे...";
   } else if (aiResponse) {
     statusLabel =
       activeLang === "hi"
-        ? "मार्गदर्शन तैयार है"
+        ? "पुनः पूछ सकते हैं"
         : activeLang === "en"
-        ? "Guidance Ready"
-        : "मार्गदर्शन मिळाले";
+        ? "Ready for next question"
+        : "पुन्हा विचारू शकता";
   }
 
   // Dynamic Intent Label based on detected intent
-  const currentIntent = aiResponse?.intent || "GENERAL_COOPERATIVE";
+  const currentIntent = aiResponse?.intent || "CASUAL_GREETING";
   const intentLabel =
     INTENT_LABELS[currentIntent]?.[activeLang] ||
     INTENT_LABELS[currentIntent]?.mr ||
     INTENT_LABELS["GENERAL_COOPERATIVE"][activeLang] ||
-    "सहकारी सहाय्य";
+    "SAHKAARSETU";
+
+  const langDisplayName = LANG_DISPLAY_NAMES[activeLang] || activeLang;
 
   return (
     <div className="voice-mode-overlay" role="dialog" aria-label="Voice Assistance">
@@ -252,12 +271,18 @@ export const VoiceModeView: React.FC<Props> = ({
         {/* Dynamic Status Label */}
         <div className="voice-status-text">{statusLabel}</div>
 
-        {/* User Recognized Transcript */}
+        {/* User Recognized Transcript Card */}
         {userTranscript && (
           <div className="voice-user-transcript">
-            <span className="transcript-label">
-              {activeLang === "hi" ? "आपने कहा:" : activeLang === "en" ? "You said:" : "तुम्ही म्हणालात:"}
-            </span>
+            <div className="transcript-meta-row">
+              <span className="transcript-label">
+                {activeLang === "hi" ? "आपने कहा:" : activeLang === "en" ? "YOU SAID:" : "तुम्ही म्हणालात:"}
+              </span>
+              <div className="transcript-tags">
+                <span className="transcript-tag-lang">🌐 {langDisplayName}</span>
+                {aiResponse && <span className="transcript-tag-intent">📌 {intentLabel}</span>}
+              </div>
+            </div>
             <p className="transcript-body">"{userTranscript}"</p>
           </div>
         )}

@@ -87,14 +87,26 @@ RESPONSE STYLE:
 # Evaluated in order; first match wins. Falls back to GENERAL_COOPERATIVE.
 _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
     (
-        ["hello", "hi", "namaskar", "namaste", "नमस्कार", "नमस्ते", "हॅलो", "हेलो", "गुड मॉर्निंग", "good morning", "vanakkam", "namaskaram"],
-        "GREETING",
+        ["hello", "hi", "hey", "namaskar", "namaste", "नमस्कार", "नमस्ते", "हॅलो", "हेलो", "कसे आहात", "कैसे हो", "good morning", "good evening", "vanakkam", "namaskaram", "kuch to bolo"],
+        "CASUAL_GREETING",
+    ),
+    (
+        ["धन्यवाद", "शुक्रिया", "आभार", "thank you", "thanks", "thankyou", "dhanyawad", "dhanyavaad", "aabhar"],
+        "CASUAL_THANKS",
+    ),
+    (
+        ["who are you", "what can you do", "तुम्ही कोण आहात", "तुम्ही काय करू शकता", "तुम कौन हो", "आप क्या कर सकते हैं", "sahkaarsetu काय आहे", "sahkaarsetu kya hai"],
+        "CASUAL_IDENTITY",
+    ),
+    (
+        ["मला मदत हवी आहे", "मदत हवी आहे", "मदद चाहिए", "मदद करो", "help me", "i need help", "मदत करा"],
+        "UNCLEAR",
     ),
     (
         ["pmfby", "fasal bima", "फसल बीमा", "पीएमएफबीवाय", "पीएमएफबीवाई", "crop insurance",
          "pradhan mantri fasal", "पीक विमा", "पिक विमा", "soyabeen", "soybean", "सोयाबीन",
          "peek kharab", "पिक खराब", "पीक खराब", "paus", "pausa", "pavsa", "पाऊस", "पावसामुळे",
-         "crop damage", "crop damaged", "rain damage"],
+         "crop damage", "crop damaged", "rain damage", "नुकसान", "पिकाचे नुकसान", "पिकाचे"],
         "PMFBY",
     ),
     (
@@ -114,7 +126,7 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
     ),
     (
         ["cooperative law", "cooperative act", "सहकारी कानून", "सहकारी कायदा",
-         "maharashtra cooperative", "mcs act", "section", "registration"],
+         "maharashtra cooperative", "mcs act", "section", "registration", "नियम", "नियमांबद्दल", "कायदे"],
         "COOPERATIVE_LAW",
     ),
     (

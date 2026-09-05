@@ -12,18 +12,7 @@ LanguageCode = str
 
 # ── Intent categories ─────────────────────────────────────────────────────────
 
-IntentCode = Literal[
-    "COOPERATIVE_LAW",
-    "COOPERATIVE_BYLAW",
-    "MINISTRY_SCHEME",
-    "PACS_SERVICE",
-    "PMFBY",
-    "AGRICULTURAL_SUPPORT",
-    "FINANCIAL_LITERACY",
-    "GRIEVANCE",
-    "GENERAL_COOPERATIVE",
-    "GREETING",
-]
+IntentCode = str
 
 
 # ── Request ──────────────────────────────────────────────────────────────────
