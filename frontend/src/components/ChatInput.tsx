@@ -27,11 +27,17 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
 
   const handleTranscript = useCallback(
     (text: string) => {
-      onChange(value ? `${value} ${text}` : text);
-      textareaRef.current?.focus();
+      const newText = value ? `${value} ${text}` : text;
+      onChange(newText);
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
+        textareaRef.current.focus();
+      }
     },
     [value, onChange]
   );
+
 
   const { status, errorMessage, startListening, stopListening, clearError, isSupported } =
     useSpeechRecognition({

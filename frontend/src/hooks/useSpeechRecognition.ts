@@ -114,14 +114,26 @@ export function useSpeechRecognition({
 
       recognition.onresult = (event: any) => {
         setStatus("processing");
-        if (event.results && event.results[0] && event.results[0][0]) {
-          const text = event.results[0][0].transcript;
-          if (text && text.trim()) {
-            onTranscriptRef.current(text.trim());
+        try {
+          let transcriptText = "";
+          if (event.results) {
+            for (let i = event.resultIndex || 0; i < event.results.length; i++) {
+              if (event.results[i] && event.results[i][0]) {
+                transcriptText += event.results[i][0].transcript + " ";
+              }
+            }
           }
+          const cleanText = transcriptText.trim();
+          if (cleanText) {
+            console.info("STT captured transcript:", cleanText);
+            onTranscriptRef.current(cleanText);
+          }
+        } catch (e) {
+          console.error("Error parsing STT transcript:", e);
         }
         setStatus("idle");
       };
+
 
       recognition.onerror = (event: any) => {
         const err = event.error;
