@@ -202,25 +202,39 @@ class GeminiProvider(AIProvider):
             client = self._get_client()
             prompt = self._build_prompt(request.message, request.language, intent)
 
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(
-                    system_instruction=_SYSTEM_INSTRUCTION,
-                    temperature=0.4,          # factual, low creativity
-                    max_output_tokens=1024,
-                    safety_settings=[
-                        genai_types.SafetySetting(
-                            category="HARM_CATEGORY_HARASSMENT",
-                            threshold="BLOCK_MEDIUM_AND_ABOVE",
+            model_candidates = [
+                "gemini-3.5-flash-lite",
+                "gemini-3.5-flash",
+                "gemini-3.6-flash",
+                "gemini-2.5-flash",
+            ]
+            response = None
+            for model_name in model_candidates:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=genai_types.GenerateContentConfig(
+                            system_instruction=_SYSTEM_INSTRUCTION,
+                            temperature=0.4,          # factual, low creativity
+                            max_output_tokens=500,
+                            safety_settings=[
+                                genai_types.SafetySetting(
+                                    category="HARM_CATEGORY_HARASSMENT",
+                                    threshold="BLOCK_MEDIUM_AND_ABOVE",
+                                ),
+                                genai_types.SafetySetting(
+                                    category="HARM_CATEGORY_HATE_SPEECH",
+                                    threshold="BLOCK_MEDIUM_AND_ABOVE",
+                                ),
+                            ],
                         ),
-                        genai_types.SafetySetting(
-                            category="HARM_CATEGORY_HATE_SPEECH",
-                            threshold="BLOCK_MEDIUM_AND_ABOVE",
-                        ),
-                    ],
-                ),
-            )
+                    )
+                    if response and response.text:
+                        break
+                except Exception as exc:
+                    logger.warning("GeminiProvider model '%s' skipped: %s", model_name, exc)
+                    continue
 
             # Extract text safely
             answer = self._extract_text(response, request.language)

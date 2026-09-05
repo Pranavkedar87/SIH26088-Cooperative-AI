@@ -14,7 +14,9 @@ SECURITY ARCHITECTURE:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
+import uuid
 from typing import Any, Optional, Tuple
 
 from app.schemas.query import QueryRequest, QueryResponse, SourceItem
@@ -26,48 +28,38 @@ logger = logging.getLogger(__name__)
 _rag_pipeline = RAGPipeline()
 
 
-def _try_setup_db(session_id_from_request: str | None, language: str) -> Tuple[Optional[str], Optional[str]]:
-    """Resolve or create a session + conversation. Never raises."""
-    try:
-        from database.repository import create_session, create_conversation
-
-        if session_id_from_request:
-            session_id = session_id_from_request
-        else:
-            session_id = create_session(language)
-
-        conversation_id = None
-        if session_id:
-            conversation_id = create_conversation(session_id)
-
-        return session_id, conversation_id
-
-    except Exception as exc:
-        logger.error("DB setup error in query_service (non-fatal): %s", exc)
-        return None, None
-
-
-def _try_save_message(
-    conversation_id: Optional[str],
-    role: str,
-    content: str,
+def _async_persist_chat_history(
+    session_id: str,
+    conversation_id: str,
+    user_message: str,
+    assistant_answer: str,
     language: str,
     intent: Optional[str] = None,
 ) -> None:
-    """Save a single message to database (best-effort). Never raises."""
-    if not conversation_id:
-        return
+    """Background worker to save session, conversation, user msg, and assistant msg to Supabase."""
     try:
-        from database.repository import save_message
+        from database.repository import create_session, create_conversation, save_message
+
+        # Ensure session and conversation exist in DB
+        s_id = create_session(language) or session_id
+        c_id = create_conversation(s_id) or conversation_id
+
+        # Save user and assistant turns
         save_message(
-            conversation_id=conversation_id,
-            role=role,
-            content=content,
+            conversation_id=c_id,
+            role="user",
+            content=user_message,
+            language=language,
+        )
+        save_message(
+            conversation_id=c_id,
+            role="assistant",
+            content=assistant_answer,
             language=language,
             intent=intent,
         )
     except Exception as exc:
-        logger.error("Failed to persist message in query_service (role=%s): %s", role, exc)
+        logger.error("Background DB persistence error (non-fatal): %s", exc)
 
 
 async def process_user_query(
@@ -77,34 +69,18 @@ async def process_user_query(
 ) -> QueryResponse:
     """
     Central AI processing entry point for ALL client interfaces (Web, ESP32 Voice, Vision).
-
-    Flow:
-      1. Setup/reuse session and conversation in Supabase (best-effort)
-      2. Persist user message to database
-      3. Execute RAG Pipeline (Intent -> Vector Retrieval -> Grounded Gemini)
-      4. Persist assistant response to database
-      5. Return structured QueryResponse with verified sources and session IDs
-
-    Args:
-        message: The user's input text (or transcribed speech / OCR text).
-        language: Language code ("en", "hi", "mr").
-        session_id: Optional UUID to maintain session context.
-
-    Returns:
-        QueryResponse containing answer, language, intent, sources, session_id, conversation_id.
+    Optimized for high speed: RAG executes immediately while DB persistence runs in background.
     """
     clean_message = message.strip()
 
-    # 1. DB setup (best-effort)
-    res_session_id, conversation_id = _try_setup_db(session_id, language)
+    # 1. Instant session and conversation ID generation
+    res_session_id = session_id or str(uuid.uuid4())
+    conversation_id = str(uuid.uuid4())
 
-    # 2. Save user message (best-effort)
-    _try_save_message(conversation_id, "user", clean_message, language)
-
-    # 3. RAG Pipeline Execution
+    # 2. RAG Pipeline Execution (Immediate)
     req_obj = QueryRequest(
         message=clean_message,
-        language=language, # type: ignore[arg-type]
+        language=language,  # type: ignore[arg-type]
         session_id=res_session_id,
     )
 
@@ -121,19 +97,26 @@ async def process_user_query(
         for s in raw_sources
     ]
 
-    # 4. Save assistant response (best-effort)
-    _try_save_message(
-        conversation_id,
-        "assistant",
-        rag_response.answer,
-        rag_response.language,
-        rag_response.intent,
-    )
+    # 3. Schedule DB persistence in background task without blocking response delivery
+    try:
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(
+            None,
+            _async_persist_chat_history,
+            res_session_id,
+            conversation_id,
+            clean_message,
+            rag_response.answer,
+            language,
+            rag_response.intent,
+        )
+    except Exception as exc:
+        logger.error("Failed to schedule background DB persistence: %s", exc)
 
-    # 5. Return complete structured response
+    # 4. Return complete structured response immediately
     return QueryResponse(
         answer=rag_response.answer,
-        language=rag_response.language,
+        language=language,  # type: ignore[arg-type]
         intent=rag_response.intent,
         source=rag_response.source,
         sources=source_items,
@@ -141,3 +124,4 @@ async def process_user_query(
         session_id=res_session_id,
         conversation_id=conversation_id,
     )
+

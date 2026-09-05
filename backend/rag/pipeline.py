@@ -111,15 +111,22 @@ class RAGPipeline:
 
         primary_source = sources_list[0]["title"] if sources_list else None
 
-        # 5. Build grounded prompt & call Gemini
+        # 5. Build grounded prompt & call Gemini using fast candidate fallback
         answer = None
         client = self._get_client()
         prompt = build_grounded_prompt(message, language, intent, chunks)
 
-        for attempt in range(3):
+        model_candidates = [
+            "gemini-3.5-flash-lite",
+            "gemini-3.5-flash",
+            "gemini-3.6-flash",
+            "gemini-2.5-flash",
+        ]
+
+        for model_name in model_candidates:
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model=model_name,
                     contents=prompt,
                     config=genai_types.GenerateContentConfig(
                         system_instruction=RAG_SYSTEM_INSTRUCTION,
@@ -130,15 +137,11 @@ class RAGPipeline:
                 if response and response.text:
                     answer = response.text.strip()
                     if answer:
+                        logger.info("RAG generation succeeded using model '%s'", model_name)
                         break
             except Exception as exc:
-                is_rate_limit = "429" in str(exc) or "RESOURCE_EXHAUSTED" in str(exc) or "quota" in str(exc).lower()
-                if is_rate_limit and attempt < 2:
-                    logger.warning("Gemini rate limit hit (429). Retrying in 15s (attempt %d/3)...", attempt + 1)
-                    await asyncio.sleep(15.0)
-                    continue
-                logger.exception("Gemini API or generation error during RAG generation: %s", exc)
-                break
+                logger.warning("Model '%s' generation failed/quota hit (%s). Trying next candidate...", model_name, exc)
+                continue
 
         if not answer:
             logger.warning("Gemini returned empty response text or failed generation.")

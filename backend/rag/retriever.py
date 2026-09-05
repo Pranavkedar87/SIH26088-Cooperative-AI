@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import logging
+import time
 from typing import Optional
 try:
     from typing_extensions import TypedDict
@@ -18,6 +19,10 @@ from database.supabase import get_supabase_client
 from rag.embeddings import GeminiEmbeddingProvider
 
 logger = logging.getLogger(__name__)
+
+_CHUNKS_CACHE: list[dict] = []
+_CACHE_TIMESTAMP: float = 0.0
+_CACHE_TTL_SECONDS: float = 300.0  # 5 minutes cache
 
 
 class RetrievedChunk(TypedDict):
@@ -54,7 +59,6 @@ INTENT_ALLOWED_DOC_TYPES: dict[str, set[str]] = {
 }
 
 
-
 def _is_doc_type_allowed(doc_type: Optional[str], intent: Optional[str]) -> bool:
     """Return True if doc_type matches the target intent domain."""
     if not intent or intent not in INTENT_ALLOWED_DOC_TYPES:
@@ -63,6 +67,61 @@ def _is_doc_type_allowed(doc_type: Optional[str], intent: Optional[str]) -> bool
         return True
     allowed = INTENT_ALLOWED_DOC_TYPES[intent]
     return doc_type in allowed
+
+
+def _get_cached_chunks(client) -> list[dict]:
+    """Retrieve and cache knowledge chunks in memory to avoid repetitive heavy DB table scans."""
+    global _CHUNKS_CACHE, _CACHE_TIMESTAMP
+    now = time.time()
+    if _CHUNKS_CACHE and (now - _CACHE_TIMESTAMP) < _CACHE_TTL_SECONDS:
+        return _CHUNKS_CACHE
+
+    try:
+        data = client.table("knowledge_chunks").select(
+            "id, document_id, content, language, metadata, "
+            "knowledge_documents(title, source_name, source_url, document_type)"
+        ).execute()
+
+        if not data or not data.data:
+            return _CHUNKS_CACHE
+
+        new_cache = []
+        for row in data.data:
+            meta = row.get("metadata") or {}
+            chunk_vec = meta.get("embedding") if isinstance(meta, dict) else None
+
+            if not chunk_vec:
+                continue
+
+            if isinstance(chunk_vec, str):
+                import json
+                try:
+                    chunk_vec = json.loads(chunk_vec)
+                except Exception:
+                    continue
+
+            doc = row.get("knowledge_documents") or {}
+            doc_type = doc.get("document_type") or meta.get("document_type")
+
+            new_cache.append({
+                "id": row.get("id"),
+                "content": row.get("content", ""),
+                "document_id": str(row.get("document_id", "")),
+                "title": doc.get("title", "Official Source"),
+                "source_name": doc.get("source_name"),
+                "source_url": doc.get("source_url"),
+                "document_type": doc_type,
+                "language": row.get("language"),
+                "embedding": chunk_vec,
+            })
+
+        _CHUNKS_CACHE = new_cache
+        _CACHE_TIMESTAMP = now
+        logger.info("Loaded %d knowledge chunks into memory cache", len(_CHUNKS_CACHE))
+    except Exception as exc:
+        logger.error("Error refreshing knowledge chunks cache: %s", exc)
+
+    return _CHUNKS_CACHE
 
 
 def retrieve_relevant_knowledge(
@@ -74,12 +133,6 @@ def retrieve_relevant_knowledge(
 ) -> list[RetrievedChunk]:
     """
     Retrieve top_k knowledge chunks matching the query.
-
-    Steps:
-      1. Embed query text using GeminiEmbeddingProvider.
-      2. Call Supabase RPC `match_knowledge_chunks`.
-      3. Fallback to client-side similarity if RPC fails.
-      4. Filter by match_threshold and document domain allowed types.
     """
     if not query or not query.strip():
         return []
@@ -110,7 +163,7 @@ def retrieve_relevant_knowledge(
             {
                 "query_embedding": query_vec,
                 "match_threshold": match_threshold,
-                "match_count": top_k * 2,  # fetch candidate pool
+                "match_count": top_k * 2,
                 "filter_language": language,
                 "filter_intent": intent,
             },
@@ -138,66 +191,44 @@ def retrieve_relevant_knowledge(
                 return results
 
     except Exception as rpc_exc:
-        logger.debug("RPC match_knowledge_chunks failed, falling back to query: %s", rpc_exc)
+        logger.debug("RPC match_knowledge_chunks unavailable, using in-memory vector cache: %s", rpc_exc)
 
-    # 3. Fallback: Query knowledge_chunks + knowledge_documents directly
+    # 3. High-performance In-Memory Similarity Search
     try:
-        data = client.table("knowledge_chunks").select(
-            "id, document_id, content, language, metadata, "
-            "knowledge_documents(title, source_name, source_url, document_type)"
-        ).execute()
-
-        if not data or not data.data:
+        cached_chunks = _get_cached_chunks(client)
+        if not cached_chunks:
             return []
 
         scored_chunks: list[tuple[float, dict]] = []
-        for row in data.data:
-            meta = row.get("metadata") or {}
-            chunk_vec = meta.get("embedding") if isinstance(meta, dict) else None
-
-            if not chunk_vec:
+        for chunk in cached_chunks:
+            if not _is_doc_type_allowed(chunk["document_type"], intent):
                 continue
 
-            # Ensure embedding is a list of floats
-            if isinstance(chunk_vec, str):
-                import json
-                try:
-                    chunk_vec = json.loads(chunk_vec)
-                except Exception:
-                    continue
-
-            doc = row.get("knowledge_documents") or {}
-            doc_type = doc.get("document_type") or meta.get("document_type")
-
-            if not _is_doc_type_allowed(doc_type, intent):
-                continue
-
-            sim = _cosine_similarity(query_vec, chunk_vec)
+            sim = _cosine_similarity(query_vec, chunk["embedding"])
             if sim >= match_threshold:
-                # Boost language match slightly
-                if row.get("language") == language:
+                if chunk["language"] == language:
                     sim += 0.05
                 scored_chunks.append((sim, {
-                    "content": row.get("content", ""),
-                    "document_id": str(row.get("document_id", "")),
-                    "title": doc.get("title", "Official Source"),
-                    "source_name": doc.get("source_name"),
-                    "source_url": doc.get("source_url"),
-                    "document_type": doc_type,
-                    "language": row.get("language"),
+                    "content": chunk["content"],
+                    "document_id": chunk["document_id"],
+                    "title": chunk["title"],
+                    "source_name": chunk["source_name"],
+                    "source_url": chunk["source_url"],
+                    "document_type": chunk["document_type"],
+                    "language": chunk["language"],
                     "similarity": round(sim, 4),
                 }))
 
-        # Sort by similarity desc
         scored_chunks.sort(key=lambda x: x[0], reverse=True)
 
         for sim, chunk in scored_chunks[:top_k]:
             results.append(chunk)
 
-        logger.info("Retrieved %d chunks via Python similarity fallback", len(results))
+        logger.info("Retrieved %d chunks via fast in-memory similarity search", len(results))
         return results
 
     except Exception as exc:
-        logger.error("Failed to retrieve knowledge chunks via fallback: %s", exc)
+        logger.error("Failed to retrieve knowledge chunks via in-memory search: %s", exc)
         return []
+
 
