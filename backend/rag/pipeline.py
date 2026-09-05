@@ -126,11 +126,16 @@ class RAGPipeline:
 
             answer = response.text.strip() if response and response.text else None
             if not answer:
+                logger.warning("Gemini returned empty response text during RAG generation.")
                 answer = _ERROR_ANSWER.get(language, _ERROR_ANSWER["en"])
+                sources_list = []
+                primary_source = None
 
         except Exception as exc:
-            logger.exception("Gemini error during RAG generation: %s", exc)
+            logger.exception("Gemini API or generation error during RAG generation: %s", exc)
             answer = _ERROR_ANSWER.get(language, _ERROR_ANSWER["en"])
+            sources_list = []
+            primary_source = None
 
         response_obj = QueryResponse(
             answer=answer,
@@ -142,3 +147,4 @@ class RAGPipeline:
         )
 
         return response_obj, sources_list
+

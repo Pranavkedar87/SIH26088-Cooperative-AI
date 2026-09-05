@@ -88,7 +88,9 @@ RESPONSE STYLE:
 _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
     (
         ["pmfby", "fasal bima", "फसल बीमा", "पीएमएफबीवाय", "पीएमएफबीवाई", "crop insurance",
-         "pradhan mantri fasal", "पीक विमा", "पिक विमा"],
+         "pradhan mantri fasal", "पीक विमा", "पिक विमा", "soyabeen", "soybean", "सोयाबीन",
+         "peek kharab", "पिक खराब", "पीक खराब", "paus", "pausa", "pavsa", "पाऊस", "पावसामुळे",
+         "crop damage", "crop damaged", "rain damage"],
         "PMFBY",
     ),
     (
@@ -124,10 +126,11 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
     ),
     (
         ["crop loan", "agricultural loan", "farming loan", "farm loan", "agricultural support",
-         "krishi", "कृषि", "शेती", "fertilizer", "seed"],
+         "krishi", "कृषि", "शेती", "fertilizer", "seed", "peek", "पीक", "पिक", "kharab", "नुकसान"],
         "AGRICULTURAL_SUPPORT",
     ),
 ]
+
 
 
 def _classify_intent(message: str) -> IntentCode:

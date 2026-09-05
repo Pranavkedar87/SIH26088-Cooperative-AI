@@ -43,6 +43,27 @@ def _cosine_similarity(v1: list[float], v2: list[float]) -> float:
     return dot / (norm1 * norm2)
 
 
+INTENT_ALLOWED_DOC_TYPES: dict[str, set[str]] = {
+    "PMFBY": {"scheme_guide", "guide", "pmfby_guide"},
+    "AGRICULTURAL_SUPPORT": {"scheme_guide", "guide", "pacs_guide"},
+    "COOPERATIVE_LAW": {"legal_act", "act", "guide"},
+    "COOPERATIVE_BYLAW": {"legal_act", "bylaw", "guide"},
+    "PACS_SERVICE": {"pacs_guide", "service_guide", "guide"},
+    "FINANCIAL_LITERACY": {"financial_guide", "guide"},
+    "GRIEVANCE": {"legal_act", "guide", "pacs_guide", "scheme_guide"},
+}
+
+
+def _is_doc_type_allowed(doc_type: Optional[str], intent: Optional[str]) -> bool:
+    """Return True if doc_type matches the target intent domain."""
+    if not intent or intent not in INTENT_ALLOWED_DOC_TYPES:
+        return True
+    if not doc_type:
+        return True
+    allowed = INTENT_ALLOWED_DOC_TYPES[intent]
+    return doc_type in allowed
+
+
 def retrieve_relevant_knowledge(
     query: str,
     language: str = "en",
@@ -57,7 +78,7 @@ def retrieve_relevant_knowledge(
       1. Embed query text using GeminiEmbeddingProvider.
       2. Call Supabase RPC `match_knowledge_chunks`.
       3. Fallback to client-side similarity if RPC fails.
-      4. Filter by match_threshold and return results.
+      4. Filter by match_threshold and document domain allowed types.
     """
     if not query or not query.strip():
         return []
@@ -88,7 +109,7 @@ def retrieve_relevant_knowledge(
             {
                 "query_embedding": query_vec,
                 "match_threshold": match_threshold,
-                "match_count": top_k,
+                "match_count": top_k * 2,  # fetch candidate pool
                 "filter_language": language,
                 "filter_intent": intent,
             },
@@ -96,18 +117,24 @@ def retrieve_relevant_knowledge(
 
         if rpc_response and rpc_response.data:
             for item in rpc_response.data:
+                doc_type = item.get("document_type")
+                if not _is_doc_type_allowed(doc_type, intent):
+                    continue
                 results.append({
                     "content": item.get("content", ""),
                     "document_id": str(item.get("document_id", "")),
                     "title": item.get("title", "Official Source"),
                     "source_name": item.get("source_name"),
                     "source_url": item.get("source_url"),
-                    "document_type": item.get("document_type"),
+                    "document_type": doc_type,
                     "language": item.get("language"),
                     "similarity": float(item.get("similarity", 0.0)),
                 })
-            logger.info("Retrieved %d chunks via RPC match_knowledge_chunks", len(results))
-            return results
+                if len(results) >= top_k:
+                    break
+            if results:
+                logger.info("Retrieved %d domain-filtered chunks via RPC match_knowledge_chunks", len(results))
+                return results
 
     except Exception as rpc_exc:
         logger.debug("RPC match_knowledge_chunks failed, falling back to query: %s", rpc_exc)
@@ -138,9 +165,14 @@ def retrieve_relevant_knowledge(
                 except Exception:
                     continue
 
+            doc = row.get("knowledge_documents") or {}
+            doc_type = doc.get("document_type") or meta.get("document_type")
+
+            if not _is_doc_type_allowed(doc_type, intent):
+                continue
+
             sim = _cosine_similarity(query_vec, chunk_vec)
             if sim >= match_threshold:
-                doc = row.get("knowledge_documents") or {}
                 # Boost language match slightly
                 if row.get("language") == language:
                     sim += 0.05
@@ -150,7 +182,7 @@ def retrieve_relevant_knowledge(
                     "title": doc.get("title", "Official Source"),
                     "source_name": doc.get("source_name"),
                     "source_url": doc.get("source_url"),
-                    "document_type": doc.get("document_type"),
+                    "document_type": doc_type,
                     "language": row.get("language"),
                     "similarity": round(sim, 4),
                 }))
@@ -167,3 +199,4 @@ def retrieve_relevant_knowledge(
     except Exception as exc:
         logger.error("Failed to retrieve knowledge chunks via fallback: %s", exc)
         return []
+
