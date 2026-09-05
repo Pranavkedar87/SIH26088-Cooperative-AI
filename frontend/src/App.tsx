@@ -229,7 +229,7 @@ const App: React.FC = () => {
               language={language}
               onSpeak={speak}
               activeSpeakingId={activeId}
-              onFollowUp={(p) => setInputValue(p)}
+              onFollowUp={(p) => handleSendQuery(p)}
               onSimplify={(p) => handleSendQuery(p)}
             />
           </div>

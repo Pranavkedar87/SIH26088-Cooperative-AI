@@ -1428,8 +1428,34 @@
 .guidance-toolbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 2px;
+}
+
+.pdf-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-btn);
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pdf-download-btn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.pdf-download-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
 }
 
 .guidance-toolbar__modes {
@@ -1731,24 +1757,32 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-btn);
-  padding: 8px 12px;
-  font-size: 13px;
+  padding: 10px 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--color-text);
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .next-step-action-btn:hover {
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  color: var(--color-primary-dark);
   background: var(--color-primary-light);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(18, 107, 98, 0.12);
+}
+
+.next-step-action-btn:hover .action-bullet {
+  transform: translateX(2px);
 }
 
 .action-bullet {
   color: var(--color-primary);
   font-weight: 800;
+  transition: transform 0.15s ease;
 }
 
 .action-text {
@@ -1776,6 +1810,7 @@
 @media (max-width: 479px) {
   .brand-tagline { display: none; }
   .hub-services-grid { grid-template-columns: 1fr; }
+  .guidance-facts-grid { grid-template-columns: 1fr; }
   .nav-item__label { font-size: 10.5px; }
   .nav-item { padding: 4px 6px; min-width: 50px; }
   .chat-card { max-width: 90%; }
@@ -1783,12 +1818,15 @@
 
 @media (min-width: 480px) and (max-width: 1023px) {
   .hub-services-grid { grid-template-columns: repeat(2, 1fr); }
+  .guidance-facts-grid { grid-template-columns: repeat(2, 1fr); }
   .chat-card { max-width: 82%; }
 }
 
 @media (min-width: 1024px) {
   .platform-app { margin: 16px auto; border-radius: var(--radius-card); height: calc(100vh - 32px); }
   .hub-services-grid { grid-template-columns: repeat(3, 1fr); }
+  .guidance-facts-grid { grid-template-columns: repeat(3, 1fr); }
   .chat-card { max-width: 75%; }
 }
+
 

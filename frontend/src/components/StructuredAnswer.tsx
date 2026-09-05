@@ -14,7 +14,7 @@ const StructuredAnswer: React.FC<Props> = ({ rawText = "", language = "mr", onFo
     <GuidanceRenderer
       rawContent={rawText}
       language={language}
-      onFollowUp={onFollowUp}
+      onExecuteAction={onFollowUp}
     />
   );
 };

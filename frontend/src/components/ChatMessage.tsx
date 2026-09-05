@@ -6,6 +6,7 @@ import { SpeakerIcon, CopyIcon, ShieldCheckIcon } from "./Icons";
 
 interface Props {
   message: ChatMessageType;
+  userQuestion?: string;
   onSpeak?: (id: string, text: string, language: LanguageCode) => void;
   isSpeaking?: boolean;
   onFollowUp?: (prompt: string) => void;
@@ -18,6 +19,7 @@ function formatTime(date: Date): string {
 
 const ChatMessage: React.FC<Props> = ({
   message,
+  userQuestion,
   onSpeak,
   isSpeaking = false,
   onFollowUp,
@@ -60,8 +62,10 @@ const ChatMessage: React.FC<Props> = ({
         ) : (
           <GuidanceRenderer
             rawContent={message.content}
+            userQuestion={userQuestion}
             language={message.language}
-            onFollowUp={onFollowUp}
+            onExecuteAction={onFollowUp}
+            sources={message.sources}
           />
         )}
 
@@ -108,16 +112,6 @@ const ChatMessage: React.FC<Props> = ({
                 >
                   <CopyIcon size={14} />
                   <span>Copy</span>
-                </button>
-              )}
-              {onFollowUp && (
-                <button
-                  type="button"
-                  className="action-btn"
-                  onClick={() => onFollowUp("Can you provide more details about this service?")}
-                  aria-label="Ask follow up"
-                >
-                  <span>Ask Follow-up</span>
                 </button>
               )}
               {onSimplify && (

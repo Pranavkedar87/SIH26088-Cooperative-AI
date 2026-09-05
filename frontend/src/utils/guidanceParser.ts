@@ -31,6 +31,13 @@ export interface GuidanceStep {
   description: string;
 }
 
+export interface NextAction {
+  label: string;
+  type: "ASK_AI";
+  query: string;
+  preserveContext: boolean;
+}
+
 export interface StructuredGuidance {
   domain: ResponseDomain;
   domainLabel: string;
@@ -40,6 +47,7 @@ export interface StructuredGuidance {
   checklist: string[];
   warnings: string[];
   nextSteps: string[];
+  nextActions: NextAction[];
   cleanParagraphs: string[];
 }
 
@@ -143,9 +151,121 @@ function detectDomain(text: string): { domain: ResponseDomain; label: string } {
 }
 
 /**
+ * Contextual Next Actions mapping per domain
+ */
+function getContextualActions(domain: ResponseDomain, lang: string): NextAction[] {
+  if (domain === "PMFBY") {
+    return [
+      {
+        label: lang === "hi" ? "नुकसान दर्ज करने की प्रक्रिया" : lang === "en" ? "Loss Intimation Procedure" : "नुकसान नोंदवण्याची प्रक्रिया",
+        type: "ASK_AI",
+        query: "PMFBY अंतर्गत पीक नुकसानाची अधिकृत सूचना व दावा नोंदवण्याची टप्पा-निहाय प्रक्रिया काय आहे?",
+        preserveContext: true,
+      },
+      {
+        label: lang === "hi" ? "आवश्यक दस्तावेज एवं प्रमाण" : lang === "en" ? "Required Documents & Proofs" : "आवश्यक कागदपत्रे व पुरावे",
+        type: "ASK_AI",
+        query: "PMFBY दाव्यासाठी कोणती कागदपत्रे, 7/12 उतारा व पुरावे आवश्यक आहेत?",
+        preserveContext: true,
+      },
+      {
+        label: lang === "hi" ? "हेल्पलाइन एवं फॉलो-अप" : lang === "en" ? "Helpline & Follow-up Details" : "हेल्पलाईन व पुढील पाठपुरावा",
+        type: "ASK_AI",
+        query: "विमा कंपनी व कृषी विभागाचा अधिकृत हेल्पलाईन नंबर व पाठपुरावा कसा करावा?",
+        preserveContext: true,
+      },
+    ];
+  }
+
+  if (domain === "PACS") {
+    return [
+      {
+        label: lang === "hi" ? "सदस्यता पात्रता एवं प्रक्रिया" : lang === "en" ? "PACS Membership Eligibility" : "PACS सदस्यत्वाबद्दल जाणून घ्या",
+        type: "ASK_AI",
+        query: "PACS मध्ये नवीन शेतकरी सभासद होण्यासाठी नियम, पात्रता व अर्ज प्रक्रिया काय आहे?",
+        preserveContext: true,
+      },
+      {
+        label: lang === "hi" ? "PACS द्वारा मिलने वाली सेवाएं" : lang === "en" ? "Services Provided by PACS" : "PACS सोसायटी सेवा पाहा",
+        type: "ASK_AI",
+        query: "PACS सोसायटीद्वारे सभासदांना कोणत्या अल्पमुदत पीक कर्ज व खात/बियाणे सेवा मिळतात?",
+        preserveContext: true,
+      },
+      {
+        label: lang === "hi" ? "ऋण एवं ब्याज अनुदान योजना" : lang === "en" ? "Crop Loan & Subsidy Schemes" : "कर्ज व व्याज सवलत योजना",
+        type: "ASK_AI",
+        query: "PACS मधील पीक कर्ज व ३% व्याज परतावा योजनेचा लाभ कसा घ्यावा?",
+        preserveContext: true,
+      },
+    ];
+  }
+
+  if (domain === "LAW") {
+    return [
+      {
+        label: lang === "hi" ? "संबंधित नियम एवं धाराएं" : lang === "en" ? "Relevant Law Sections & Rules" : "संबंधित नियम समजून घ्या",
+        type: "ASK_AI",
+        query: "महाराष्ट्र सहकारी संस्था कायदा १९६० मधील संबंधित कलमे व नियम काय सांगतात?",
+        preserveContext: true,
+      },
+      {
+        label: lang === "hi" ? "DDR कार्यालय में शिकायत प्रक्रिया" : lang === "en" ? "File Appeal with DDR Officer" : "DDR कार्यालयाकडे दाद मागा",
+        type: "ASK_AI",
+        query: "या प्रकरणात जिल्हा सहकार उपनिबंधक (DDR) कार्यालयाकडे तक्रार व दाद मागण्याची प्रक्रिया काय आहे?",
+        preserveContext: true,
+      },
+      {
+        label: lang === "hi" ? "AGM एवं चुनाव नियम" : lang === "en" ? "AGM & Election By-Laws" : "वार्षिक सभा व निवडणूक नियम",
+        type: "ASK_AI",
+        query: "वार्षिक सर्वसाधारण सभा (AGM) व निवडणुकीबाबत पोटनियमांतील कायदेशीर नियमावली काय आहे?",
+        preserveContext: true,
+      },
+    ];
+  }
+
+  if (domain === "GRIEVANCE") {
+    return [
+      {
+        label: lang === "hi" ? "शिकायत का प्रारूप तैयार करें" : lang === "en" ? "Draft Formal Complaint" : "तक्रारीचा मसुदा तयार करा",
+        type: "ASK_AI",
+        query: "माझ्या तक्रारीचा अधिकृत मसुदा (Draft Complaint Letter) तयार करून द्या.",
+        preserveContext: true,
+      },
+      {
+        label: lang === "hi" ? "संबंधित प्राधिकारी एवं कार्यालय" : lang === "en" ? "Competent Authority Details" : "संबंधित कार्यालयाबद्दल माहिती",
+        type: "ASK_AI",
+        query: "या तक्रारीसाठी कोणत्या उपनिबंधक किंवा प्राधिकरणाकडे अर्ज सादर करावा?",
+        preserveContext: true,
+      },
+      {
+        label: lang === "hi" ? "निवारण समय-सीमा एवं अपील" : lang === "en" ? "Redressal Timeline & Appeal" : "तक्रार निवारण मुदत व पाठपुरावा",
+        type: "ASK_AI",
+        query: "तक्रार निवारणासाठी कायदेशीर मुदत किती आहे व पाठपुरावा कसा करावा?",
+        preserveContext: true,
+      },
+    ];
+  }
+
+  return [
+    {
+      label: lang === "hi" ? "विस्तृत मार्गदर्शन प्राप्त करें" : lang === "en" ? "Get Detailed Guidance" : "या विषयावर अधिक सविस्तर माहिती",
+      type: "ASK_AI",
+      query: "या विषयाबद्दल अधिक सविस्तर नियम, अटी व माहिती सांगा.",
+      preserveContext: true,
+    },
+    {
+      label: lang === "hi" ? "आगे के कदम" : lang === "en" ? "Recommended Action Steps" : "पुढील प्रक्रिया समजून घ्या",
+      type: "ASK_AI",
+      query: "या प्रकरणात मी प्रत्यक्ष काय पावले उचलावीत?",
+      preserveContext: true,
+    },
+  ];
+}
+
+/**
  * Main function to parse raw AI answer text into StructuredGuidance
  */
-export function parseGuidance(rawText: string, _lang: string = "mr"): StructuredGuidance {
+export function parseGuidance(rawText: string, lang: string = "mr"): StructuredGuidance {
   if (!rawText || !rawText.trim()) {
     return {
       domain: "INFORMATION",
@@ -156,6 +276,7 @@ export function parseGuidance(rawText: string, _lang: string = "mr"): Structured
       checklist: [],
       warnings: [],
       nextSteps: [],
+      nextActions: [],
       cleanParagraphs: [],
     };
   }
@@ -227,7 +348,6 @@ export function parseGuidance(rawText: string, _lang: string = "mr"): Structured
     }
 
     // 2. Extract Step Timeline Items
-    // Format: "1. **Title:** Desc" or "### 1. Title" or "1. Title: Desc" or "Step 1: Title"
     const stepMatch = rawLine.match(
       /^(?:#{1,6}\s*)?(?:(\d+)\.|\bstep\s*(\d+):?|\bटप्पा\s*(\d+):?|\bचरण\s*(\d+):?)\s*(.+)$/i
     );
@@ -238,7 +358,6 @@ export function parseGuidance(rawText: string, _lang: string = "mr"): Structured
       );
       const rest = stepMatch[5].trim();
 
-      // Split rest into Title vs Desc if colon exists
       let title = cleanMarkdown(rest);
       let desc = "";
 
@@ -248,10 +367,9 @@ export function parseGuidance(rawText: string, _lang: string = "mr"): Structured
         desc = cleanMarkdown(rest.substring(colonIdx + 1));
       }
 
-      // Check if next line is description for this step
       if (!desc && i + 1 < lines.length && !lines[i + 1].match(/^(?:#{1,6}|\d+\.|\*|-)/)) {
         desc = cleanMarkdown(lines[i + 1]);
-        i++; // consume next line
+        i++;
       }
 
       steps.push({
@@ -305,19 +423,32 @@ export function parseGuidance(rawText: string, _lang: string = "mr"): Structured
     summary = cleanMarkdown(rawText).slice(0, 180) + "…";
   }
 
-  // Deduplicate and trim arrays
   const uniqueNextSteps = Array.from(new Set(nextSteps));
   const uniqueWarnings = Array.from(new Set(warnings));
+
+  // Build NextAction objects
+  let nextActions: NextAction[] = [];
+  if (uniqueNextSteps.length > 0) {
+    nextActions = uniqueNextSteps.map((ns) => ({
+      label: ns,
+      type: "ASK_AI",
+      query: ns,
+      preserveContext: true,
+    }));
+  } else {
+    nextActions = getContextualActions(domain, lang);
+  }
 
   return {
     domain,
     domainLabel,
     summary,
-    keyFacts: keyFacts.slice(0, 6), // limit to max 6 key fact cards
+    keyFacts: keyFacts.slice(0, 6),
     steps,
     checklist,
     warnings: uniqueWarnings,
     nextSteps: uniqueNextSteps,
-    cleanParagraphs: cleanParagraphs.slice(1), // rest of paragraphs
+    nextActions,
+    cleanParagraphs: cleanParagraphs.slice(1),
   };
 }

@@ -80,16 +80,24 @@ const ChatArea: React.FC<Props> = ({
         </div>
       )}
 
-      {messages.map((msg) => (
-        <ChatMessage
-          key={msg.id}
-          message={msg}
-          onSpeak={onSpeak}
-          isSpeaking={activeSpeakingId === msg.id}
-          onFollowUp={onFollowUp}
-          onSimplify={onSimplify}
-        />
-      ))}
+      {messages.map((msg, index) => {
+        const userQuestion =
+          msg.role === "assistant" && index > 0 && messages[index - 1].role === "user"
+            ? messages[index - 1].content
+            : undefined;
+
+        return (
+          <ChatMessage
+            key={msg.id}
+            message={msg}
+            userQuestion={userQuestion}
+            onSpeak={onSpeak}
+            isSpeaking={activeSpeakingId === msg.id}
+            onFollowUp={onFollowUp}
+            onSimplify={onSimplify}
+          />
+        );
+      })}
 
       {isLoading && (
         <div className="chat-message chat-message--assistant">
