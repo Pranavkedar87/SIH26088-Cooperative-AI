@@ -9,6 +9,23 @@ _LANG_NAME: dict[str, str] = {
     "en": "English",
     "hi": "Hindi",
     "mr": "Marathi",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "kn": "Kannada",
+    "gu": "Gujarati",
+    "bn": "Bengali",
+    "pa": "Punjabi",
+    "ml": "Malayalam",
+}
+
+GREETING_RESPONSES: dict[str, str] = {
+    "mr": "नमस्कार! मी SahkaarSetu. सहकारी सेवा, योजना, पीक विमा किंवा कायद्याबद्दल तुम्ही मला विचारू शकता.",
+    "hi": "नमस्कार! मैं SahkaarSetu हूँ। सहकारी सेवाओं, योजनाओं, फसल बीमा या कानून के बारे में आप मुझसे पूछ सकते हैं।",
+    "en": "Hello! I am SahkaarSetu. You can ask me about cooperative services, schemes, crop insurance, or laws.",
+    "ta": "வணக்கம்! நான் SahkaarSetu. கூட்டுறவு சேவைகள், திட்டங்கள் அல்லது சட்டங்கள் பற்றி என்னிடம் கேட்கலாம்.",
+    "te": "నమస్కారం! నేను SahkaarSetu. మీరు సహకార సేవలు, పథకాలు లేదా చట్టాల గురించి నన్ను అడగవచ్చు.",
+    "kn": "ನಮಸ್ಕಾರ! ನಾನು SahkaarSetu. ನೀವು ಸಹಕಾರ ಸೇವೆಗಳು, ಯೋಜನೆಗಳು ಅಥವಾ ಕಾನೂನುಗಳ ಬಗ್ಗೆ ನನ್ನನ್ನು ಕೇಳಬಹುದು.",
+    "gu": "નમસ્તે! હું SahkaarSetu છું. તમે મને સહકારી સેવાઓ, યોજનાઓ અથવા કાયદા વિશે પૂછી શકો છો.",
 }
 
 RAG_SYSTEM_INSTRUCTION = """You are Sahakari AI Sahayak (सहकारी AI सहाय्यक), a trustworthy, multilingual cooperative governance and legal assistance assistant for India.
@@ -31,9 +48,10 @@ def build_grounded_prompt(
     language: str,
     intent: str,
     context_chunks: list[dict[str, Any]],
+    response_mode: str = "text",
 ) -> str:
     """Format prompt with retrieved context chunks."""
-    lang_name = _LANG_NAME.get(language, "English")
+    lang_name = _LANG_NAME.get(language, "Marathi")
 
     if context_chunks:
         formatted_context = ""
@@ -45,7 +63,7 @@ def build_grounded_prompt(
     else:
         formatted_context = "NO RELIABLE KNOWLEDGE RETRIEVED."
 
-    return (
+    base_prompt = (
         f"User language: {lang_name}\n"
         f"Detected intent: {intent}\n\n"
         f"RETRIEVED OFFICIAL KNOWLEDGE CONTEXT:\n"
@@ -53,6 +71,16 @@ def build_grounded_prompt(
         f"USER QUESTION:\n{message}\n\n"
         f"Instructions: Answer the user's question in {lang_name} adhering strictly to the system rules above."
     )
+
+    if response_mode == "voice":
+        base_prompt += (
+            f"\n\nVOICE MODE INSTRUCTIONS: Provide a concise, natural, spoken response suitable for text-to-speech. "
+            f"Keep the total answer strictly to 2 to 3 clear sentences maximum. "
+            f"Do NOT use markdown headings, asterisks, bullet points, or URLs. "
+            f"Answer strictly in {lang_name}."
+        )
+
+    return base_prompt
 
 
 # Controlled fallback messages per language when no knowledge is retrieved

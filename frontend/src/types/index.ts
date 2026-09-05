@@ -9,9 +9,9 @@ export interface Language {
 }
 
 export const LANGUAGES: Language[] = [
-  { code: "en", label: "English", nativeLabel: "English" },
-  { code: "hi", label: "Hindi", nativeLabel: "हिंदी" },
   { code: "mr", label: "Marathi", nativeLabel: "मराठी" },
+  { code: "hi", label: "Hindi", nativeLabel: "हिंदी" },
+  { code: "en", label: "English", nativeLabel: "English" },
 ];
 
 // ── Application Navigation Tabs ───────────────────────────────────────────────
@@ -107,6 +107,7 @@ export interface QueryRequest {
   message: string;
   language: LanguageCode;
   session_id?: string | null;
+  response_mode?: "text" | "voice";
 }
 
 export interface QueryResponse {

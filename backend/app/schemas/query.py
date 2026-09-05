@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 # ── Supported languages ──────────────────────────────────────────────────────
 
-LanguageCode = Literal["en", "hi", "mr"]
+LanguageCode = str
 
 # ── Intent categories ─────────────────────────────────────────────────────────
 
@@ -22,6 +22,7 @@ IntentCode = Literal[
     "FINANCIAL_LITERACY",
     "GRIEVANCE",
     "GENERAL_COOPERATIVE",
+    "GREETING",
 ]
 
 
@@ -36,8 +37,8 @@ class QueryRequest(BaseModel):
         examples=["What are the rules for PACS registration?"],
     )
     language: LanguageCode = Field(
-        default="en",
-        description="ISO 639-1 language code for the response.",
+        default="mr",
+        description="ISO language code: en | hi | mr | ta | te | kn | gu | bn | pa | ml",
     )
     session_id: Optional[str] = Field(
         default=None,
@@ -45,6 +46,10 @@ class QueryRequest(BaseModel):
             "Existing session UUID. If null, a new session is created automatically. "
             "Pass the session_id returned from the previous response to continue a session."
         ),
+    )
+    response_mode: Optional[Literal["text", "voice"]] = Field(
+        default="text",
+        description="Response presentation mode: 'text' (detailed) or 'voice' (concise spoken answer).",
     )
 
 

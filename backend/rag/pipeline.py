@@ -62,7 +62,21 @@ class RAGPipeline:
 
         # 1. Intent classification
         intent = _classify_intent(message)
-        logger.info("RAG Pipeline | intent=%s | lang=%s | msg=%.60s", intent, language, message)
+        logger.info("RAG Pipeline | intent=%s | lang=%s | mode=%s | msg=%.60s", intent, language, getattr(request, "response_mode", "text"), message)
+
+        # FAST PATH FOR GREETINGS: No retrieval or LLM call required
+        if intent == "GREETING":
+            from rag.prompts import GREETING_RESPONSES
+            greeting_ans = GREETING_RESPONSES.get(language, GREETING_RESPONSES.get("mr", GREETING_RESPONSES["en"]))
+            return QueryResponse(
+                answer=greeting_ans,
+                language=language,
+                intent="GREETING",
+                source="SahkaarSetu Welcome",
+                sources=[],
+                next_action=None,
+                session_id=request.session_id,
+            ), []
 
         # 2. Knowledge Retrieval
         try:
@@ -114,7 +128,8 @@ class RAGPipeline:
         # 5. Build grounded prompt & call Gemini using fast candidate fallback
         answer = None
         client = self._get_client()
-        prompt = build_grounded_prompt(message, language, intent, chunks)
+        resp_mode = getattr(request, "response_mode", "text") or "text"
+        prompt = build_grounded_prompt(message, language, intent, chunks, response_mode=resp_mode)
 
         model_candidates = [
             "gemini-3.5-flash-lite",
@@ -122,6 +137,8 @@ class RAGPipeline:
             "gemini-3.6-flash",
             "gemini-2.5-flash",
         ]
+
+        max_tokens = 250 if resp_mode == "voice" else 1024
 
         for model_name in model_candidates:
             try:
@@ -131,7 +148,7 @@ class RAGPipeline:
                     config=genai_types.GenerateContentConfig(
                         system_instruction=RAG_SYSTEM_INSTRUCTION,
                         temperature=0.2,  # Low temperature for strict factual grounding
-                        max_output_tokens=1024,
+                        max_output_tokens=max_tokens,
                     ),
                 )
                 if response and response.text:

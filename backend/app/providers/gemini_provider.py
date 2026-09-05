@@ -87,6 +87,10 @@ RESPONSE STYLE:
 # Evaluated in order; first match wins. Falls back to GENERAL_COOPERATIVE.
 _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
     (
+        ["hello", "hi", "namaskar", "namaste", "नमस्कार", "नमस्ते", "हॅलो", "हेलो", "गुड मॉर्निंग", "good morning", "vanakkam", "namaskaram"],
+        "GREETING",
+    ),
+    (
         ["pmfby", "fasal bima", "फसल बीमा", "पीएमएफबीवाय", "पीएमएफबीवाई", "crop insurance",
          "pradhan mantri fasal", "पीक विमा", "पिक विमा", "soyabeen", "soybean", "सोयाबीन",
          "peek kharab", "पिक खराब", "पीक खराब", "paus", "pausa", "pavsa", "पाऊस", "पावसामुळे",

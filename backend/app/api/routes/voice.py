@@ -47,9 +47,9 @@ class VoiceQueryRequest(BaseModel):
         default=None,
         description="Session UUID to maintain conversation history.",
     )
-    device_id: Optional[str] = Field(
-        default=None,
-        description="Physical ESP32-S3 hardware device identifier (e.g. esp32-pacs-unit-01).",
+    response_mode: str = Field(
+        default="voice",
+        description="Response mode: 'voice' (concise spoken response) or 'text'.",
     )
 
     def get_text(self) -> str:
@@ -80,13 +80,14 @@ async def voice_query(body: VoiceQueryRequest) -> VoiceQueryResponse:
                 detail="Voice query text (transcript or query field) cannot be empty.",
             )
 
-        logger.info("Voice Query received | device_id=%s | lang=%s | text=%.60s", body.device_id, body.language, query_text)
+        logger.info("Voice Query received | device_id=%s | lang=%s | mode=%s | text=%.60s", body.device_id, body.language, body.response_mode, query_text)
         
         # Delegate directly to shared query service
         res = await process_user_query(
             message=query_text,
             language=body.language,
             session_id=body.session_id,
+            response_mode=body.response_mode,
         )
 
         return VoiceQueryResponse(

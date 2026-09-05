@@ -3,8 +3,15 @@ import type { LanguageCode, ChatMessage } from "../types";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { useTextToSpeech } from "../hooks/useTextToSpeech";
 import { sendQuery } from "../api/client";
-import { parseGuidance } from "../utils/guidanceParser";
-import { SahkaarSetuLogo, MicIcon, PauseIcon, SpeakerIcon, ArrowRightIcon, ShieldCheckIcon } from "./Icons";
+import { detectLanguageFromText } from "../utils/languageDetector";
+import {
+  SahkaarSetuLogo,
+  MicIcon,
+  PauseIcon,
+  SpeakerIcon,
+  ArrowRightIcon,
+  ShieldCheckIcon,
+} from "./Icons";
 
 interface Props {
   language: LanguageCode;
@@ -12,71 +19,89 @@ interface Props {
   onNavigateToChat?: () => void;
 }
 
+const INTENT_LABELS: Record<string, Record<string, string>> = {
+  PMFBY: { mr: "पीक विमा (PMFBY)", hi: "फसल बीमा (PMFBY)", en: "PMFBY Crop Insurance" },
+  PACS_SERVICE: { mr: "पॅक्स सेवा (PACS)", hi: "पैक्स सेवाएं (PACS)", en: "PACS Services" },
+  COOPERATIVE_LAW: { mr: "सहकारी कायदे", hi: "सहकारी कानून", en: "Cooperative Law" },
+  COOPERATIVE_BYLAW: { mr: "सहकारी उपनियम", hi: "सहकारी उपनियम", en: "Cooperative By-Laws" },
+  MINISTRY_SCHEME: { mr: "सरकारी योजना", hi: "सरकारी योजनाएं", en: "Government Schemes" },
+  GRIEVANCE: { mr: "तक्रार निवारण", hi: "शिकायत सहायता", en: "Grievance Assistance" },
+  FINANCIAL_LITERACY: { mr: "आर्थिक साक्षरता", hi: "वित्तीय साक्षरता", en: "Financial Literacy" },
+  AGRICULTURAL_SUPPORT: { mr: "कृषी सहाय्य", hi: "कृषि सहायता", en: "Agricultural Support" },
+  GENERAL_COOPERATIVE: { mr: "सहकारी मार्गदर्शक", hi: "सहकारी मार्गदर्शक", en: "Cooperative Guidance" },
+  GREETING: { mr: "सहकारी स्वागत", hi: "सहकारी स्वागत", en: "Cooperative Welcome" },
+};
+
 export const VoiceModeView: React.FC<Props> = ({
   language,
   onClose,
   onNavigateToChat,
 }) => {
+  // Session ID persisted across continuous voice turns in this session
+  const [sessionId] = useState<string>(
+    () => `voice-session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+  );
+
+  const [activeLang, setActiveLang] = useState<LanguageCode>(language);
   const [userTranscript, setUserTranscript] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [aiResponse, setAiResponse] = useState<ChatMessage | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { speak, isSpeaking, stop: stopSpeaking } = useTextToSpeech();
-
-  const samplePrompt =
-    language === "hi"
-      ? "उदा. — मेरी फसल का नुकसान हो गया है, मुझे क्या करना चाहिए?"
-      : language === "en"
-      ? "e.g. — My crop suffered damage, what steps should I take?"
-      : "उदा. — माझ्या पिकाचे नुकसान झाले आहे, मला काय करावे?";
-
-  const titleText =
-    language === "hi"
-      ? "हिंदी में बोलें"
-      : language === "en"
-      ? "Speak in English"
-      : "मराठीत बोला";
+  const { speak, isSpeaking, stop: stopSpeaking, unlockAudio } = useTextToSpeech();
 
   const handleSpeechCaptured = async (text: string) => {
     if (!text || !text.trim() || isProcessing) return;
+
+    const startTime = performance.now();
     const trimmed = text.trim();
     setUserTranscript(trimmed);
     setIsProcessing(true);
     setErrorMsg(null);
     stopSpeaking();
+    unlockAudio();
+
+    // 1. Detect language from spoken input
+    const detectedLang = detectLanguageFromText(trimmed, activeLang);
+    setActiveLang(detectedLang);
 
     try {
+      // 2. Query backend with response_mode = "voice" for fast concise spoken answer
       const response = await sendQuery({
         message: trimmed,
-        language,
+        language: detectedLang,
+        session_id: sessionId,
+        response_mode: "voice",
       });
+
+      const elapsed = Math.round(performance.now() - startTime);
+      console.info(
+        `[VOICE_LATENCY] Captured: "${trimmed}" | Detected lang: ${detectedLang} | Intent: ${response.intent} | Time: ${elapsed}ms`
+      );
 
       const assistantMsg: ChatMessage = {
         id: `voice-msg-${Date.now()}`,
         role: "assistant",
         content: response.answer,
         timestamp: new Date(),
-        language: response.language,
+        language: response.language || detectedLang,
         sources: response.sources,
         intent: response.intent,
       };
 
       setAiResponse(assistantMsg);
 
-      // AUTOMATIC VOICE-FIRST PLAYBACK
-      // Parse summary/guidance and speak aloud automatically
-      const parsed = parseGuidance(response.answer, response.language);
-      const spokenText = parsed.summary || response.answer.slice(0, 200);
-      speak(assistantMsg.id, spokenText, response.language);
+      // 3. AUTOMATIC VOICE PLAYBACK IN DETECTED LANGUAGE
+      const targetLang = response.language || detectedLang;
+      speak(assistantMsg.id, response.answer, targetLang);
     } catch (err) {
-      console.error("Voice mode error:", err);
+      console.error("Voice processing error:", err);
       setErrorMsg(
-        language === "hi"
-          ? "आवाज संसाधित करने में समस्या आई। पुनः प्रयास करें।"
-          : language === "en"
+        detectedLang === "hi"
+          ? "उत्तर तैयार करने में समस्या आई। पुनः प्रयास करें।"
+          : detectedLang === "en"
           ? "Could not process voice input. Please try again."
-          : "आवाज प्रक्रिया करताना अडचण आली. कृपया पुन्हा प्रयत्न करा."
+          : "उत्तर तयार करताना अडचण आली. कृपया पुन्हा प्रयत्न करा."
       );
     } finally {
       setIsProcessing(false);
@@ -84,12 +109,13 @@ export const VoiceModeView: React.FC<Props> = ({
   };
 
   const { status, startListening, stopListening } = useSpeechRecognition({
-    language,
+    language: activeLang,
     onTranscript: handleSpeechCaptured,
   });
 
-  // Start listening on initial view open
+  // Start listening and unlock audio on initial view mount
   useEffect(() => {
+    unlockAudio();
     startListening();
     return () => {
       stopListening();
@@ -98,59 +124,96 @@ export const VoiceModeView: React.FC<Props> = ({
   }, []);
 
   const handleMicClick = () => {
+    unlockAudio();
     if (status === "listening") {
       stopListening();
     } else {
       setUserTranscript("");
       setAiResponse(null);
+      setErrorMsg(null);
       stopSpeaking();
       startListening();
     }
   };
 
+  const handleStopClick = () => {
+    stopSpeaking();
+  };
+
+  const handleSpeakAgainClick = () => {
+    unlockAudio();
+    stopSpeaking();
+    setUserTranscript("");
+    setAiResponse(null);
+    setErrorMsg(null);
+    startListening();
+  };
+
   const handleSampleClick = () => {
     const text =
-      language === "hi"
-        ? "मेरी फसल का नुकसान हो गया है, PMFBY में क्या करें?"
-        : language === "en"
-        ? "My crop suffered damage, what steps under PMFBY?"
-        : "माझ्या पिकाचे नुकसान झाले आहे, PMFBY मध्ये काय करावे?";
+      activeLang === "hi"
+        ? "मेरी फसल का नुकसान हो गया है, मुझे क्या करना चाहिए?"
+        : activeLang === "en"
+        ? "My crop suffered damage, what steps should I take?"
+        : "माझ्या पिकाचे नुकसान झाले आहे, मला काय करावे?";
     handleSpeechCaptured(text);
   };
 
+  const samplePrompt =
+    activeLang === "hi"
+      ? "उदा. — मेरी फसल का नुकसान हो गया है, मुझे क्या करना चाहिए?"
+      : activeLang === "en"
+      ? "e.g. — My crop suffered damage, what steps should I take?"
+      : "उदा. — माझ्या पिकाचे नुकसान झाले आहे, मला काय करावे?";
+
+  const titleText =
+    activeLang === "hi"
+      ? "हिंदी (बोलकर पूछें)"
+      : activeLang === "en"
+      ? "English (Voice Active)"
+      : "मराठी (बोलून विचारा)";
+
   // Status Labels
-  let statusLabel = language === "hi" ? "सुन रहा हूँ..." : language === "en" ? "Listening..." : "ऐकत आहे...";
+  let statusLabel =
+    activeLang === "hi" ? "सुन रहा हूँ..." : activeLang === "en" ? "Listening..." : "ऐकत आहे...";
+
   if (isProcessing) {
     statusLabel =
-      language === "hi"
+      activeLang === "hi"
         ? "उत्तर तैयार हो रहा है..."
-        : language === "en"
+        : activeLang === "en"
         ? "Preparing guidance..."
         : "उत्तर तयार होत आहे...";
   } else if (isSpeaking) {
     statusLabel =
-      language === "hi"
-        ? "उत्तर दे रहा हूँ..."
-        : language === "en"
+      activeLang === "hi"
+        ? "बोल रहा हूँ..."
+        : activeLang === "en"
         ? "SahkaarSetu Speaking..."
-        : "उत्तर देत आहे...";
+        : "बोलत आहे...";
   } else if (aiResponse) {
     statusLabel =
-      language === "hi"
-        ? "मार्गदर्शन प्राप्त हुआ"
-        : language === "en"
+      activeLang === "hi"
+        ? "मार्गदर्शन तैयार है"
+        : activeLang === "en"
         ? "Guidance Ready"
         : "मार्गदर्शन मिळाले";
   }
 
-  const parsedGuidance = aiResponse ? parseGuidance(aiResponse.content, language) : null;
+  // Dynamic Intent Label based on detected intent
+  const currentIntent = aiResponse?.intent || "GENERAL_COOPERATIVE";
+  const intentLabel =
+    INTENT_LABELS[currentIntent]?.[activeLang] ||
+    INTENT_LABELS[currentIntent]?.mr ||
+    INTENT_LABELS["GENERAL_COOPERATIVE"][activeLang] ||
+    "सहकारी सहाय्य";
 
   return (
     <div className="voice-mode-overlay" role="dialog" aria-label="Voice Assistance">
       {/* Header */}
       <div className="voice-mode-header">
         <div className="voice-mode-brand">
-          <SahkaarSetuLogo size={24} color="#126B62" />
+          <SahkaarSetuLogo size={24} color="#FFFFFF" />
           <span className="voice-mode-name">SahkaarSetu Voice</span>
         </div>
         <div className="voice-mode-lang">{titleText}</div>
@@ -179,6 +242,7 @@ export const VoiceModeView: React.FC<Props> = ({
                 : ""
             }`}
             onClick={handleMicClick}
+            aria-label="Toggle Microphone"
           >
             <MicIcon size={36} color="#FFFFFF" />
           </div>
@@ -192,7 +256,7 @@ export const VoiceModeView: React.FC<Props> = ({
         {userTranscript && (
           <div className="voice-user-transcript">
             <span className="transcript-label">
-              {language === "hi" ? "आपने कहा:" : language === "en" ? "You said:" : "तुम्ही म्हणालात:"}
+              {activeLang === "hi" ? "आपने कहा:" : activeLang === "en" ? "You said:" : "तुम्ही म्हणालात:"}
             </span>
             <p className="transcript-body">"{userTranscript}"</p>
           </div>
@@ -213,50 +277,50 @@ export const VoiceModeView: React.FC<Props> = ({
         {errorMsg && <div className="voice-error-bar">{errorMsg}</div>}
 
         {/* Spoken AI Response Card */}
-        {parsedGuidance && (
+        {aiResponse && (
           <div className="voice-response-card">
             <div className="voice-response-header">
               <ShieldCheckIcon size={16} color="#126B62" />
-              <span>{parsedGuidance.domainLabel}</span>
+              <span>{intentLabel}</span>
             </div>
 
-            <p className="voice-response-summary">{parsedGuidance.summary}</p>
+            <p className="voice-response-summary">{aiResponse.content}</p>
 
-            {/* Playback Controls */}
+            {/* Playback & Voice Action Controls */}
             <div className="voice-controls-row">
               {isSpeaking ? (
                 <button
                   type="button"
                   className="voice-control-btn voice-control-btn--active"
-                  onClick={stopSpeaking}
+                  onClick={handleStopClick}
                 >
                   <PauseIcon size={16} />
-                  <span>{language === "hi" ? "रोकें" : language === "en" ? "Stop" : "थांबवा"}</span>
+                  <span>{activeLang === "hi" ? "रोकें" : activeLang === "en" ? "Stop" : "थांबवा"}</span>
                 </button>
               ) : (
                 <button
                   type="button"
                   className="voice-control-btn"
                   onClick={() =>
-                    aiResponse && speak(aiResponse.id, parsedGuidance.summary, language)
+                    aiResponse && speak(aiResponse.id, aiResponse.content, aiResponse.language || activeLang)
                   }
                 >
                   <SpeakerIcon size={16} />
                   <span>
-                    {language === "hi" ? "फिर से सुनें" : language === "en" ? "Listen Again" : "पुन्हा ऐका"}
+                    {activeLang === "hi" ? "ऐकें" : activeLang === "en" ? "Listen" : "ऐका"}
                   </span>
                 </button>
               )}
 
-              {/* Repeat Speak CTA */}
+              {/* Continuous Voice Conversation: Speak Again */}
               <button
                 type="button"
                 className="voice-control-btn voice-control-btn--primary"
-                onClick={handleMicClick}
+                onClick={handleSpeakAgainClick}
               >
                 <MicIcon size={16} color="#FFFFFF" />
                 <span>
-                  {language === "hi" ? "फिर बोलें" : language === "en" ? "Speak Again" : "पुन्हा बोला"}
+                  {activeLang === "hi" ? "फिर बोलें" : activeLang === "en" ? "Speak Again" : "पुन्हा बोला"}
                 </span>
               </button>
             </div>
@@ -276,9 +340,9 @@ export const VoiceModeView: React.FC<Props> = ({
             }}
           >
             <span>
-              {language === "hi"
+              {activeLang === "hi"
                 ? "लिखित चैट उत्तर देखें"
-                : language === "en"
+                : activeLang === "en"
                 ? "View Detailed Text Chat"
                 : "सविस्तर मजकूर चॅट पाहा"}
             </span>

@@ -64,8 +64,9 @@ def _async_persist_chat_history(
 
 async def process_user_query(
     message: str,
-    language: str = "en",
+    language: str = "mr",
     session_id: Optional[str] = None,
+    response_mode: str = "text",
 ) -> QueryResponse:
     """
     Central AI processing entry point for ALL client interfaces (Web, ESP32 Voice, Vision).
@@ -82,6 +83,7 @@ async def process_user_query(
         message=clean_message,
         language=language,  # type: ignore[arg-type]
         session_id=res_session_id,
+        response_mode=response_mode,  # type: ignore[arg-type]
     )
 
     rag_response, raw_sources = await _rag_pipeline.process_query(req_obj)

@@ -38,6 +38,7 @@ async def query(body: QueryRequest) -> QueryResponse:
             message=body.message,
             language=body.language,
             session_id=body.session_id,
+            response_mode=body.response_mode or "text",
         )
     except Exception as exc:
         logger.exception("Unexpected error in /api/query: %s", exc)

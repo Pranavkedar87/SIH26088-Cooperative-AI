@@ -1,10 +1,17 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { LanguageCode } from "../types";
 
-const LANG_VOICE_PREFERENCES: Record<LanguageCode, string[]> = {
+const LANG_VOICE_PREFERENCES: Record<string, string[]> = {
   en: ["en-IN", "en-US", "en-GB", "en"],
-  hi: ["hi-IN", "hi"],
-  mr: ["mr-IN", "mr", "hi-IN", "hi"], // Fallback to Hindi voice if Marathi voice is not installed
+  hi: ["hi-IN", "hi", "en-IN"],
+  mr: ["mr-IN", "mr", "hi-IN", "hi", "en-IN"], // Fallback to Hindi voice if Marathi voice is missing
+  ta: ["ta-IN", "ta", "hi-IN", "en-IN"],
+  te: ["te-IN", "te", "hi-IN", "en-IN"],
+  kn: ["kn-IN", "kn", "hi-IN", "en-IN"],
+  gu: ["gu-IN", "gu", "hi-IN", "en-IN"],
+  bn: ["bn-IN", "bn", "hi-IN", "en-IN"],
+  pa: ["pa-IN", "pa", "hi-IN", "en-IN"],
+  ml: ["ml-IN", "ml", "hi-IN", "en-IN"],
 };
 
 interface UseTextToSpeechReturn {
@@ -12,6 +19,7 @@ interface UseTextToSpeechReturn {
   isSpeaking: boolean;
   speak: (id: string, text: string, language: LanguageCode) => void;
   stop: () => void;
+  unlockAudio: () => void;
   isSupported: boolean;
 }
 
@@ -22,6 +30,19 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const isSupported = typeof window !== "undefined" && "speechSynthesis" in window;
+
+  const unlockAudio = useCallback(() => {
+    if (isSupported && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.resume();
+        const dummy = new SpeechSynthesisUtterance("");
+        dummy.volume = 0;
+        window.speechSynthesis.speak(dummy);
+      } catch (e) {
+        // ignore unlock errors
+      }
+    }
+  }, [isSupported]);
 
   // Load available voices
   useEffect(() => {
@@ -61,7 +82,7 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
   const speak = useCallback(
     (id: string, text: string, language: LanguageCode) => {
       if (!isSupported) {
-        console.warn("Speech Synthesis is not supported in this browser.");
+        console.warn("[TTS] Speech Synthesis is not supported in this browser.");
         return;
       }
 
@@ -84,25 +105,36 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
 
       if (!cleanText) return;
 
-      try {
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        
-        const preferredLangCode = LANG_VOICE_PREFERENCES[language]?.[0] || "en-IN";
-        utterance.lang = preferredLangCode;
+      const bestVoice = findBestVoice(language, voices);
+      const preferredLangCode = LANG_VOICE_PREFERENCES[language]?.[0] || "en-IN";
 
-        const bestVoice = findBestVoice(language, voices);
+      console.info(`[TTS] Request started | lang: ${language} | text len: ${cleanText.length} | voice: ${bestVoice?.name || preferredLangCode}`);
+
+      try {
+        window.speechSynthesis.resume();
+
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = bestVoice ? bestVoice.lang : preferredLangCode;
+
         if (bestVoice) {
           utterance.voice = bestVoice;
         }
 
+        utterance.onstart = () => {
+          console.info("[TTS] Audio playback started.");
+          setActiveId(id);
+          setIsSpeaking(true);
+        };
+
         utterance.onend = () => {
+          console.info("[TTS] Audio playback completed.");
           setActiveId(null);
           setIsSpeaking(false);
           currentUtteranceRef.current = null;
         };
 
         utterance.onerror = (e) => {
-          console.warn("TTS error:", e);
+          console.warn("[TTS] Playback error or interrupted:", e);
           setActiveId(null);
           setIsSpeaking(false);
           currentUtteranceRef.current = null;
@@ -114,7 +146,7 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
 
         window.speechSynthesis.speak(utterance);
       } catch (err) {
-        console.error("Failed to execute TTS:", err);
+        console.error("[TTS] Failed to execute TTS speak:", err);
         stop();
       }
     },
@@ -133,6 +165,7 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     isSpeaking,
     speak,
     stop,
+    unlockAudio,
     isSupported,
   };
 }

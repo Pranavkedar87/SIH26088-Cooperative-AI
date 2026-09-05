@@ -32,6 +32,7 @@ export async function checkHealth(): Promise<{ status: string }> {
 function generateFallbackResponse(request: QueryRequest): QueryResponse {
   const msg = request.message.toLowerCase();
   const lang = request.language || "mr";
+  const isVoice = request.response_mode === "voice";
 
   // PMFBY Crop Insurance Query
   if (
@@ -45,6 +46,22 @@ function generateFallbackResponse(request: QueryRequest): QueryResponse {
     msg.includes("रब्बी") ||
     msg.includes("72")
   ) {
+    if (isVoice) {
+      const voiceAns =
+        lang === "hi"
+          ? "आपकी फसल का नुकसान हुआ है, तो 72 घंटे के भीतर PMFBY ऐप या कृषि अधिकारी को सूचित करें। आधार कार्ड और 7/12 पासबुक तैयार रखें।"
+          : lang === "en"
+          ? "If your crop suffered damage, report it within 72 hours via the PMFBY app or to your local agriculture officer. Keep land documents ready."
+          : "तुमच्या पिकाचे नुकसान झाले असल्यास, ७२ तासांच्या आत PMFBY ॲप किंवा कृषी अधिकाऱ्याकडे तक्रार नोंदवा. ७/१२ उतारा व आधार कार्ड सोबत ठेवा.";
+      return {
+        answer: voiceAns,
+        language: lang,
+        intent: "PMFBY",
+        source: "PMFBY Guidelines",
+        sources: [],
+        next_action: null,
+      };
+    }
     if (lang === "hi") {
       return {
         answer: `### 1. फसल क्षति दावा एवं 72 घंटे की समय-सीमा
@@ -152,6 +169,22 @@ Delayed intimations beyond 72 hours are liable for rejection. Notify immediately
 
   // PACS Query
   if (msg.includes("pacs") || msg.includes("पॅक्स") || msg.includes("सोसायटी")) {
+    if (isVoice) {
+      const voiceAns =
+        lang === "hi"
+          ? "पैक्स संस्थाएं किसानों को अल्पकालिक ऋण, खाद और बीज उपलब्ध कराती हैं। आप 7/12 और आधार कार्ड के साथ सदस्य बन सकते हैं।"
+          : lang === "en"
+          ? "PACS credit societies provide short-term crop loans, fertilizers, and seeds to farmers. You can join with land documents and Aadhaar."
+          : "पॅक्स संस्था शेतकऱ्यांना अल्पमुदत पीक कर्ज, खते आणि बियाणे पुरवतात. ७/१२ उतारा आणि आधार कार्ड देऊन तुम्ही सभासद होऊ शकता.";
+      return {
+        answer: voiceAns,
+        language: lang,
+        intent: "PACS_SERVICE",
+        source: "PACS Guidelines",
+        sources: [],
+        next_action: null,
+      };
+    }
     return {
       answer: `### 1. प्राथमिक कृषी पतसंस्था (PACS) सेवा
 
