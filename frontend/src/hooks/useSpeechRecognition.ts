@@ -105,6 +105,9 @@ export function useSpeechRecognition({
       recognition.continuous = false;
       recognition.interimResults = false;
 
+      // Optimistically indicate listening so mic UI immediately responds
+      setStatus("listening");
+
       recognition.onstart = () => {
         setStatus("listening");
       };
@@ -124,27 +127,34 @@ export function useSpeechRecognition({
         const err = event.error;
         console.warn("Speech recognition error:", err, "lang:", currentLang);
 
-        if (err === "not-allowed" || err === "permission-denied") {
+        if (err === "permission-denied") {
           setStatus("error");
           setErrorMessage("Microphone permission denied. Please allow microphone access in your browser settings.");
+          return;
+        }
+
+        // If current language code failed and we have fallback language codes available, retry
+        if (langIndexRef.current < targetLangs.length - 1) {
+          langIndexRef.current += 1;
+          console.info("Retrying STT with fallback language code:", targetLangs[langIndexRef.current]);
+          setTimeout(() => startListening(), 50);
+          return;
+        }
+
+        if (err === "not-allowed") {
+          setStatus("error");
+          setErrorMessage("Microphone access not allowed. Check browser permissions.");
         } else if (err === "no-speech") {
           setStatus("error");
           setErrorMessage("No speech detected. Click mic to try speaking again.");
         } else if (err === "language-not-supported" || err === "service-not-allowed") {
-          if (langIndexRef.current < targetLangs.length - 1) {
-            langIndexRef.current += 1;
-            console.info("Retrying STT with fallback language code:", targetLangs[langIndexRef.current]);
-            setTimeout(() => startListening(), 100);
-            return;
-          }
           setStatus("error");
           if (err === "service-not-allowed") {
             setErrorMessage("Safari requires Dictation enabled (System Settings → Keyboard → Dictation). For best multi-lingual voice support, use Google Chrome.");
           } else {
-            setErrorMessage("Selected language is not supported by your browser's speech engine. Try Google Chrome or type your question.");
+            setErrorMessage("Selected language is not supported by your browser. Try Google Chrome or type your question.");
           }
-        }
- else if (err === "audio-capture") {
+        } else if (err === "audio-capture") {
           setStatus("error");
           setErrorMessage("No microphone detected. Please connect a microphone and try again.");
         } else if (err === "aborted") {
@@ -163,11 +173,17 @@ export function useSpeechRecognition({
       recognitionRef.current = recognition;
       recognition.start();
     } catch (err) {
-      console.error("Failed to start speech recognition:", err);
+      console.error("Failed to start speech recognition synchronously:", err);
+      if (langIndexRef.current < targetLangs.length - 1) {
+        langIndexRef.current += 1;
+        setTimeout(() => startListening(), 50);
+        return;
+      }
       setStatus("error");
       setErrorMessage("Could not start voice recognition. Please try typing instead.");
     }
   }, [SpeechRecognitionClass, language]);
+
 
   useEffect(() => {
     langIndexRef.current = 0;
