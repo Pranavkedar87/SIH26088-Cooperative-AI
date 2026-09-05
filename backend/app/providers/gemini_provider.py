@@ -87,13 +87,13 @@ RESPONSE STYLE:
 # Evaluated in order; first match wins. Falls back to GENERAL_COOPERATIVE.
 _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
     (
-        ["pmfby", "fasal bima", "फसल बीमा", "पीएमएफबीवाय", "crop insurance",
-         "pradhan mantri fasal"],
+        ["pmfby", "fasal bima", "फसल बीमा", "पीएमएफबीवाय", "पीएमएफबीवाई", "crop insurance",
+         "pradhan mantri fasal", "पीक विमा", "पिक विमा"],
         "PMFBY",
     ),
     (
         ["pacs", "पैक्स", "पॅक्स", "primary agricultural credit",
-         "प्राथमिक कृषि", "primary agri"],
+         "प्राथमिक कृषि", "प्राथमिक कृषी", "primary agri"],
         "PACS_SERVICE",
     ),
     (
@@ -112,20 +112,20 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
         "COOPERATIVE_LAW",
     ),
     (
+        ["financial literacy", "वित्तीय साक्षरता", "आर्थिक साक्षरता",
+         "kcc", "kisan credit", "किसान क्रेडिट", "saving", "बचत", "investment", "निवेश", "budget", "interest",
+         "emi", "fd", "fixed deposit", "credit card"],
+        "FINANCIAL_LITERACY",
+    ),
+    (
         ["scheme", "योजना", "yojana", "subsidy", "अनुदान", "benefit",
          "ministry", "government scheme", "sarkar", "सरकार"],
         "MINISTRY_SCHEME",
     ),
     (
-        ["kcc", "kisan credit", "किसान क्रेडिट", "loan", "कर्ज", "कर्ज",
-         "crop loan", "agricultural loan", "farming"],
+        ["crop loan", "agricultural loan", "farming loan", "farm loan", "agricultural support",
+         "krishi", "कृषि", "शेती", "fertilizer", "seed"],
         "AGRICULTURAL_SUPPORT",
-    ),
-    (
-        ["financial literacy", "वित्तीय साक्षरता", "आर्थिक साक्षरता",
-         "saving", "बचत", "investment", "निवेश", "budget", "interest",
-         "emi", "fd", "fixed deposit"],
-        "FINANCIAL_LITERACY",
     ),
 ]
 

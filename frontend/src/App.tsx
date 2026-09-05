@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import type { ChatMessage, LanguageCode } from "./types";
 import { sendQuery } from "./api/client";
+import { useTextToSpeech } from "./hooks/useTextToSpeech";
 import LanguageSelector from "./components/LanguageSelector";
 import QuickTopics from "./components/QuickTopics";
 import ChatArea from "./components/ChatArea";
@@ -44,6 +45,8 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
+
+  const { activeId, speak } = useTextToSpeech();
 
   const addMessage = useCallback((msg: ChatMessage) => {
     setMessages((prev) => [...prev, msg]);
@@ -139,7 +142,13 @@ const App: React.FC = () => {
         )}
 
         {/* Conversation */}
-        <ChatArea messages={messages} isLoading={isLoading} language={language} />
+        <ChatArea
+          messages={messages}
+          isLoading={isLoading}
+          language={language}
+          onSpeak={speak}
+          activeSpeakingId={activeId}
+        />
       </main>
 
       {/* ── Input ──────────────────────────────────────────────────────── */}

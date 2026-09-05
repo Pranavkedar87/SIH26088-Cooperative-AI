@@ -1,17 +1,25 @@
 import React from "react";
-import type { ChatMessage as ChatMessageType } from "../types";
+import type { ChatMessage as ChatMessageType, LanguageCode } from "../types";
 
 interface Props {
   message: ChatMessageType;
+  onSpeak?: (id: string, text: string, language: LanguageCode) => void;
+  isSpeaking?: boolean;
 }
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-const ChatMessage: React.FC<Props> = ({ message }) => {
+const ChatMessage: React.FC<Props> = ({ message, onSpeak, isSpeaking = false }) => {
   const isUser = message.role === "user";
   const hasSources = !isUser && message.sources && message.sources.length > 0;
+
+  const handleSpeakClick = () => {
+    if (onSpeak) {
+      onSpeak(message.id, message.content, message.language);
+    }
+  };
 
   return (
     <div className={`chat-message chat-message--${message.role}`}>
@@ -45,7 +53,20 @@ const ChatMessage: React.FC<Props> = ({ message }) => {
           </div>
         )}
 
-        <span className="chat-message__time">{formatTime(message.timestamp)}</span>
+        <div className="chat-message__footer">
+          {!isUser && onSpeak && (
+            <button
+              type="button"
+              className={`tts-btn ${isSpeaking ? "tts-btn--active" : ""}`}
+              onClick={handleSpeakClick}
+              aria-label={isSpeaking ? "Stop reading" : "Read answer aloud"}
+              title={isSpeaking ? "Stop reading" : "Read answer aloud"}
+            >
+              {isSpeaking ? "⏹ Stop" : "🔊 Read aloud"}
+            </button>
+          )}
+          <span className="chat-message__time">{formatTime(message.timestamp)}</span>
+        </div>
       </div>
     </div>
   );

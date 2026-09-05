@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import math
 import logging
-from typing import Optional, TypedDict
+from typing import Optional
+try:
+    from typing_extensions import TypedDict
+except ImportError:
+    from typing import TypedDict  # type: ignore[assignment]
 
 from database.supabase import get_supabase_client
 from rag.embeddings import GeminiEmbeddingProvider

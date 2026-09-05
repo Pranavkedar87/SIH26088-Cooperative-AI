@@ -12,7 +12,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
-from app.api.routes import health, query, conversations, voice, vision
+from app.api.routes import health, query, conversations, voice, vision, knowledge, grievance
 
 # ── Settings ─────────────────────────────────────────────────────────────────
 settings = get_settings()
@@ -51,5 +51,8 @@ app.include_router(query.router)
 app.include_router(conversations.router)
 app.include_router(voice.router)
 app.include_router(vision.router)
+app.include_router(knowledge.router)
+app.include_router(grievance.router)
 
 logger.info("Cooperative AI Assistant API started | env=%s", settings.app_env)
+

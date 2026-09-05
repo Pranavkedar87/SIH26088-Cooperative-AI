@@ -173,53 +173,79 @@ Expected response:
   "language": "en",
   "intent": "GENERAL_COOPERATIVE",
   "source": null,
-  "next_action": null
-}
+## 📦 Software Completion Status (Task 6 Complete)
+
+- [x] **React + Vite + TypeScript Frontend**
+- [x] **Multilingual Support**: English (`en-IN`), Hindi (`hi-IN`), Marathi (`mr-IN`)
+- [x] **Web Speech STT & TTS**: Browser-native SpeechRecognition & SpeechSynthesis with voice controls
+- [x] **FastAPI Backend Gateway**: Centralized `process_user_query()` single source of truth
+- [x] **RAG Knowledge Pipeline**: Supabase PostgreSQL + `pgvector` IVFFlat similarity search (768-dim embeddings)
+- [x] **Gemini 1.5/2.0 AI Generation**: Strictly grounded with anti-hallucination & prompt injection defense
+- [x] **Verified Source Citations**: Real government URLs (`cooperation.gov.in`, `pmfby.gov.in`, `nabard.org`)
+- [x] **Domain APIs & Grievance Workflow**: Document listing, Knowledge search, and Grievance preparation summary
+- [x] **Hardware-Ready API Contracts**: `/api/voice/query` and `/api/vision/query` ready for tomorrow's ESP32-S3
+
+---
+
+## 🛠️ API Inventory
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Server health check |
+| `POST` | `/api/query` | Text query endpoint |
+| `GET` | `/api/conversations/{id}/messages` | Fetch chat history turns |
+| `POST` | `/api/voice/query` | Web & ESP32-S3 hardware voice contract |
+| `POST` | `/api/vision/query` | Camera / OCR document contract |
+| `GET` | `/api/knowledge/documents` | List registered knowledge documents |
+| `GET` | `/api/knowledge/search` | Vector search knowledge chunks |
+| `POST` | `/api/grievance` | Grievance draft creation & summary |
+| `GET` | `/api/grievance/{id}` | Fetch grievance record details |
+| `GET` | `/api/grievance/{id}/summary` | Fetch complaint summary & verification guide |
+
+Interactive Swagger API Documentation is available at **http://localhost:8000/docs**.
+
+---
+
+## 🧪 Testing Commands
+
+### Backend Verification Suite
+```bash
+cd backend
+PYTHONPATH=. .venv/bin/python /Users/pranav/.gemini/antigravity/brain/c58c5817-7655-4820-a79e-489928cd0b8e/scratch/test_task6_verification.py
+```
+
+### Frontend Build Check
+```bash
+cd frontend
+npm run build
 ```
 
 ---
 
-## 📦 Current MVP Scope (Milestone 1)
+## 🔌 Hardware-Ready Architecture (ESP32-S3 Ready for Tomorrow)
 
-- [x] React + Vite + TypeScript frontend
-- [x] Multilingual UI (English, Hindi, Marathi)
-- [x] Chat interface with quick topic buttons
-- [x] Mobile-responsive design
-- [x] FastAPI backend with CORS configured
-- [x] `GET /health` endpoint
-- [x] `POST /api/query` with Pydantic validation
-- [x] `AIProvider` abstraction layer
-- [x] `GeminiProvider` stub (returns placeholder responses)
-- [x] Supabase config ready in settings
-- [x] `.env.example` for both frontend and backend
+```
+                  ┌──────────────────────┐
+                  │  ESP32-S3 Hardware   │
+                  │  INMP441 / Button    │
+                  └──────────┬───────────┘
+                             │
+                      HTTPS POST /api/voice/query
+                             │
+                             ▼
+                  ┌──────────────────────┐
+                  │   FastAPI Gateway    │
+                  └──────────┬───────────┘
+                             │
+                             ▼
+                    process_user_query()
+                             │
+              ┌──────────────┴──────────────┐
+              ▼                             ▼
+         RAG + Gemini                  Persistence
+```
 
----
-
-## 🗺️ Future Modules
-
-| Milestone | Module |
-|---|---|
-| M2 | Gemini API integration + intent classification |
-| M3 | RAG pipeline with Supabase pgvector |
-| M4 | Web voice (Speech-to-Text / Text-to-Speech) |
-| M5 | Grievance workflow (file, track, escalate) |
-| M6 | Supabase database schema (users, grievances, sessions) |
-| M7 | Authentication |
-| M8 | ESP32 / INMP441 hardware integration |
-| M9 | OV2640 camera + OCR |
-| M10 | Hardware dashboard + telemetry |
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Frontend | React 18, Vite, TypeScript |
-| Backend | Python 3.11, FastAPI, Pydantic v2 |
-| AI | Google Gemini API |
-| Database | Supabase (PostgreSQL + pgvector) |
-| Deployment | Vercel (frontend), Render (backend), Supabase (DB) |
+*Note: ESP32 devices communicate purely over HTTPS with FastAPI and require zero secret keys (`GEMINI_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).*
 
 ---
 

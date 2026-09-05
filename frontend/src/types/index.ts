@@ -114,3 +114,8 @@ export interface QueryResponse {
   session_id?: string | null;
   conversation_id?: string | null;
 }
+
+// ── Voice / Speech ───────────────────────────────────────────────────────────
+
+export type STTStatus = "idle" | "listening" | "processing" | "error" | "unsupported";
+

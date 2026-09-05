@@ -135,3 +135,74 @@ def get_conversation_messages(conversation_id: str) -> list[dict]:
             exc,
         )
         return []
+
+
+# ── Grievances ────────────────────────────────────────────────────────────────
+
+def create_grievance(
+    conversation_id: Optional[str],
+    category: str,
+    description: str,
+    status: str = "draft",
+) -> Optional[str]:
+    """
+    Create a new grievance record in Supabase.
+    Returns grievance UUID string or None on failure.
+    """
+    client = get_supabase_client()
+    if client is None:
+        return None
+
+    grievance_id = _new_id()
+    try:
+        client.table("grievances").insert({
+            "id": grievance_id,
+            "conversation_id": conversation_id,
+            "category": category,
+            "description": description,
+            "status": status,
+        }).execute()
+        logger.info("Grievance record created: %s (category=%s)", grievance_id, category)
+        return grievance_id
+    except Exception as exc:
+        logger.error("Failed to create grievance: %s", exc)
+        return None
+
+
+def get_grievance(grievance_id: str) -> Optional[dict]:
+    """
+    Fetch a grievance record by UUID.
+    Returns dict or None if not found/error.
+    """
+    client = get_supabase_client()
+    if client is None:
+        return None
+
+    try:
+        res = client.table("grievances").select("*").eq("id", grievance_id).execute()
+        if res.data and len(res.data) > 0:
+            return res.data[0]
+        return None
+    except Exception as exc:
+        logger.error("Failed to fetch grievance %s: %s", grievance_id, exc)
+        return None
+
+
+# ── Knowledge Documents ───────────────────────────────────────────────────────
+
+def get_knowledge_documents() -> list[dict]:
+    """
+    Fetch all knowledge documents stored in database.
+    Returns empty list on failure.
+    """
+    client = get_supabase_client()
+    if client is None:
+        return []
+
+    try:
+        res = client.table("knowledge_documents").select("*").order("created_at", desc=True).execute()
+        return res.data or []
+    except Exception as exc:
+        logger.error("Failed to fetch knowledge documents: %s", exc)
+        return []
+

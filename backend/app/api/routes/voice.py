@@ -30,10 +30,14 @@ router = APIRouter(prefix="/api/voice", tags=["voice"])
 
 
 class VoiceQueryRequest(BaseModel):
-    transcript: str = Field(
-        ...,
+    transcript: Optional[str] = Field(
+        default=None,
         description="Transcribed text from browser STT or ESP32-S3 microphone input.",
         examples=["PMFBY म्हणजे काय?"],
+    )
+    query: Optional[str] = Field(
+        default=None,
+        description="Alternative field name for transcribed text query.",
     )
     language: str = Field(
         default="en",
@@ -47,6 +51,10 @@ class VoiceQueryRequest(BaseModel):
         default=None,
         description="Physical ESP32-S3 hardware device identifier (e.g. esp32-pacs-unit-01).",
     )
+
+    def get_text(self) -> str:
+        text = self.transcript or self.query or ""
+        return text.strip()
 
 
 class VoiceQueryResponse(QueryResponse):
@@ -65,11 +73,18 @@ async def voice_query(body: VoiceQueryRequest) -> VoiceQueryResponse:
     This ensures physical devices (ESP32) and web voice use the exact same AI brain.
     """
     try:
-        logger.info("Voice Query received | device_id=%s | lang=%s", body.device_id, body.language)
+        query_text = body.get_text()
+        if not query_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Voice query text (transcript or query field) cannot be empty.",
+            )
+
+        logger.info("Voice Query received | device_id=%s | lang=%s | text=%.60s", body.device_id, body.language, query_text)
         
         # Delegate directly to shared query service
         res = await process_user_query(
-            message=body.transcript,
+            message=query_text,
             language=body.language,
             session_id=body.session_id,
         )
@@ -83,12 +98,15 @@ async def voice_query(body: VoiceQueryRequest) -> VoiceQueryResponse:
             next_action=res.next_action,
             session_id=res.session_id,
             conversation_id=res.conversation_id,
-            audio_url=None,  # TTS audio stream URL will be populated in Task 5
+            audio_url=None,  # TTS audio stream URL will be populated in future hardware task
         )
 
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("Error in /api/voice/query: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while processing voice request.",
         ) from exc
+

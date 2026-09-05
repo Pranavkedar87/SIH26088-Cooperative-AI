@@ -6,6 +6,8 @@ interface Props {
   messages: ChatMessageType[];
   isLoading: boolean;
   language: LanguageCode;
+  onSpeak?: (id: string, text: string, language: LanguageCode) => void;
+  activeSpeakingId?: string | null;
 }
 
 const EMPTY_TEXT: Record<LanguageCode, string> = {
@@ -14,7 +16,13 @@ const EMPTY_TEXT: Record<LanguageCode, string> = {
   mr: "प्रारंभ करण्यासाठी खाली तुमचा प्रश्न विचारा.",
 };
 
-const ChatArea: React.FC<Props> = ({ messages, isLoading, language }) => {
+const ChatArea: React.FC<Props> = ({
+  messages,
+  isLoading,
+  language,
+  onSpeak,
+  activeSpeakingId,
+}) => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,7 +39,12 @@ const ChatArea: React.FC<Props> = ({ messages, isLoading, language }) => {
       )}
 
       {messages.map((msg) => (
-        <ChatMessage key={msg.id} message={msg} />
+        <ChatMessage
+          key={msg.id}
+          message={msg}
+          onSpeak={onSpeak}
+          isSpeaking={activeSpeakingId === msg.id}
+        />
       ))}
 
       {isLoading && (

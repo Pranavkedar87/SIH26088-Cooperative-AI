@@ -29,7 +29,9 @@ STRICT_KNOWLEDGE_INTENTS: set[str] = {
     "AGRICULTURAL_SUPPORT",
     "FINANCIAL_LITERACY",
     "GRIEVANCE",
+    "GENERAL_COOPERATIVE",
 }
+
 
 
 class RAGPipeline:
@@ -61,13 +63,17 @@ class RAGPipeline:
         logger.info("RAG Pipeline | intent=%s | lang=%s | msg=%.60s", intent, language, message)
 
         # 2. Knowledge Retrieval
-        chunks: list[RetrievedChunk] = retrieve_relevant_knowledge(
-            query=message,
-            language=language,
-            intent=intent,
-            top_k=4,
-            match_threshold=0.45,
-        )
+        try:
+            chunks: list[RetrievedChunk] = retrieve_relevant_knowledge(
+                query=message,
+                language=language,
+                intent=intent,
+                top_k=4,
+                match_threshold=0.45,
+            )
+        except Exception as exc:
+            logger.error("Knowledge retrieval failed (falling back to controlled refusal): %s", exc)
+            chunks = []
 
         logger.info("RAG Pipeline | retrieved %d chunks for intent %s", len(chunks), intent)
 
