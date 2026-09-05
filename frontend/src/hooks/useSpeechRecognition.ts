@@ -37,6 +37,12 @@ export function useSpeechRecognition({
   const recognitionRef = useRef<any>(null);
   const langIndexRef = useRef<number>(0);
 
+  // Keep latest onTranscript in ref to prevent startListening recreation loops
+  const onTranscriptRef = useRef(onTranscript);
+  useEffect(() => {
+    onTranscriptRef.current = onTranscript;
+  }, [onTranscript]);
+
   const SpeechRecognitionClass =
     typeof window !== "undefined"
       ? window.SpeechRecognition || window.webkitSpeechRecognition
@@ -46,14 +52,16 @@ export function useSpeechRecognition({
 
   const clearError = useCallback(() => {
     setErrorMessage(null);
-    if (status === "error") {
-      setStatus("idle");
-    }
-  }, [status]);
+    setStatus("idle");
+  }, []);
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current) {
       try {
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
         recognitionRef.current.stop();
       } catch (e) {
         // Ignore stop errors if already stopped
@@ -65,6 +73,7 @@ export function useSpeechRecognition({
 
   const startListening = useCallback(() => {
     setErrorMessage(null);
+    langIndexRef.current = 0; // Reset language fallback index on explicit user request
 
     if (!SpeechRecognitionClass) {
       setStatus("unsupported");
@@ -72,12 +81,18 @@ export function useSpeechRecognition({
       return;
     }
 
+    // Clean up any existing recognition instance to avoid InvalidStateError
     if (recognitionRef.current) {
       try {
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
         recognitionRef.current.abort();
       } catch (e) {
         // Ignore abort errors
       }
+      recognitionRef.current = null;
     }
 
     const targetLangs = STT_LANG_MAP[language] || ["en-IN"];
@@ -98,7 +113,7 @@ export function useSpeechRecognition({
         if (event.results && event.results[0] && event.results[0][0]) {
           const text = event.results[0][0].transcript;
           if (text && text.trim()) {
-            onTranscript(text.trim());
+            onTranscriptRef.current(text.trim());
           }
         }
         setStatus("idle");
@@ -113,26 +128,27 @@ export function useSpeechRecognition({
           setErrorMessage("Microphone permission denied. Please allow microphone access in your browser settings.");
         } else if (err === "no-speech") {
           setStatus("error");
-          setErrorMessage("No speech detected. Please try speaking again.");
+          setErrorMessage("No speech detected. Click mic to try speaking again.");
         } else if (err === "service-not-allowed") {
           setStatus("error");
-          setErrorMessage("Voice recognition service not enabled in browser. Please check microphone/Siri settings or try Google Chrome.");
+          setErrorMessage("Voice recognition service not enabled in browser. Check microphone/Siri settings or try Google Chrome.");
         } else if (err === "language-not-supported") {
-          // Retry with next fallback language code if available
           if (langIndexRef.current < targetLangs.length - 1) {
             langIndexRef.current += 1;
             console.info("Retrying STT with fallback language:", targetLangs[langIndexRef.current]);
-            startListening();
+            setTimeout(() => startListening(), 100);
             return;
           }
           setStatus("error");
-          setErrorMessage("Selected language is not supported by your browser's speech engine. Try typing or use Google Chrome.");
+          setErrorMessage("Selected language is not supported by your browser. Try typing or use Google Chrome.");
         } else if (err === "audio-capture") {
           setStatus("error");
           setErrorMessage("No microphone detected. Please connect a microphone and try again.");
+        } else if (err === "aborted") {
+          setStatus("idle");
         } else {
           setStatus("error");
-          setErrorMessage("Voice input unavailable in this browser session. You can type your question instead.");
+          setErrorMessage("Voice input unavailable. You can type your question instead.");
         }
       };
 
@@ -148,7 +164,7 @@ export function useSpeechRecognition({
       setStatus("error");
       setErrorMessage("Could not start voice recognition. Please try typing instead.");
     }
-  }, [SpeechRecognitionClass, language, onTranscript]);
+  }, [SpeechRecognitionClass, language]);
 
   useEffect(() => {
     langIndexRef.current = 0;
@@ -158,6 +174,10 @@ export function useSpeechRecognition({
     return () => {
       if (recognitionRef.current) {
         try {
+          recognitionRef.current.onstart = null;
+          recognitionRef.current.onresult = null;
+          recognitionRef.current.onerror = null;
+          recognitionRef.current.onend = null;
           recognitionRef.current.abort();
         } catch (e) {
           // Ignore abort on unmount
@@ -175,3 +195,4 @@ export function useSpeechRecognition({
     isSupported,
   };
 }
+
