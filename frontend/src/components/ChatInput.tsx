@@ -1,7 +1,7 @@
 import React, { useRef, useCallback } from "react";
 import type { LanguageCode } from "../types";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
-import { MicIcon, SendIcon } from "./Icons";
+import { MicIcon, SendIcon, PlusIcon } from "./Icons";
 
 interface Props {
   language: LanguageCode;
@@ -12,9 +12,9 @@ interface Props {
 }
 
 const PLACEHOLDER: Record<LanguageCode, string> = {
-  en: "Ask your question about cooperative services, schemes, or laws…",
-  hi: "सहकारी सेवाओं, योजनाओं या नियमों के बारे में अपना प्रश्न पूछें…",
-  mr: "सहकारी सेवा, योजना किंवा कायद्याबद्दल प्रश्न विचारा…",
+  en: "Ask anything about cooperatives, schemes, PACS, or laws…",
+  hi: "सहकारी, योजनाओं, पैक्स या कानूनों के बारे में कुछ भी पूछें…",
+  mr: "सहकारी संस्था, योजना, पॅक्स किंवा कायद्याबद्दल काहीही विचारा…",
 };
 
 const STT_STATUS_LABEL: Record<LanguageCode, { listening: string; processing: string }> = {
@@ -32,7 +32,7 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
       onChange(newText);
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
-        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 140)}px`;
+        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
         textareaRef.current.focus();
       }
     },
@@ -75,7 +75,7 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
     const el = textareaRef.current;
     if (el) {
       el.style.height = "auto";
-      el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+      el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
     }
   };
 
@@ -89,22 +89,22 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
   };
 
   return (
-    <div className="input-container">
+    <div className="input-bar-container">
       {/* Listening or processing status badge */}
       {status === "listening" && (
-        <div className="stt-badge stt-badge--listening" role="status" aria-live="polite">
-          <span className="stt-red-dot">🔴</span>
+        <div className="stt-status-bar stt-status-bar--listening" role="status" aria-live="polite">
+          <MicIcon size={14} color="#B94A48" />
           <span>{STT_STATUS_LABEL[language].listening}</span>
         </div>
       )}
       {status === "processing" && (
-        <div className="stt-badge stt-badge--processing" role="status" aria-live="polite">
-          <span>⏳ {STT_STATUS_LABEL[language].processing}</span>
+        <div className="stt-status-bar stt-status-bar--processing" role="status" aria-live="polite">
+          <span>{STT_STATUS_LABEL[language].processing}</span>
         </div>
       )}
       {errorMessage && status === "error" && (
-        <div className="stt-badge stt-badge--error" role="alert">
-          <span>⚠️ {errorMessage}</span>
+        <div className="stt-status-bar stt-status-bar--error" role="alert">
+          <span>{errorMessage}</span>
           <button
             type="button"
             className="stt-dismiss-btn"
@@ -116,27 +116,36 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
         </div>
       )}
 
-      <div className="input-bar">
+      <div className="input-sticky-bar">
+        <button
+          type="button"
+          className="input-action-btn"
+          title="Guided Options"
+          aria-label="Guided Options"
+        >
+          <PlusIcon size={18} color="#66777A" />
+        </button>
+
         <textarea
           ref={textareaRef}
-          className="input-bar__textarea"
+          className="input-textarea"
           value={value}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
           placeholder={PLACEHOLDER[language]}
           rows={1}
           disabled={isLoading}
-          aria-label="Ask a question"
+          aria-label="Message input"
           maxLength={2000}
         />
 
         {/* Microphone Button */}
         <button
           type="button"
-          className={`input-bar__btn mic-btn ${status === "listening" ? "mic-btn--listening" : ""}`}
+          className={`input-btn mic-btn ${status === "listening" ? "mic-btn--active" : ""}`}
           onClick={handleMicClick}
           disabled={isLoading}
-          aria-label={status === "listening" ? "Stop listening" : "Start voice input"}
+          aria-label={status === "listening" ? "Stop voice input" : "Start voice input"}
           title={
             !isSupported
               ? "Voice input not supported"
@@ -145,13 +154,13 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
               : "Click to speak"
           }
         >
-          <MicIcon size={18} color={status === "listening" ? "#E57373" : "#145A62"} />
+          <MicIcon size={18} color={status === "listening" ? "#B94A48" : "#176B5B"} />
         </button>
 
         {/* Send Button */}
         <button
           type="button"
-          className="input-bar__btn send-btn"
+          className="input-btn send-btn"
           onClick={handleSend}
           disabled={!value.trim() || isLoading}
           aria-label="Send message"

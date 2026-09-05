@@ -1,5 +1,11 @@
 import React, { useState } from "react";
 import type { LanguageCode } from "../types";
+import {
+  ClipboardCheckIcon,
+  CopyIcon,
+  ShieldCheckIcon,
+  ArrowRightIcon,
+} from "./Icons";
 
 interface Props {
   language: LanguageCode;
@@ -48,22 +54,22 @@ const GrievanceWorkflow: React.FC<Props> = ({ language, onSaveHistory }) => {
 
   const categoryName = category[language] ?? category.en;
 
-  const generatedSummary = `=== COOPERATIVE GRIEVANCE SUMMARY ===
+  const generatedSummary = `=== FORMAL COOPERATIVE GRIEVANCE SUMMARY ===
 Date: ${new Date().toLocaleDateString()}
 Category: ${category.en} (${categoryName})
-Society Name: ${societyName || "Not specified"}
-District/Location: ${district || "Not specified"}
+Cooperative Society / PACS: ${societyName || "Not specified"}
+District / Location: ${district || "Not specified"}
 
-SUMMARY OF ISSUES:
+SUMMARY OF PROBLEM & INCIDENT:
 ${details || "No specific details entered."}
 
 RECOMMENDED OFFICIAL ACTION STEPS:
-1. Submit this formal written complaint to the Chairman/Secretary of ${societyName || "the society"}.
-2. If unresolved within 15 days, forward this summary along with receipt to the District Deputy Registrar (DDR) of Cooperative Societies.
+1. Submit this formal written complaint to the Chairman/Secretary of ${societyName || "the society"} via registered post or in-person receipt.
+2. If unresolved within 15 days, forward this complaint summary along with your acknowledgment receipt to the District Deputy Registrar (DDR) of Cooperative Societies.
 3. For PMFBY claims, submit a copy to the District Agriculture Officer (DAO) and Insurance Company Grievance Nodal Officer.
 
-DISCLAIMER:
-SahkaarSetu provides structured guidance and summary compilation based on cooperative rules. SahkaarSetu does not file official legal claims directly with court/government authorities.`;
+LEGAL DISCLAIMER:
+SahkaarSetu provides structured guidance and summary compilation based on official Maharashtra Cooperative rules. SahkaarSetu does not file official legal claims directly with court/government authorities.`;
 
   const handleComplete = () => {
     if (onSaveHistory) {
@@ -76,35 +82,47 @@ SahkaarSetu provides structured guidance and summary compilation based on cooper
   };
 
   return (
-    <div className="grievance-workflow" aria-label="Cooperative Grievance Redressal Assistant">
+    <div className="grievance-workflow" aria-label="Grievance Assistance Wizard">
+      {/* Header Bar */}
       <div className="grievance-header">
-        <h3 className="grievance-title">
-          📋 {language === "hi" ? "सहकारी शिकायत निवारण सहायक" : language === "mr" ? "सहकारी तक्रार निवारण सहाय्यक" : "Cooperative Grievance Redressal Assistant"}
-        </h3>
-        <p className="grievance-sub">
-          {language === "hi"
-            ? "आधिकारिक प्रस्तुति के लिए संरचित शिकायत सारांश तैयार करें"
-            : language === "mr"
-            ? "अधिकृत सादरकरणासाठी रचनात्मक तक्रार सारांश तयार करा"
-            : "Compile formal structured complaint summaries for District Deputy Registrar (DDR) submission"}
-        </p>
+        <div className="grievance-header__icon">
+          <ClipboardCheckIcon size={24} color="#176B5B" />
+        </div>
+        <div className="grievance-header__text">
+          <h3 className="grievance-title">
+            {language === "hi" ? "सहकारी शिकायत सहायता" : language === "mr" ? "सहकारी तक्रार निवारण मार्गदर्शक" : "Grievance Assistance"}
+          </h3>
+          <p className="grievance-sub">
+            {language === "hi"
+              ? "आधिकारिक प्रस्तुति के लिए संरचित शिकायत सारांश तैयार करें"
+              : language === "mr"
+              ? "अधिकृत सादरकरणासाठी रचनात्मक तक्रार सारांश तयार करा"
+              : "Tell us what happened to compile a formal complaint summary for District Deputy Registrar (DDR) submission"}
+          </p>
+        </div>
       </div>
 
-      {/* Progress Line */}
+      {/* Progress Node Line */}
       <div className="grievance-progress">
-        <div className={`grievance-step-node ${step >= 1 ? "grievance-step-node--active" : ""}`}>1. Category</div>
+        <div className={`grievance-step-node ${step >= 1 ? "grievance-step-node--active" : ""}`}>
+          <span>1. Select Issue</span>
+        </div>
         <div className="grievance-progress-line" />
-        <div className={`grievance-step-node ${step >= 2 ? "grievance-step-node--active" : ""}`}>2. Details</div>
+        <div className={`grievance-step-node ${step >= 2 ? "grievance-step-node--active" : ""}`}>
+          <span>2. Enter Details</span>
+        </div>
         <div className="grievance-progress-line" />
-        <div className={`grievance-step-node ${step >= 3 ? "grievance-step-node--active" : ""}`}>3. Summary</div>
+        <div className={`grievance-step-node ${step >= 3 ? "grievance-step-node--active" : ""}`}>
+          <span>3. Formal Summary</span>
+        </div>
       </div>
 
-      {/* Step Panels */}
+      {/* Panels */}
       <div className="grievance-body">
         {step === 1 && (
           <div className="grievance-panel">
             <h4 className="grievance-panel-heading">
-              {language === "hi" ? "अपनी शिकायत श्रेणी चुनें" : language === "mr" ? "तुमच्या तक्रारीचा प्रकार निवडा" : "Select Your Complaint Category"}
+              {language === "hi" ? "अपनी शिकायत श्रेणी चुनें" : language === "mr" ? "तुमच्या तक्रारीचा प्रकार निवडा" : "Step 1: Select your complaint category"}
             </h4>
             <div className="grievance-cat-list">
               {CATEGORIES.map((cat) => (
@@ -124,7 +142,8 @@ SahkaarSetu provides structured guidance and summary compilation based on cooper
               className="grievance-main-btn"
               onClick={() => setStep(2)}
             >
-              {language === "hi" ? "विवरण भरें →" : language === "mr" ? "तपशील भरा →" : "Enter Details →"}
+              <span>{language === "hi" ? "विवरण दर्ज करें" : language === "mr" ? "तपशील नोंदवा" : "Enter Details"}</span>
+              <ArrowRightIcon size={16} color="#FFFFFF" />
             </button>
           </div>
         )}
@@ -132,7 +151,7 @@ SahkaarSetu provides structured guidance and summary compilation based on cooper
         {step === 2 && (
           <div className="grievance-panel">
             <h4 className="grievance-panel-heading">
-              {language === "hi" ? "समिति एवं शिकायत विवरण दर्ज करें" : language === "mr" ? "संस्था व तक्रार तपशील नोंदवा" : "Enter Society & Incident Details"}
+              {language === "hi" ? "समिति एवं घटना का विवरण दें" : language === "mr" ? "संस्था व समस्येचे वर्णन करा" : "Step 2: Describe the problem & society details"}
             </h4>
 
             <div className="form-group">
@@ -163,7 +182,7 @@ SahkaarSetu provides structured guidance and summary compilation based on cooper
 
             <div className="form-group">
               <label className="form-label">
-                {language === "hi" ? "समस्या का संक्षिप्त विवरण:" : language === "mr" ? "समस्येचे सविस्तर वर्णन:" : "Description of Issue / Incident:"}
+                {language === "hi" ? "समस्या का विवरण दर्ज करें:" : language === "mr" ? "समस्येचे सविस्तर वर्णन करा:" : "Description of problem / incident:"}
               </label>
               <textarea
                 className="form-textarea"
@@ -186,7 +205,8 @@ SahkaarSetu provides structured guidance and summary compilation based on cooper
                   handleComplete();
                 }}
               >
-                {language === "hi" ? "सारांश बनाएं →" : language === "mr" ? "सारांश तयार करा →" : "Generate Summary →"}
+                <span>{language === "hi" ? "सारांश बनाएं" : language === "mr" ? "सारांश तयार करा" : "Generate Summary"}</span>
+                <ArrowRightIcon size={16} color="#FFFFFF" />
               </button>
             </div>
           </div>
@@ -195,13 +215,16 @@ SahkaarSetu provides structured guidance and summary compilation based on cooper
         {step === 3 && (
           <div className="grievance-panel">
             <h4 className="grievance-panel-heading">
-              {language === "hi" ? "आपकी संरचित शिकायत सारांश" : language === "mr" ? "तुमचा रचनात्मक तक्रार सारांश" : "Generated Complaint Summary"}
+              {language === "hi" ? "आपकी संरचित शिकायत सारांश" : language === "mr" ? "तुमचा रचनात्मक तक्रार सारांश" : "YOUR GRIEVANCE SUMMARY"}
             </h4>
 
             <pre className="summary-preview">{generatedSummary}</pre>
 
             <div className="disclaimer-callout">
-              ⚠️ <strong>Disclaimer:</strong> SahkaarSetu provides structured guidance based on Maharashtra Cooperative rules. SahkaarSetu does not file official legal claims directly with court/government authorities.
+              <ShieldCheckIcon size={16} color="#B7791F" />
+              <span>
+                <strong>Notice:</strong> SahkaarSetu provides structured complaint guidance based on official Maharashtra Cooperative rules. SahkaarSetu does not file official legal claims directly with court/government authorities.
+              </span>
             </div>
 
             <div className="grievance-btn-row">
@@ -210,14 +233,15 @@ SahkaarSetu provides structured guidance and summary compilation based on cooper
                 className="grievance-sec-btn"
                 onClick={() => handleCopySummary(generatedSummary)}
               >
-                {copied ? "✓ Copied!" : "📋 Copy Summary"}
+                <CopyIcon size={14} color="#17363A" />
+                <span>{copied ? "✓ Copied!" : "Copy Summary"}</span>
               </button>
               <button
                 type="button"
                 className="grievance-main-btn"
                 onClick={() => handleDownloadSummary(generatedSummary)}
               >
-                📥 Download Summary (.txt)
+                <span>Download (.txt)</span>
               </button>
             </div>
           </div>

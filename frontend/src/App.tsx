@@ -9,9 +9,9 @@ import AssistanceHub from "./components/AssistanceHub";
 import GuidedAssistance from "./components/GuidedAssistance";
 import ServicesDirectory from "./components/ServicesDirectory";
 import GrievanceWorkflow from "./components/GrievanceWorkflow";
-import HistoryDrawer from "./components/HistoryDrawer";
 import ChatArea from "./components/ChatArea";
 import ChatInput from "./components/ChatInput";
+import { SahkaarSetuLogo } from "./components/Icons";
 import "./App.css";
 
 let _id = 0;
@@ -55,18 +55,21 @@ const App: React.FC = () => {
     setMessages((prev) => [...prev, msg]);
   }, []);
 
-  const saveHistoryItem = useCallback((title: string, subtitle: string, details?: string, type: "query" | "grievance" | "guided" = "query") => {
-    const newItem: HistoryItem = {
-      id: `hist-${Date.now()}`,
-      type,
-      title,
-      subtitle,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      language,
-      details,
-    };
-    setHistory((prev) => [newItem, ...prev.slice(0, 19)]);
-  }, [language]);
+  const saveHistoryItem = useCallback(
+    (title: string, subtitle: string, details?: string, type: "query" | "grievance" | "guided" = "query") => {
+      const newItem: HistoryItem = {
+        id: `hist-${Date.now()}`,
+        type,
+        title,
+        subtitle,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        language,
+        details,
+      };
+      setHistory((prev) => [newItem, ...prev.slice(0, 19)]);
+    },
+    [language]
+  );
 
   const handleSendQuery = useCallback(
     async (text: string) => {
@@ -120,7 +123,7 @@ const App: React.FC = () => {
     [language, sessionId, addMessage, saveHistoryItem]
   );
 
-  // STT Hook for Homepage Voice CTA
+  // STT Hook for Homepage Voice shortcut
   const handleVoiceTranscript = useCallback(
     (text: string) => {
       if (text.trim()) {
@@ -152,23 +155,14 @@ const App: React.FC = () => {
     handleSendQuery(prompt);
   };
 
-  const handleHistorySelect = (item: HistoryItem) => {
-    if (item.details) {
-      alert(`${item.title}\n\n${item.details}`);
-    } else {
-      handleSendQuery(item.title);
-    }
-  };
-
   return (
     <div className="platform-app">
-      {/* Institutional Header */}
+      {/* Clean Institutional Header (NO "Live" Badge, NO Emojis) */}
       <header className="platform-header">
         <div className="header-brand-block">
           <div className="header-brand-row">
-            <span className="brand-logo-icon" aria-hidden="true">🤝</span>
+            <SahkaarSetuLogo size={28} color="#176B5B" />
             <h1 className="brand-name">SahkaarSetu</h1>
-            <span className="online-pill">● Live</span>
           </div>
           <span className="brand-tagline">
             {language === "hi"
@@ -179,7 +173,7 @@ const App: React.FC = () => {
           </span>
         </div>
 
-        {/* Desktop Header Navigation & Language Switcher */}
+        {/* Segmented Language Selector */}
         <div className="header-controls">
           <LanguageSelector selected={language} onChange={setLanguage} />
         </div>
@@ -187,10 +181,10 @@ const App: React.FC = () => {
 
       {/* Main Multi-Tab Viewport */}
       <main className="platform-main">
-        {/* Error Alert Bar */}
+        {/* Error Notification Bar */}
         {error && (
           <div className="platform-error-bar" role="alert">
-            <span>⚠️ {error}</span>
+            <span>{error}</span>
             <button
               type="button"
               className="error-dismiss-btn"
@@ -258,32 +252,20 @@ const App: React.FC = () => {
             }}
           />
         )}
-
-        {/* Tab 5: HISTORY My Assistance */}
-        {activeTab === "history" && (
-          <HistoryDrawer
-            history={history}
-            language={language}
-            onClear={() => setHistory([])}
-            onSelect={handleHistorySelect}
-          />
-        )}
       </main>
 
-      {/* Chat Input Bar (Shown during Ask Tab or when input needed) */}
+      {/* Single Sticky Input Bar (Shown during Ask Tab or when messages exist) */}
       {(activeTab === "ask" || messages.length > 0) && (
-        <div className="platform-input-wrapper">
-          <ChatInput
-            language={language}
-            isLoading={isLoading}
-            onSend={handleSendQuery}
-            value={inputValue}
-            onChange={setInputValue}
-          />
-        </div>
+        <ChatInput
+          language={language}
+          isLoading={isLoading}
+          onSend={handleSendQuery}
+          value={inputValue}
+          onChange={setInputValue}
+        />
       )}
 
-      {/* Persistent Bottom & Top Navigation Bar */}
+      {/* Persistent 4-Tab Navigation Bar */}
       <Navigation
         activeTab={activeTab}
         onTabChange={(tab) => {

@@ -3,7 +3,7 @@ import type { ChatMessage as ChatMessageType, LanguageCode } from "../types";
 import { parseAnswer } from "../utils/parseAnswer";
 import StructuredAnswer from "./StructuredAnswer";
 import SourcesAccordion from "./SourcesAccordion";
-import { SpeakerIcon, CopyIcon, CheckVerifiedIcon } from "./Icons";
+import { SpeakerIcon, CopyIcon, ShieldCheckIcon } from "./Icons";
 
 interface Props {
   message: ChatMessageType;
@@ -58,7 +58,7 @@ const ChatMessage: React.FC<Props> = ({
   return (
     <div className={`chat-row chat-row--${message.role}`}>
       <div className="chat-card">
-        {/* User prompt or Assistant response */}
+        {/* User Prompt or Assistant Response */}
         {isUser || !sections ? (
           <p className="chat-card__text">{message.content}</p>
         ) : (
@@ -70,28 +70,28 @@ const ChatMessage: React.FC<Props> = ({
           <div className="grounding-badge-row">
             {hasSources ? (
               <div className="grounded-tag grounded-tag--verified">
-                <CheckVerifiedIcon size={13} color="#2E8B57" />
-                <span>🛡️ Source-backed guidance</span>
+                <ShieldCheckIcon size={14} color="#2F855A" />
+                <span>Source-backed guidance</span>
               </div>
             ) : (
               <div className="grounded-tag grounded-tag--reference">
-                <span> Based on available official information</span>
+                <span>Based on official information</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Collapsible Source Drawer */}
+        {/* Source Drawer */}
         {hasSources && <SourcesAccordion sources={message.sources!} />}
 
-        {/* Assistant Action Controls & Simplify Bar */}
+        {/* Assistant Action Toolbar */}
         {!isUser && (
           <div className="chat-card__footer-toolbar">
             <div className="chat-card__actions">
               {onSpeak && (
                 <button
                   type="button"
-                  className={`action-pill ${isSpeaking ? "action-pill--active" : ""}`}
+                  className={`action-btn ${isSpeaking ? "action-btn--active" : ""}`}
                   onClick={handleSpeakClick}
                   aria-label={isSpeaking ? "Stop reading" : "Read aloud"}
                 >
@@ -102,7 +102,7 @@ const ChatMessage: React.FC<Props> = ({
               {navigator.clipboard && (
                 <button
                   type="button"
-                  className="action-pill"
+                  className="action-btn"
                   onClick={handleCopy}
                   aria-label="Copy response"
                 >
@@ -113,7 +113,7 @@ const ChatMessage: React.FC<Props> = ({
               {onFollowUp && (
                 <button
                   type="button"
-                  className="action-pill"
+                  className="action-btn"
                   onClick={() => onFollowUp("Can you provide more details about this service?")}
                   aria-label="Ask follow up"
                 >
@@ -123,10 +123,10 @@ const ChatMessage: React.FC<Props> = ({
               {onSimplify && (
                 <button
                   type="button"
-                  className="action-pill action-pill--accent"
+                  className="action-btn action-btn--accent"
                   onClick={() => setShowSimplifyOptions((s) => !s)}
                 >
-                  <span>💡 Explain This...</span>
+                  <span>Explain This…</span>
                 </button>
               )}
             </div>

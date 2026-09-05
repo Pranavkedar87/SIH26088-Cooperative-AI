@@ -1,5 +1,11 @@
 import React from "react";
 import type { AppTab, LanguageCode } from "../types";
+import {
+  HomeIcon,
+  MessageSquareIcon,
+  GridIcon,
+  ClipboardCheckIcon,
+} from "./Icons";
 
 interface Props {
   activeTab: AppTab;
@@ -7,37 +13,40 @@ interface Props {
   language: LanguageCode;
 }
 
-const TAB_LABELS: Record<AppTab, { en: string; hi: string; mr: string; icon: string }> = {
-  home: { en: "Home", hi: "मुख्य पृष्ठ", mr: "मुख्य पृष्ठ", icon: "🏠" },
-  ask: { en: "Ask AI", hi: "प्रश्न पूछें", mr: "प्रश्न विचारा", icon: "💬" },
-  services: { en: "Services", hi: "सेवाएं", mr: "सेवा", icon: "🏛️" },
-  grievance: { en: "Grievance", hi: "शिकायत", mr: "तक्रार", icon: "📋" },
-  history: { en: "History", hi: "इतिहास", mr: "इतिहास", icon: "🕒" },
-};
+const TAB_CONFIG: Array<{
+  id: AppTab;
+  icon: React.FC<{ size?: number; color?: string }>;
+  en: string;
+  hi: string;
+  mr: string;
+}> = [
+  { id: "home", icon: HomeIcon, en: "Home", hi: "गृह", mr: "मुख्य" },
+  { id: "ask", icon: MessageSquareIcon, en: "Ask AI", hi: "प्रश्न पूछें", mr: "प्रश्न विचारा" },
+  { id: "services", icon: GridIcon, en: "Services", hi: "सेवाएं", mr: "सेवा" },
+  { id: "grievance", icon: ClipboardCheckIcon, en: "Grievance", hi: "शिकायत", mr: "तक्रार" },
+];
 
 const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
-  const tabs: AppTab[] = ["home", "ask", "services", "grievance", "history"];
-
   return (
-    <nav className="app-nav" aria-label="Main Navigation">
+    <nav className="app-nav" aria-label="Primary Navigation">
       <div className="nav-container">
-        {tabs.map((tab) => {
-          const meta = TAB_LABELS[tab];
-          const label = meta[language] ?? meta.en;
-          const isActive = activeTab === tab;
+        {TAB_CONFIG.map((tab) => {
+          const IconComp = tab.icon;
+          const label = tab[language] ?? tab.en;
+          const isActive = activeTab === tab.id;
 
           return (
             <button
-              key={tab}
+              key={tab.id}
               type="button"
               className={`nav-item ${isActive ? "nav-item--active" : ""}`}
-              onClick={() => onTabChange(tab)}
+              onClick={() => onTabChange(tab.id)}
               aria-selected={isActive}
               role="tab"
             >
-              <span className="nav-item__icon" aria-hidden="true">
-                {meta.icon}
-              </span>
+              <div className="nav-item__icon-wrapper">
+                <IconComp size={20} color={isActive ? "#176B5B" : "#66777A"} />
+              </div>
               <span className="nav-item__label">{label}</span>
             </button>
           );

@@ -9,18 +9,23 @@ interface Props {
 
 const LanguageSelector: React.FC<Props> = ({ selected, onChange }) => {
   return (
-    <div className="segmented-lang-control" role="group" aria-label="Select Language">
-      {LANGUAGES.map((lang: Language) => (
-        <button
-          key={lang.code}
-          type="button"
-          className={`segmented-lang-btn ${selected === lang.code ? "segmented-lang-btn--selected" : ""}`}
-          onClick={() => onChange(lang.code)}
-          aria-pressed={selected === lang.code}
-        >
-          {lang.nativeLabel}
-        </button>
-      ))}
+    <div className="segmented-lang-bar" role="group" aria-label="Language Selector">
+      {LANGUAGES.map((lang: Language) => {
+        const isSelected = selected === lang.code;
+        const displayLabel = lang.code === "en" ? "EN" : lang.nativeLabel;
+
+        return (
+          <button
+            key={lang.code}
+            type="button"
+            className={`segmented-lang-segment ${isSelected ? "segmented-lang-segment--active" : ""}`}
+            onClick={() => onChange(lang.code)}
+            aria-pressed={isSelected}
+          >
+            {displayLabel}
+          </button>
+        );
+      })}
     </div>
   );
 };

@@ -1,5 +1,15 @@
 import React, { useState } from "react";
 import type { LanguageCode } from "../types";
+import {
+  WheatIcon,
+  LandmarkIcon,
+  ScaleIcon,
+  WalletCardsIcon,
+  FileCheckIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  ShieldCheckIcon,
+} from "./Icons";
 
 interface Props {
   flowType: string;
@@ -19,7 +29,7 @@ interface FlowConfig {
   titleEn: string;
   titleHi: string;
   titleMr: string;
-  icon: string;
+  icon: React.FC<{ size?: number; color?: string }>;
   step1Question: { en: string; hi: string; mr: string };
   step1Options: StepOption[];
   step2Question: { en: string; hi: string; mr: string };
@@ -30,170 +40,164 @@ interface FlowConfig {
 
 const FLOW_CONFIGS: Record<string, FlowConfig> = {
   crop_damage: {
-    titleEn: "PMFBY Crop Damage Assistance",
-    titleHi: "पीएमएफबीवाई फसल नुकसान सहायता",
-    titleMr: "PMFBY पीक नुकसान मदत",
-    icon: "🌾",
+    titleEn: "PMFBY Crop & Insurance Guidance",
+    titleHi: "पीएमएफबीवाई फसल और बीमा सहायता",
+    titleMr: "PMFBY पीक व विमा मार्गदर्शन",
+    icon: WheatIcon,
     step1Question: {
-      en: "What type of damage occurred?",
-      hi: "किस प्रकार का नुकसान हुआ है?",
-      mr: "नुकसान कशामुळे झाले आहे?",
+      en: "What happened to your crop?",
+      hi: "आपकी फसल के साथ क्या हुआ?",
+      mr: "पिकाचे कशामुळे नुकसान झाले?",
     },
     step1Options: [
-      { id: "rain", en: "Excessive Rain / Flood", hi: "अत्यधिक वर्षा / बाढ़", mr: "अतिवृष्टी / पूर" },
-      { id: "hail", en: "Hailstorm", hi: "ओला वृष्टि", mr: "गारपीट" },
+      { id: "rain", en: "Excessive Rain / Inundation", hi: "अत्यधिक वर्षा / जलभराव", mr: "अतिवृष्टी / पूर" },
+      { id: "hail", en: "Hailstorm / Cyclone", hi: "ओला वृष्टि / चक्रवात", mr: "गारपीट / वादळ" },
       { id: "drought", en: "Dry Spell / Drought", hi: "सूखा / वर्षा की कमी", mr: "दुष्काळ / पावसाचा खंड" },
       { id: "pest", en: "Pest / Disease Attack", hi: "कीट / रोग का प्रकोप", mr: "कीड / रोग प्रादुर्भाव" },
     ],
     step2Question: {
-      en: "What stage is the crop in?",
-      hi: "फसल किस चरण में है?",
-      mr: "पीक कोणत्या टप्प्यात आहे?",
+      en: "What are you trying to understand?",
+      hi: "आप क्या जानना चाहते हैं?",
+      mr: "तुम्हाला नक्की काय समजून घ्यायचे आहे?",
     },
     step2Options: [
-      { id: "standing", en: "Standing Crop", hi: "खड़ी फसल", mr: "उभे पीक" },
-      { id: "harvested", en: "Cut & Spread (Post-Harvest)", hi: "कटी हुई फसल (कटाई के बाद)", mr: "कापणी केलेले पीक" },
-      { id: "sowing", en: "Prevented Sowing", hi: "बुआई न हो पाना", mr: "पेरणी न होणे" },
+      { id: "claim", en: "72-hour claim reporting steps", hi: "72 घंटे की दावा सूचना प्रक्रिया", mr: "७२ तासांत दावा कळवण्याच्या पायऱ्या" },
+      { id: "coverage", en: "Coverage & sum insured", hi: "बीमा कवरेज और बीमित राशि", mr: "विमा संरक्षण व रक्कम" },
+      { id: "docs", en: "Required document checklist", hi: "आवश्यक दस्तावेजों की सूची", mr: "लागणारी आवश्यक कागदपत्रे" },
     ],
     checklist: [
-      { en: "Intimate within 72 hours of damage", hi: "नुकसान के 72 घंटे के भीतर सूचित करें", mr: "७२ तासांच्या आत विमा कंपनीस कळवा" },
-      { en: "Keep 7/12 land extract & bank passbook ready", hi: "7/12 भूमि विवरण एवं बैंक पासबुक रखें", mr: "७/१२ उतारा व बँक पासबुक तयार ठेवा" },
-      { en: "Take geotagged photos of damaged crop", hi: "क्षतिग्रस्त फसल की तस्वीरें लें", mr: "नुकसानग्रस्त पिकाचे फोटो काढा" },
-      { en: "Contact PACS / Agriculture Officer / Toll-free 14447", hi: "पैक्स / कृषि अधिकारी / टोल-फ्री 14447 पर संपर्क करें", mr: "PACS / कृषी अधिकारी / टोल-फ्री १४४४७ वर संपर्क साधा" },
+      { en: "Notify insurance company within 72 hours of damage", hi: "नुकसान के 72 घंटे के भीतर बीमा कंपनी को सूचित करें", mr: "७२ तासांच्या आत विमा कंपनीस कळवा" },
+      { en: "Keep 7/12 land extract & bank passbook copy ready", hi: "7/12 भूमि विवरण एवं बैंक पासबुक रखें", mr: "७/१२ उतारा व बँक पासबुक तयार ठेवा" },
+      { en: "Take clear photos of the affected crop field", hi: "प्रभावित फसल क्षेत्र की तस्वीरें लें", mr: "नुकसानग्रस्त पिकाचे स्पष्ट फोटो काढा" },
     ],
     promptTemplate: (opt1, opt2) =>
-      `My crop suffered ${opt1} damage during ${opt2} stage. What are the exact steps and documents required to claim PMFBY crop insurance compensation?`,
+      `My crop suffered ${opt1}. I want to understand ${opt2} under PMFBY. What are the official steps, required documents, and contact details?`,
   },
   pacs_help: {
-    titleEn: "PACS Service Guidance",
+    titleEn: "PACS Services Guidance",
     titleHi: "पैक्स (PACS) सेवा मार्गदर्शन",
     titleMr: "PACS सेवा मार्गदर्शन",
-    icon: "🏛️",
+    icon: LandmarkIcon,
     step1Question: {
-      en: "Which service do you need?",
-      hi: "आपको किस सेवा की आवश्यकता है?",
-      mr: "तुम्हाला कोणती सेवा हवी आहे?",
+      en: "Which service do you need guidance on?",
+      hi: "आपको किस पैक्स सेवा पर मार्गदर्शन चाहिए?",
+      mr: "तुम्हाला कोणत्या PACS सेवेबाबत माहिती हवी आहे?",
     },
     step1Options: [
-      { id: "loan", en: "KCC Short-term Crop Loan", hi: "केसीसी अल्पकालिक फसल ऋण", mr: "KCC पीक कर्ज" },
-      { id: "inputs", en: "Seeds & Fertilizer Purchase", hi: "बीज एवं उर्वरक खरीद", mr: "बियाणे व खते खरेदी" },
-      { id: "storage", en: "Warehouse / Storage Facility", hi: "गोदाम / भंडारण सुविधा", mr: "गोदाम / साठवणूक सुविधा" },
-      { id: "membership", en: "New PACS Membership", hi: "नवीन पैक्स सदस्यता", mr: "नवीन PACS सभासदत्व" },
+      { id: "loan", en: "KCC Short-Term Crop Loan", hi: "केसीसी अल्पकालिक फसल ऋण", mr: "KCC अल्पमुदत पीक कर्ज" },
+      { id: "inputs", en: "Fertilizers & Seeds Purchase", hi: "उर्वरक एवं बीज खरीद", mr: "खते व बियाणे खरेदी" },
+      { id: "storage", en: "Warehouse & Grain Storage", hi: "गोदाम एवं अनाज भंडारण", mr: "गोदाम व धान्य साठवणूक" },
+      { id: "membership", en: "PACS Membership Application", hi: "पैक्स सदस्यता आवेदन", mr: "PACS सभासदत्व अर्ज" },
     ],
     step2Question: {
-      en: "Are you an existing PACS member?",
-      hi: "क्या आप वर्तमान में पैक्स के सदस्य हैं?",
-      mr: "तुम्ही सध्या PACS चे सभासद आहात का?",
+      en: "What is your current status?",
+      hi: "आपकी वर्तमान स्थिति क्या है?",
+      mr: "तुमची सध्याची स्थिती काय आहे?",
     },
     step2Options: [
-      { id: "yes", en: "Yes, active member", hi: "हाँ, सक्रिय सदस्य", mr: "होय, सक्रिय सभासद" },
-      { id: "no", en: "No, want to apply", hi: "नहीं, आवेदन करना चाहता हूँ", mr: "नाही, अर्ज करायचा आहे" },
+      { id: "active", en: "Active PACS member", hi: "सक्रिय पैक्स सदस्य", mr: "सक्रिय PACS सभासद" },
+      { id: "new", en: "New applicant", hi: "नया आवेदक", mr: "नवीन अर्जदार" },
     ],
     checklist: [
       { en: "Aadhaar Card & PAN Card", hi: "आधार कार्ड एवं पैन कार्ड", mr: "आधार कार्ड व पॅन कार्ड" },
-      { en: "7/12 & 8A Land Records", hi: "7/12 एवं 8A भूमि दस्तावेज", mr: "७/१२ व ८अ उतारा" },
-      { en: "No-dues certificate from nearby banks", hi: "अन्य बैंकों से बकाया न होने का प्रमाण पत्र", mr: "इतर बँकांचे थकबाकी नसल्याचे प्रमाणपत्र" },
+      { en: "7/12 Land ownership Record", hi: "7/12 भूमि स्वामित्व दस्तावेज", mr: "७/१२ जमीन उतारा" },
+      { en: "No-dues certificate from local DCCB bank", hi: "स्थानीय डीसीसीबी बैंक से बकाया न होने का प्रमाण पत्र", mr: "DCCB बँकेचे थकबाकी नसल्याचे प्रमाणपत्र" },
     ],
     promptTemplate: (opt1, opt2) =>
-      `I need assistance with ${opt1} at PACS as a ${opt2}. What is the process, interest subvention benefit, and required documentation?`,
+      `I am a ${opt2} seeking guidance on ${opt1} at PACS. What is the process, interest rate benefit, and document checklist?`,
   },
   coop_rule: {
     titleEn: "Cooperative Rules & By-laws",
-    titleHi: "सहकारी नियम एवं उपनियम",
-    titleMr: "सहकारी संस्था नियम व उपविधी",
-    icon: "📜",
+    titleHi: "सहकारी नियम और उपनियम",
+    titleMr: "सहकारी नियम व उपविधी",
+    icon: ScaleIcon,
     step1Question: {
-      en: "Which area of governance do you want to understand?",
-      hi: "आप शासन के किस क्षेत्र को समझना चाहते हैं?",
-      mr: "तुम्हाला कोणत्या विषयाबाबत माहिती हवी आहे?",
+      en: "Which rule topic do you want to understand?",
+      hi: "आप किस नियम विषय को समझना चाहते हैं?",
+      mr: "तुम्हाला कोणत्या नियमाबाबत माहिती हवी आहे?",
     },
     step1Options: [
-      { id: "rights", en: "Member Rights & Voting", hi: "सदस्य अधिकार एवं मतदान", mr: "सभासद अधिकार व मतदान" },
-      { id: "election", en: "Committee Elections & Tenure", hi: "समिति चुनाव एवं कार्यकाल", mr: "संचालक मंडळ निवडणूक व मुदत" },
-      { id: "audit", en: "Annual General Body & Audit", hi: "वार्षिक साधारण सभा एवं ऑडिट", mr: "वार्षिक सर्वसाधारण सभा व ऑडिट" },
-      { id: "expulsion", en: "Member Disqualification / Expulsion", hi: "सदस्य अयोग्यता / निष्कासन", mr: "सभासद अपात्रता / हकालपट्टी" },
+      { id: "rights", en: "Member Voting Rights (Sec 27)", hi: "सदस्य मतदान अधिकार (धारा 27)", mr: "सभासद मतदान अधिकार (कलम २७)" },
+      { id: "election", en: "Managing Committee Election", hi: "प्रबंध समिति चुनाव", mr: "संचालक मंडळ निवडणूक" },
+      { id: "agm", en: "Annual General Meeting (AGM)", hi: "वार्षिक साधारण सभा (AGM)", mr: "वार्षिक सर्वसाधारण सभा (AGM)" },
     ],
     step2Question: {
-      en: "Which cooperative type?",
-      hi: "किस प्रकार की सहकारी संस्था?",
-      mr: "कोणत्या प्रकारची सहकारी संस्था?",
+      en: "What is your goal?",
+      hi: "आपका उद्देश्य क्या है?",
+      mr: "तुमचा उद्देश काय आहे?",
     },
     step2Options: [
-      { id: "pacs_soc", en: "PACS / Agricultural Credit", hi: "पैक्स / कृषि साख समिति", mr: "PACS / कृषी पतसंस्था" },
-      { id: "housing", en: "Housing Cooperative Society", hi: "आवास सहकारी समिति", mr: "गृहनिर्माण संस्था" },
-      { id: "other_soc", en: "Other Cooperative Society", hi: "अन्य सहकारी समिति", mr: "इतर सहकारी संस्था" },
+      { id: "understand", en: "Understand legal provisions", hi: "कानूनी प्रावधान समझना", mr: "कायदेशीर तरतुदी समजून घेणे" },
+      { id: "dispute", en: "Address a governance dispute", hi: "प्रबंधन विवाद का निवारण", mr: "व्यवस्थापन वादावर तोडगा" },
     ],
     checklist: [
-      { en: "Check Maharashtra Cooperative Societies Act provisions", hi: "महाराष्ट्र सहकारी अधिनियम प्रावधान देखें", mr: "महाराष्ट्र सहकारी संस्था कायद्यातील तरतुदी तपासा" },
-      { en: "Refer to Model By-law Section 22 to 35", hi: "मॉडल उपनियम धारा 22 से 35 देखें", mr: "मॉडेल उपविधी कलम २२ ते ३५ पहा" },
+      { en: "Refer to Maharashtra Cooperative Societies Act 1960", hi: "महाराष्ट्र सहकारी समिति अधिनियम 1960 देखें", mr: "महाराष्ट्र सहकारी संस्था कायदा १९६० पहा" },
+      { en: "Check Model By-laws Sections 22 to 35", hi: "मॉडल उपनियम धारा 22 से 35 देखें", mr: "मॉडेल उपविधी कलम २२ ते ३५ तपासा" },
     ],
     promptTemplate: (opt1, opt2) =>
-      `Explain the Maharashtra Cooperative Societies Act rules and standard by-laws regarding ${opt1} for a ${opt2}.`,
+      `Explain the Maharashtra Cooperative Societies Act rules regarding ${opt1} to help ${opt2}.`,
   },
   financial_guidance: {
-    titleEn: "Rural Financial Literacy Guidance",
-    titleHi: "ग्रामीण वित्तीय साक्षरता मार्गदर्शन",
-    titleMr: "ग्रामीण आर्थिक साक्षरता मार्गदर्शन",
-    icon: "🏦",
+    titleEn: "Financial Literacy Guidance",
+    titleHi: "वित्तीय साक्षरता मार्गदर्शन",
+    titleMr: "आर्थिक साक्षरता मार्गदर्शन",
+    icon: WalletCardsIcon,
     step1Question: {
       en: "What financial topic do you need help with?",
       hi: "आपको किस वित्तीय विषय पर सहायता चाहिए?",
       mr: "तुम्हाला कोणत्या आर्थिक विषयावर माहिती हवी आहे?",
     },
     step1Options: [
-      { id: "kcc", en: "Kisan Credit Card (KCC) Interest Subvention", hi: "केसीसी ब्याज अनुदान योजना", mr: "KCC व्याज सवलत योजना" },
-      { id: "loan_repay", en: "Loan Repayment & Credit Score", hi: "ऋण पुनर्भुगतान एवं क्रेडिट स्कोर", mr: "कर्ज परतफेड व सिबिल स्कोर" },
-      { id: "deposit", en: "Cooperative Bank Fixed Deposits", hi: "सहकारी बैंक सावधि जमा (FD)", mr: "सहकारी बँक मुदत ठेव (FD)" },
-      { id: "insurance", en: "Micro-Insurance & Pension Schemes", hi: "सूक्ष्म बीमा एवं पेंशन योजनाएं", mr: "सूक्ष्म विमा व पेन्शन योजना" },
+      { id: "subvention", en: "3% Interest Subvention for KCC", hi: "केसीसी पर 3% ब्याज छूट योजना", mr: "KCC वर ३% व्याज सवलत योजना" },
+      { id: "credit_score", en: "CIBIL Credit Score & Repayment", hi: "सिबिल क्रेडिट स्कोर और पुनर्भुगतान", mr: "सिबिल क्रेडिट स्कोर व परतफेड" },
+      { id: "deposit_safety", en: "Cooperative Bank Deposit Safety (DICGC)", hi: "सहकारी बैंक जमा सुरक्षा (DICGC)", mr: "सहकारी बँक ठेव सुरक्षा (DICGC)" },
     ],
     step2Question: {
-      en: "What is your primary goal?",
-      hi: "आपका मुख्य उद्देश्य क्या है?",
-      mr: "तुमचा मुख्य उद्देश काय आहे?",
+      en: "What guidance do you require?",
+      hi: "आपको कैसा मार्गदर्शन चाहिए?",
+      mr: "तुम्हाला कसे मार्गदर्शन हवे आहे?",
     },
     step2Options: [
-      { id: "save_cost", en: "Reduce interest burden", hi: "ब्याज का बोझ कम करना", mr: "व्याज भार कमी करणे" },
-      { id: "borrow", en: "Apply for new credit", hi: "नए ऋण के लिए आवेदन करना", mr: "नवीन कर्जासाठी अर्ज करणे" },
-      { id: "safe_save", en: "Safe savings & investment", hi: "सुरक्षित बचत एवं निवेश", mr: "सुरक्षित बचत व गुंतवणूक" },
+      { id: "explain", en: "Simple explanation with example", hi: "उदाहरण के साथ सरल व्याख्या", mr: "उदाहरणासह सोपे स्पष्टीकरण" },
+      { id: "action", en: "Actionable steps to apply", hi: "आवेदन के लिए व्यावहारिक कदम", mr: "अर्जासाठी प्रत्यक्ष पायऱ्या" },
     ],
     checklist: [
-      { en: "Timely repayment earns 3% interest subvention", hi: "समय पर भुगतान करने पर 3% अतिरिक्त ब्याज छूट", mr: "वेळेवर परतफेड केल्यास ३% अतिरिक्त व्याज सवलत" },
-      { en: "Always obtain official computerised receipt", hi: "हमेशा आधिकारिक कम्प्यूटरीकृत रसीद प्राप्त करें", mr: "नेहमी संगणकीकृत पावती मिळवा" },
+      { en: "Timely repayment earns 3% prompt repayment incentive", hi: "समय पर भुगतान करने पर 3% प्रोत्साहन छूट मिलती है", mr: "वेळेवर परतफेडीवर ३% सवलत मिळते" },
+      { en: "Deposits insured up to Rs. 5 Lakhs per depositor", hi: "प्रति जमाकर्ता 5 लाख रुपये तक जमा बीमा संरक्षित", mr: "प्रत्येक ठेवीदारासाठी ५ लाखांपर्यंत विमा संरक्षण" },
     ],
     promptTemplate: (opt1, opt2) =>
-      `Provide financial literacy guidance on ${opt1} to help ${opt2}. Explain the benefits, interest rates, and safety precautions.`,
+      `Provide financial literacy guidance on ${opt1}. Give a ${opt2} for farmers and cooperative members.`,
   },
   schemes_entry: {
-    titleEn: "Ministry of Cooperation Schemes",
-    titleHi: "सहकार मंत्रालय योजनाएं",
-    titleMr: "सहकार मंत्रालय योजना",
-    icon: "🏛️",
+    titleEn: "Government Schemes Guidance",
+    titleHi: "सरकारी योजना मार्गदर्शन",
+    titleMr: "सरकारी योजना मार्गदर्शन",
+    icon: FileCheckIcon,
     step1Question: {
-      en: "Which scheme domain interests you?",
-      hi: "आप किस योजना क्षेत्र में रुचि रखते हैं?",
-      mr: "तुम्हाला कोणत्या योजनेत रस आहे?",
+      en: "Which Ministry of Cooperation scheme do you want to explore?",
+      hi: "आप किस सहकार मंत्रालय योजना की जानकारी चाहते हैं?",
+      mr: "तुम्हाला कोणत्या सहकार मंत्रालय योजनेची माहिती हवी आहे?",
     },
     step1Options: [
-      { id: "pacs_comp", en: "PACS Computerization & ERP", hi: "पैक्स संगणकीकरण एवं ईआरपी", mr: "PACS संगणकीकरण व संगणकीय प्रणाली" },
-      { id: "grain_storage", en: "World's Largest Grain Storage Plan", hi: "विश्व की सबसे बड़ी अन्न भंडारण योजना", mr: "जगातील सर्वात मोठी धान्य साठवणूक योजना" },
-      { id: "seed_organic", en: "National Organic / Seed Cooperatives", hi: "राष्ट्रीय जैविक / बीज सहकारी संस्थाएं", mr: "राष्ट्रीय सेंद्रिय / बियाणे सहकारी संस्था" },
-      { id: "common_service", en: "PACS as Common Service Centers (CSC)", hi: "सामान्य सेवा केंद्र (CSC) के रूप में पैक्स", mr: "सीएससी (CSC) म्हणून PACS सेवा" },
+      { id: "comp", en: "PACS Computerization & ERP", hi: "पैक्स संगणकीकरण और ईआरपी", mr: "PACS संगणकीकरण व संगणक प्रणाली" },
+      { id: "storage", en: "World's Largest Grain Storage Plan", hi: "अन्न भंडारण योजना", mr: "धान्य साठवणूक योजना" },
+      { id: "csc", en: "PACS as Common Service Centers", hi: "सामान्य सेवा केंद्र के रूप में पैक्स", mr: "सीएससी (CSC) म्हणून PACS सेवा" },
     ],
     step2Question: {
-      en: "What information do you need?",
-      hi: "आपको क्या जानकारी चाहिए?",
-      mr: "तुम्हाला कोणती माहिती हवी आहे?",
+      en: "What do you want to know?",
+      hi: "आप क्या जानना चाहते हैं?",
+      mr: "तुम्हाला काय माहिती करून घ्यायचे आहे?",
     },
     step2Options: [
-      { id: "eligibility", en: "Eligibility & Benefits", hi: "पात्रता एवं लाभ", mr: "पात्रता व फायदे" },
-      { id: "apply", en: "How to apply / Participate", hi: "आवेदन / भागीदारी कैसे करें", mr: "अर्ज / सहभाग कसा घ्यावा" },
+      { id: "benefits", en: "Benefits & Eligibility", hi: "लाभ और पात्रता", mr: "फायदे व पात्रता" },
+      { id: "apply", en: "How to participate", hi: "भाग कैसे लें", mr: "सहभाग कसा घ्यावा" },
     ],
     checklist: [
-      { en: "Check Central Registrar / Ministry portal details", hi: "केंद्रीय निबंधक / मंत्रालय पोर्टल देखें", mr: "केंद्रीय निबंधक / मंत्रालय पोर्टल तपासा" },
-      { en: "Contact local District Central Cooperative Bank (DCCB)", hi: "स्थानीय जिला मध्यवर्ती बैंक (DCCB) से संपर्क करें", mr: "जिल्हा मध्यवर्ती सहकारी बँकेशी संपर्क साधा" },
+      { en: "Check Central Registrar of Cooperative Societies portal", hi: "केंद्रीय सहकारी समिति निबंधक पोर्टल देखें", mr: "केंद्रीय सहकार निबंधक पोर्टल तपासा" },
+      { en: "Contact local District Central Cooperative Bank (DCCB)", hi: "स्थानीय जिला मध्यवर्ती सहकारी बैंक से संपर्क करें", mr: "जिल्हा मध्यवर्ती सहकारी बँकेशी संपर्क साधा" },
     ],
     promptTemplate: (opt1, opt2) =>
-      `Explain the Ministry of Cooperation scheme regarding ${opt1}, focusing on ${opt2} for cooperative members.`,
+      `Explain the government scheme regarding ${opt1}, focusing on ${opt2} for cooperative societies.`,
   },
 };
 
@@ -204,6 +208,7 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
   const [step2Val, setStep2Val] = useState<StepOption | null>(config.step2Options[0] ?? null);
   const [currentStep, setCurrentStep] = useState<number>(1);
 
+  const IconComp = config.icon;
   const title = language === "hi" ? config.titleHi : language === "mr" ? config.titleMr : config.titleEn;
   const q1 = config.step1Question[language] ?? config.step1Question.en;
   const q2 = config.step2Question[language] ?? config.step2Question.en;
@@ -217,18 +222,18 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
 
   return (
     <div className="guided-wizard" aria-label="Guided Assistance Wizard">
-      {/* Header Bar */}
+      {/* Wizard Header Bar */}
       <div className="wizard-header">
         <button type="button" className="wizard-back-btn" onClick={onBack} aria-label="Go back">
           ← {language === "hi" ? "वापस" : language === "mr" ? "मागे" : "Back"}
         </button>
         <div className="wizard-title-group">
-          <span className="wizard-icon">{config.icon}</span>
+          <IconComp size={22} color="#176B5B" />
           <h3 className="wizard-title">{title}</h3>
         </div>
       </div>
 
-      {/* Progress Indicator */}
+      {/* Progress Line Bar: 1 ── 2 ── 3 */}
       <div className="wizard-progress">
         <div className={`progress-step ${currentStep >= 1 ? "progress-step--active" : ""}`}>
           <span className="step-num">1</span>
@@ -240,19 +245,19 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
         <div className={`progress-step ${currentStep >= 2 ? "progress-step--active" : ""}`}>
           <span className="step-num">2</span>
           <span className="step-label">
-            {language === "hi" ? "विवरण" : language === "mr" ? "तपशील" : "Details"}
+            {language === "hi" ? "आवश्यकता" : language === "mr" ? "गरज" : "Requirement"}
           </span>
         </div>
         <div className="progress-line" />
         <div className={`progress-step ${currentStep >= 3 ? "progress-step--active" : ""}`}>
           <span className="step-num">3</span>
           <span className="step-label">
-            {language === "hi" ? "कदम व कागजात" : language === "mr" ? "पायऱ्या व कागदपत्रे" : "Action Plan"}
+            {language === "hi" ? "मार्गदर्शन" : language === "mr" ? "मार्गदर्शन" : "Guidance"}
           </span>
         </div>
       </div>
 
-      {/* Step Content */}
+      {/* Step Panels */}
       <div className="wizard-body">
         {currentStep === 1 && (
           <div className="wizard-step-panel">
@@ -265,7 +270,7 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
                   className={`opt-card ${step1Val?.id === opt.id ? "opt-card--selected" : ""}`}
                   onClick={() => setStep1Val(opt)}
                 >
-                  <span className="opt-radio">{step1Val?.id === opt.id ? "●" : "○"}</span>
+                  <span className="opt-indicator">{step1Val?.id === opt.id ? "●" : "○"}</span>
                   <span className="opt-text">{opt[language] ?? opt.en}</span>
                 </button>
               ))}
@@ -275,7 +280,8 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
               className="wizard-next-btn"
               onClick={() => setCurrentStep(2)}
             >
-              {language === "hi" ? "आगे बढ़ें →" : language === "mr" ? "पुढे जा →" : "Next Step →"}
+              <span>{language === "hi" ? "आगे बढ़ें" : language === "mr" ? "पुढे जा" : "Next Step"}</span>
+              <ArrowRightIcon size={16} color="#FFFFFF" />
             </button>
           </div>
         )}
@@ -291,7 +297,7 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
                   className={`opt-card ${step2Val?.id === opt.id ? "opt-card--selected" : ""}`}
                   onClick={() => setStep2Val(opt)}
                 >
-                  <span className="opt-radio">{step2Val?.id === opt.id ? "●" : "○"}</span>
+                  <span className="opt-indicator">{step2Val?.id === opt.id ? "●" : "○"}</span>
                   <span className="opt-text">{opt[language] ?? opt.en}</span>
                 </button>
               ))}
@@ -309,7 +315,8 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
                 className="wizard-next-btn"
                 onClick={() => setCurrentStep(3)}
               >
-                {language === "hi" ? "मार्गदर्शन देखें →" : language === "mr" ? "मार्गदर्शन पहा →" : "View Guidance →"}
+                <span>{language === "hi" ? "मार्गदर्शन देखें" : language === "mr" ? "मार्गदर्शन पहा" : "View Guidance"}</span>
+                <ArrowRightIcon size={16} color="#FFFFFF" />
               </button>
             </div>
           </div>
@@ -319,33 +326,39 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
           <div className="wizard-step-panel">
             <h4 className="step-question">
               {language === "hi"
-                ? "जरूरी दस्तावेज एवं अगले कदम"
+                ? "आवश्यक चेकलिस्ट एवं कार्रवाई"
                 : language === "mr"
-                ? "महत्त्वाची कागदपत्रे व पुढील पायऱ्या"
-                : "Required Checklist & Immediate Actions"}
+                ? "आवश्यक यादी व कारवाई"
+                : "Required Checklist & Next Steps"}
             </h4>
 
             <div className="checklist-box">
               <span className="checklist-title">
-                📋 {language === "hi" ? "आवश्यक सूची" : language === "mr" ? "तपासाची यादी" : "Checklist"}
+                {language === "hi" ? "आवश्यक दस्तावेज एवं कदम" : language === "mr" ? "महत्त्वाची कागदपत्रे व पायऱ्या" : "Document & Action Checklist"}
               </span>
               <ul className="checklist-items">
                 {config.checklist.map((item, idx) => (
-                  <li key={idx}>✓ {item[language] ?? item.en}</li>
+                  <li key={idx}>
+                    <CheckIcon size={14} color="#2F855A" />
+                    <span>{item[language] ?? item.en}</span>
+                  </li>
                 ))}
               </ul>
             </div>
 
             <div className="wizard-summary-callout">
-              <span className="callout-heading">
-                💡 {language === "hi" ? "सहकारसेतु एआई सहायता" : language === "mr" ? "सहकारसेतू एआय मदत" : "SahkaarSetu Grounded Guidance"}
-              </span>
+              <div className="callout-header">
+                <ShieldCheckIcon size={16} color="#176B5B" />
+                <span className="callout-heading">
+                  {language === "hi" ? "सहकारसेतु प्रामाणिक मार्गदर्शन" : language === "mr" ? "सहकारसेतू अधिकृत मार्गदर्शन" : "SahkaarSetu Source-backed Guidance"}
+                </span>
+              </div>
               <p className="callout-text">
                 {language === "hi"
-                  ? "अब आप अपनी चयनित स्थिति के अनुसार सहकारसेतु से विस्तृत आधिकारिक उत्तर प्राप्त कर सकते हैं।"
+                  ? "अब आप सहकारसेतु से आधिकारिक ज्ञानकोश पर आधारित उत्तर प्राप्त कर सकते हैं।"
                   : language === "mr"
-                  ? "आता तुम्ही तुमच्या निवडलेल्या परिस्थितीनुसार सहकारसेतूकडून सविस्तर अधिकृत उत्तर मिळवू शकता."
-                  : "Click below to query our grounded RAG knowledge base for specific clauses, claim numbers, and official sources."}
+                  ? "आता तुम्ही सहकारसेतूकडून अधिकृत ज्ञानकोशावर आधारित उत्तर मिळवू शकता."
+                  : "Click below to query SahkaarSetu for source-backed rules, claim guidance, and next steps."}
               </p>
             </div>
 
@@ -358,7 +371,8 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
                 ← {language === "hi" ? "पिछला" : language === "mr" ? "मागे" : "Previous"}
               </button>
               <button type="button" className="wizard-next-btn" onClick={handleFinish}>
-                🤖 {language === "hi" ? "एआई से पूरा उत्तर प्राप्त करें" : language === "mr" ? "AI कडून सविस्तर उत्तर घ्या" : "Get Detailed AI Answer →"}
+                <span>{language === "hi" ? "उत्तर प्राप्त करें" : language === "mr" ? "उत्तर मिळवा" : "Get Source-backed Guidance"}</span>
+                <ArrowRightIcon size={16} color="#FFFFFF" />
               </button>
             </div>
           </div>

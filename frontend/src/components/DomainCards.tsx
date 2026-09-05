@@ -1,14 +1,14 @@
 import React from "react";
 import type { LanguageCode } from "../types";
 import {
-  PacsIcon,
-  PmfbyIcon,
-  LawIcon,
-  BylawsIcon,
-  SchemesIcon,
-  FinanceIcon,
-  GrievanceIcon,
-  AgriIcon,
+  LandmarkIcon,
+  WheatIcon,
+  ScaleIcon,
+  FileTextIcon,
+  FileCheckIcon,
+  WalletCardsIcon,
+  ClipboardCheckIcon,
+  HomeIcon,
 } from "./Icons";
 
 interface DomainCard {
@@ -26,7 +26,7 @@ interface DomainCard {
 const DOMAIN_CARDS: DomainCard[] = [
   {
     id: "pacs",
-    icon: PacsIcon,
+    icon: LandmarkIcon,
     titleEn: "PACS",
     titleHi: "पैक्स (PACS)",
     titleMr: "पॅक्स (PACS)",
@@ -37,7 +37,7 @@ const DOMAIN_CARDS: DomainCard[] = [
   },
   {
     id: "pmfby",
-    icon: PmfbyIcon,
+    icon: WheatIcon,
     titleEn: "PMFBY",
     titleHi: "पीएमएफबीवाई",
     titleMr: "पीएमएफबीवाय (PMFBY)",
@@ -48,7 +48,7 @@ const DOMAIN_CARDS: DomainCard[] = [
   },
   {
     id: "cooperative_law",
-    icon: LawIcon,
+    icon: ScaleIcon,
     titleEn: "Cooperative Law",
     titleHi: "सहकारी कानून",
     titleMr: "सहकारी कायदा",
@@ -59,7 +59,7 @@ const DOMAIN_CARDS: DomainCard[] = [
   },
   {
     id: "bylaws",
-    icon: BylawsIcon,
+    icon: FileTextIcon,
     titleEn: "By-laws",
     titleHi: "उप-नियम",
     titleMr: "उपविधी",
@@ -70,7 +70,7 @@ const DOMAIN_CARDS: DomainCard[] = [
   },
   {
     id: "schemes",
-    icon: SchemesIcon,
+    icon: FileCheckIcon,
     titleEn: "Government Schemes",
     titleHi: "सरकारी योजनाएं",
     titleMr: "सरकारी योजना",
@@ -81,7 +81,7 @@ const DOMAIN_CARDS: DomainCard[] = [
   },
   {
     id: "financial_literacy",
-    icon: FinanceIcon,
+    icon: WalletCardsIcon,
     titleEn: "Financial Literacy",
     titleHi: "वित्तीय साक्षरता",
     titleMr: "आर्थिक साक्षरता",
@@ -92,7 +92,7 @@ const DOMAIN_CARDS: DomainCard[] = [
   },
   {
     id: "grievance",
-    icon: GrievanceIcon,
+    icon: ClipboardCheckIcon,
     titleEn: "Grievance Redressal",
     titleHi: "शिकायत निवारण",
     titleMr: "तक्रार निवारण",
@@ -103,7 +103,7 @@ const DOMAIN_CARDS: DomainCard[] = [
   },
   {
     id: "agri_support",
-    icon: AgriIcon,
+    icon: HomeIcon,
     titleEn: "Agricultural Support",
     titleHi: "कृषि सहायता",
     titleMr: "शेती सहाय्य",
@@ -146,7 +146,7 @@ const DomainCards: React.FC<Props> = ({ language, onSelect }) => {
             aria-label={`Select ${card.titleEn}`}
           >
             <div className="service-card__icon-box">
-              <IconComponent size={20} color="#145A62" />
+              <IconComponent size={20} color="#176B5B" />
             </div>
             <div className="service-card__content">
               <span className="service-card__title">{getTitle(card)}</span>

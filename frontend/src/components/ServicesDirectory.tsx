@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import type { LanguageCode } from "../types";
 import {
-  PacsIcon,
-  PmfbyIcon,
-  LawIcon,
-  BylawsIcon,
-  FinanceIcon,
+  LandmarkIcon,
+  WheatIcon,
+  ScaleIcon,
+  FileTextIcon,
+  WalletCardsIcon,
+  FileCheckIcon,
+  ClipboardCheckIcon,
+  ArrowRightIcon,
 } from "./Icons";
 
 interface Props {
@@ -13,7 +16,7 @@ interface Props {
   onAskAI: (prompt: string) => void;
 }
 
-type DomainTab = "pacs" | "pmfby" | "laws" | "bylaws" | "finance";
+type DomainTab = "pacs" | "pmfby" | "laws" | "bylaws" | "finance" | "schemes" | "grievance";
 
 const DOMAIN_SECTIONS: Record<
   DomainTab,
@@ -29,18 +32,18 @@ const DOMAIN_SECTIONS: Record<
   }
 > = {
   pacs: {
-    icon: PacsIcon,
-    titleEn: "PACS Services Hub",
-    titleHi: "पैक्स (PACS) सेवा केंद्र",
-    titleMr: "PACS सेवा केंद्र",
-    subEn: "Primary Agricultural Credit Societies credit, fertilizer, and warehouse services",
-    subHi: "प्राथमिक कृषि ऋण समितियां - ऋण, उर्वरक और गोदाम सुविधाएं",
-    subMr: "प्राथमिक कृषी पतसंस्था - कर्ज, खते व गोदाम सेवा",
+    icon: LandmarkIcon,
+    titleEn: "PACS Services",
+    titleHi: "पैक्स (PACS) सेवाएं",
+    titleMr: "PACS सेवा",
+    subEn: "Primary Agricultural Credit Societies credit, fertilizer, seeds, and warehouse services",
+    subHi: "प्राथमिक कृषि ऋण समितियां - ऋण, उर्वरक, बीज और भंडारण सेवाएं",
+    subMr: "प्राथमिक कृषी पतसंस्था - कर्ज, खते, बियाणे व गोदाम सेवा",
     topics: [
       {
-        en: "Kisan Credit Card (KCC) short-term crop loans",
-        hi: "किसान क्रेडिट कार्ड (केसीसी) फसल ऋण",
-        mr: "किसान क्रेडिट कार्ड (KCC) पीक कर्ज",
+        en: "Kisan Credit Card (KCC) short-term crop loans & subvention",
+        hi: "किसान क्रेडिट कार्ड (केसीसी) फसल ऋण और ब्याज छूट",
+        mr: "किसान क्रेडिट कार्ड (KCC) पीक कर्ज व व्याज सवलत",
         promptEn: "How do farmers get KCC crop loans through PACS?",
       },
       {
@@ -50,13 +53,13 @@ const DOMAIN_SECTIONS: Record<
         promptEn: "What agricultural inputs and fertilizers are distributed at PACS?",
       },
       {
-        en: "Warehouse & grain storage scheme at PACS level",
-        hi: "पैक्स स्तर पर अनाज भंडारण योजना",
-        mr: "PACS पातळीवर धान्य साठवणूक योजना",
+        en: "Warehouse & grain storage receipt loans at PACS level",
+        hi: "पैक्स स्तर पर अनाज भंडारण एवं रसीद ऋण योजना",
+        mr: "PACS पातळीवर धान्य साठवणूक व पावती कर्ज योजना",
         promptEn: "Explain the grain storage facilities and warehouse receipt loans at PACS.",
       },
       {
-        en: "PACS Common Service Centers (CSC) digital services",
+        en: "PACS Common Service Centers (CSC) digital citizen services",
         hi: "सामान्य सेवा केंद्र (CSC) के रूप में पैक्स सेवाएं",
         mr: "सीएससी (CSC) द्वारे PACS कडून मिळणाऱ्या डिजिटल सेवा",
         promptEn: "What digital and citizen services can be accessed at PACS CSC centers?",
@@ -64,23 +67,23 @@ const DOMAIN_SECTIONS: Record<
     ],
   },
   pmfby: {
-    icon: PmfbyIcon,
-    titleEn: "PMFBY Crop Insurance Hub",
-    titleHi: "पीएमएफबीवाई फसल बीमा केंद्र",
-    titleMr: "PMFBY पीक विमा केंद्र",
-    subEn: "Pradhan Mantri Fasal Bima Yojana coverage, claims, and loss assessment",
-    subHi: "प्रधानमंत्री फसल बीमा योजना कवरेज, दावा एवं क्षति आकलन",
-    subMr: "प्रधानमंत्री पीक विमा योजना संरक्षण, दावे व नुकसान भरपाई",
+    icon: WheatIcon,
+    titleEn: "Crop & Insurance (PMFBY)",
+    titleHi: "फसल और बीमा (पीएमएफबीवाई)",
+    titleMr: "पीक आणि विमा (PMFBY)",
+    subEn: "Pradhan Mantri Fasal Bima Yojana coverage, 72-hour claim steps, and damage relief",
+    subHi: "प्रधानमंत्री फसल बीमा योजना कवरेज, 72 घंटे की दावा प्रक्रिया और सहायता",
+    subMr: "प्रधानमंत्री पीक विमा योजना संरक्षण, ७२ तासांत दावा व नुकसान भरपाई",
     topics: [
       {
-        en: "72-hour crop damage reporting procedure",
-        hi: "फसल नुकसान की 72 घंटे की रिपोर्टिंग प्रक्रिया",
+        en: "72-hour crop damage intimating procedure",
+        hi: "फसल नुकसान की 72 घंटे की सूचना प्रक्रिया",
         mr: "७२ तासांच्या आत पीक नुकसानीची माहिती देण्याची प्रक्रिया",
         promptEn: "How do I report crop damage within 72 hours under PMFBY?",
       },
       {
-        en: "Post-harvest & localized calamity coverage details",
-        hi: "कटाई के बाद और स्थानीय आपदा कवरेज विवरण",
+        en: "Post-harvest & localized inundation calamity coverage",
+        hi: "कटाई के बाद और स्थानीय जलभराव आपदा कवरेज",
         mr: "कापणीनंतरचे नुकसान व स्थानिक आपत्ती विमा संरक्षण",
         promptEn: "What post-harvest and localized losses are covered under PMFBY?",
       },
@@ -90,22 +93,16 @@ const DOMAIN_SECTIONS: Record<
         mr: "खरीप, रब्बी व रोख पिकांचे विमा हप्ते दर",
         promptEn: "What are the farmer premium rates for Kharif and Rabi crops in PMFBY?",
       },
-      {
-        en: "Required documents for crop insurance claims",
-        hi: "फसल बीमा दावों के लिए आवश्यक दस्तावेज",
-        mr: "पीक विमा दाव्यासाठी लागणारी आवश्यक कागदपत्रे",
-        promptEn: "What documents are required to claim PMFBY crop damage insurance?",
-      },
     ],
   },
   laws: {
-    icon: LawIcon,
-    titleEn: "Maharashtra Cooperative Laws Hub",
-    titleHi: "महाराष्ट्र सहकारी कानून केंद्र",
-    titleMr: "महाराष्ट्र सहकारी संस्था कायदा केंद्र",
-    subEn: "Maharashtra Cooperative Societies Act provisions, voting rights, and legal governance",
-    subHi: "महाराष्ट्र सहकारी समिति अधिनियम प्रावधान, मतदान अधिकार एवं कानून",
-    subMr: "महाराष्ट्र सहकारी संस्था कायद्यातील तरतुदी, मतदान अधिकार व कायदेशीर नियम",
+    icon: ScaleIcon,
+    titleEn: "Cooperative Laws",
+    titleHi: "सहकारी कानून",
+    titleMr: "सहकारी कायदे",
+    subEn: "Maharashtra Cooperative Societies Act provisions, voting rights, and audit rules",
+    subHi: "महाराष्ट्र सहकारी समिति अधिनियम प्रावधान, मतदान अधिकार एवं ऑडिट नियम",
+    subMr: "महाराष्ट्र सहकारी संस्था कायद्यातील तरतुदी, मतदान अधिकार व ऑडिट नियम",
     topics: [
       {
         en: "Member voting rights & disqualification rules (Sec 26 & 27)",
@@ -114,33 +111,27 @@ const DOMAIN_SECTIONS: Record<
         promptEn: "What are the voting rights and disqualification rules under Sec 26 and 27 of MCS Act?",
       },
       {
-        en: "Managing Committee election process & reservations",
-        hi: "प्रबंध समिति चुनाव प्रक्रिया एवं आरक्षण",
-        mr: "संचालक मंडळ निवडणूक प्रक्रिया व आरक्षण",
-        promptEn: "Explain the election rules and committee seat reservations in cooperative societies.",
+        en: "Managing Committee election rules & tenure limits",
+        hi: "प्रबंध समिति चुनाव नियम एवं कार्यकाल सीमा",
+        mr: "संचालक मंडळ निवडणूक नियम व मुदत मर्यादा",
+        promptEn: "Explain the election rules and committee tenure in cooperative societies.",
       },
       {
-        en: "Annual General Body Meeting (AGM) requirements & deadlines",
-        hi: "वार्षिक साधारण सभा (एजीएम) आवश्यकताएं और समय सीमा",
-        mr: "वार्षिक सर्वसाधारण सभा (AGM) नियम व मुदत",
+        en: "Annual General Meeting (AGM) deadlines & legal consequences",
+        hi: "वार्षिक साधारण सभा (एजीएम) की समय सीमा और कानूनी परिणाम",
+        mr: "वार्षिक सर्वसाधारण सभा (AGM) मुदत व कायदेशीर तरतुदी",
         promptEn: "What are the legal requirements and penalty for delay in conducting AGM?",
-      },
-      {
-        en: "Society audit rules & Financial Year requirements",
-        hi: "समिति ऑडिट नियम और वित्तीय वर्ष आवश्यकताएं",
-        mr: "संस्थेचे ऑडिट नियम व आर्थिक वर्ष तरतुदी",
-        promptEn: "What are the mandatory audit rules and penal consequences for cooperative societies?",
       },
     ],
   },
   bylaws: {
-    icon: BylawsIcon,
-    titleEn: "Standard Cooperative By-laws",
-    titleHi: "मानक सहकारी उप-नियम",
-    titleMr: "मानक सहकारी उपविधी",
-    subEn: "Model by-laws governing internal rules, member duties, and committee powers",
-    subHi: "आंतरिक नियमों, सदस्य कर्तव्यों एवं समिति शक्तियों के उपनियम",
-    subMr: "अंतर्गत नियम, सभासद कर्तव्ये व व्यवस्थापक हक्क दर्शवणारी उपविधी",
+    icon: FileTextIcon,
+    titleEn: "Cooperative By-laws",
+    titleHi: "सहकारी उप-नियम",
+    titleMr: "सहकारी उपविधी",
+    subEn: "Model by-laws governing internal rules, member classes, and share transfer",
+    subHi: "आंतरिक नियमों, सदस्य श्रेणियों और शेयर हस्तांतरण के उपनियम",
+    subMr: "अंतर्गत नियम, सभासद वर्ग व भाग हस्तांतरण दर्शवणारी उपविधी",
     topics: [
       {
         en: "Standard membership types (Active, Associate, Nominal)",
@@ -149,9 +140,9 @@ const DOMAIN_SECTIONS: Record<
         promptEn: "Explain the types of members and rights under standard cooperative by-laws.",
       },
       {
-        en: "Procedure for transfer of shares & property rights",
-        hi: "शेयर हस्तांतरण और संपत्ति अधिकारों की प्रक्रिया",
-        mr: "भाग (शेअर) हस्तांतरण व हक्क हस्तांतरण प्रक्रिया",
+        en: "Procedure for transfer of share certificates & property rights",
+        hi: "शेयर प्रमाण पत्र और संपत्ति अधिकारों के हस्तांतरण की प्रक्रिया",
+        mr: "भाग (शेअर) प्रमाणपत्र व हक्क हस्तांतरण प्रक्रिया",
         promptEn: "How are share certificates transferred under cooperative society by-laws?",
       },
       {
@@ -160,40 +151,80 @@ const DOMAIN_SECTIONS: Record<
         mr: "कायदेशीर वारस नामनिर्देशन (Nomination) प्रक्रिया",
         promptEn: "What is the legal heir nomination procedure under cooperative by-laws?",
       },
-      {
-        en: "No-confidence motion against Committee office bearers",
-        hi: "समिति पदाधिकारियों के खिलाफ अविश्वास प्रस्ताव",
-        mr: "अध्यक्षांविरुद्ध अविश्वास ठराव प्रक्रिया",
-        promptEn: "How is a no-confidence motion moved against cooperative committee office bearers?",
-      },
     ],
   },
   finance: {
-    icon: FinanceIcon,
-    titleEn: "Financial Literacy Hub",
-    titleHi: "वित्तीय साक्षरता केंद्र",
-    titleMr: "आर्थिक साक्षरता केंद्र",
-    subEn: "Rural financial planning, credit score discipline, and interest subvention benefits",
-    subHi: "ग्रामीण वित्तीय नियोजन, क्रेडिट स्कोर और ब्याज अनुदान लाभ",
-    subMr: "ग्रामीण आर्थिक नियोजन, सिबिल स्कोर व व्याज सवलतीचे फायदे",
+    icon: WalletCardsIcon,
+    titleEn: "Financial Literacy",
+    titleHi: "वित्तीय साक्षरता",
+    titleMr: "आर्थिक साक्षरता",
+    subEn: "Rural financial discipline, interest subvention benefits, and deposit safety",
+    subHi: "ग्रामीण वित्तीय अनुशासन, ब्याज अनुदान लाभ और जमा सुरक्षा",
+    subMr: "ग्रामीण आर्थिक शिस्त, व्याज सवलत व ठेव सुरक्षा",
     topics: [
       {
-        en: "3% Interest Subvention for timely KCC repayment",
-        hi: "समय पर केसीसी भुगतान पर 3% ब्याज छूट योजना",
+        en: "3% Interest Subvention for prompt KCC repayment",
+        hi: "समय पर केसीसी भुगतान करने पर 3% ब्याज छूट योजना",
         mr: "वेळेवर KCC परतफेडीवर ३% व्याज सवलत योजना",
         promptEn: "How does timely KCC repayment earn 3% interest subvention benefits?",
       },
       {
-        en: "Understanding credit score & avoiding default penalties",
-        hi: "क्रेडिट स्कोर समझना और डिफॉल्ट से बचना",
-        mr: "सिबिल स्कोर समजून घेणे व थकबाकी टाळणे",
+        en: "CIBIL credit score impact & default penalties",
+        hi: "सिबिल क्रेडिट स्कोर प्रभाव और डिफॉल्ट पेनल्टी",
+        mr: "सिबिल स्कोर प्रभाव व थकबाकी टाळणे",
         promptEn: "How does cooperative loan default affect CIBIL score and future credit?",
       },
       {
-        en: "Deposit Insurance & Credit Guarantee Corporation (DICGC) safety",
+        en: "Deposit Insurance (DICGC) safety up to Rs. 5 Lakhs",
         hi: "सहकारी बैंक जमा सुरक्षा योजना (DICGC)",
-        mr: "सहकारी बँक ठेवींची सुरक्षितता (DICGC नियम)",
+        mr: "सहकारी बँक ठेवींची सुरक्षा (DICGC नियम)",
         promptEn: "Are cooperative bank fixed deposits insured up to Rs. 5 Lakhs under DICGC?",
+      },
+    ],
+  },
+  schemes: {
+    icon: FileCheckIcon,
+    titleEn: "Government Schemes",
+    titleHi: "सरकारी योजनाएं",
+    titleMr: "सरकारी योजना",
+    subEn: "Ministry of Cooperation national schemes, PACS ERP, and storage infrastructure",
+    subHi: "सहकार मंत्रालय की राष्ट्रीय योजनाएं, ईआरपी और भंडारण संरचना",
+    subMr: "सहकार मंत्रालयाच्या राष्ट्रीय योजना, संगणकीकरण व गोदाम विकास",
+    topics: [
+      {
+        en: "PACS Computerization & ERP integration scheme",
+        hi: "पैक्स संगणकीकरण और ईआरपी योजना",
+        mr: "PACS संगणकीकरण व प्रणाली योजना",
+        promptEn: "Explain the national scheme for PACS Computerization and ERP implementation.",
+      },
+      {
+        en: "World's Largest Grain Storage Plan in Cooperative Sector",
+        hi: "सहकारी क्षेत्र में विश्व की सबसे बड़ी अनाज भंडारण योजना",
+        mr: "सहकार क्षेत्रातील जगातील सर्वात मोठी धान्य साठवणूक योजना",
+        promptEn: "Explain the grain storage plan created for primary agricultural credit societies.",
+      },
+    ],
+  },
+  grievance: {
+    icon: ClipboardCheckIcon,
+    titleEn: "Grievance Assistance",
+    titleHi: "शिकायत सहायता",
+    titleMr: "तक्रार निवारण",
+    subEn: "Structured complaint redressal guidance and Registrar submission procedures",
+    subHi: "संरचित शिकायत निवारण मार्गदर्शन और निबंधक प्रस्तुति प्रक्रिया",
+    subMr: "रचनात्मक तक्रार निवारण मार्गदर्शक व निबंधक सादरकरण पायऱ्या",
+    topics: [
+      {
+        en: "Procedure to file complaint with District Deputy Registrar (DDR)",
+        hi: "जिला उप निबंधक (DDR) के पास शिकायत दर्ज करने की प्रक्रिया",
+        mr: "जिल्हा उपनिबंधकांकडे (DDR) तक्रार नोंदवण्याची प्रक्रिया",
+        promptEn: "What is the official procedure to file a grievance with District Deputy Registrar (DDR)?",
+      },
+      {
+        en: "Grievance redressal for PACS loan refusal or membership denial",
+        hi: "पैक्स ऋण इनकार या सदस्यता इनकार के लिए शिकायत निवारण",
+        mr: "PACS कडून कर्ज किंवा सभासदत्व नाकारल्यास तक्रार कशी करावी?",
+        promptEn: "How do I file a grievance if PACS denies loan or membership without valid reasons?",
       },
     ],
   },
@@ -203,16 +234,16 @@ const ServicesDirectory: React.FC<Props> = ({ language, onAskAI }) => {
   const [activeTab, setActiveTab] = useState<DomainTab>("pacs");
   const current = DOMAIN_SECTIONS[activeTab];
 
+  const IconMain = current.icon;
   const title = language === "hi" ? current.titleHi : language === "mr" ? current.titleMr : current.titleEn;
   const sub = language === "hi" ? current.subHi : language === "mr" ? current.subMr : current.subEn;
 
   return (
-    <div className="services-directory" aria-label="Cooperative Services Directory">
-      {/* Domain Navigation Header Tabs */}
-      <div className="services-nav-tabs">
-        {(["pacs", "pmfby", "laws", "bylaws", "finance"] as DomainTab[]).map((tab) => {
+    <div className="services-directory" aria-label="Services Directory">
+      <div className="services-nav-bar">
+        {(["pacs", "pmfby", "laws", "bylaws", "finance", "schemes", "grievance"] as DomainTab[]).map((tab) => {
           const cfg = DOMAIN_SECTIONS[tab];
-          const IconComp = cfg.icon;
+          const IconTab = cfg.icon;
           const label = language === "hi" ? cfg.titleHi : language === "mr" ? cfg.titleMr : cfg.titleEn;
           const isActive = activeTab === tab;
 
@@ -220,20 +251,22 @@ const ServicesDirectory: React.FC<Props> = ({ language, onAskAI }) => {
             <button
               key={tab}
               type="button"
-              className={`service-nav-btn ${isActive ? "service-nav-btn--active" : ""}`}
+              className={`services-tab-btn ${isActive ? "services-tab-btn--active" : ""}`}
               onClick={() => setActiveTab(tab)}
             >
-              <IconComp size={18} color={isActive ? "#176B5B" : "#64757A"} />
+              <IconTab size={16} color={isActive ? "#176B5B" : "#66777A"} />
               <span>{label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Active Domain Panel */}
       <div className="services-panel">
         <div className="services-panel__header">
-          <div className="services-panel__title-group">
+          <div className="services-panel__icon">
+            <IconMain size={24} color="#176B5B" />
+          </div>
+          <div className="services-panel__titles">
             <h3 className="services-panel__title">{title}</h3>
             <p className="services-panel__sub">{sub}</p>
           </div>
@@ -245,14 +278,14 @@ const ServicesDirectory: React.FC<Props> = ({ language, onAskAI }) => {
 
             return (
               <div key={idx} className="topic-card">
-                <span className="topic-card__bullet">●</span>
                 <span className="topic-card__label">{topicLabel}</span>
                 <button
                   type="button"
                   className="topic-card__btn"
                   onClick={() => onAskAI(t.promptEn)}
                 >
-                  {language === "hi" ? "पूछें" : language === "mr" ? "विचारा" : "Ask AI"} →
+                  <span>{language === "hi" ? "पूछें" : language === "mr" ? "विचारा" : "Ask"}</span>
+                  <ArrowRightIcon size={14} color="#FFFFFF" />
                 </button>
               </div>
             );
