@@ -6,7 +6,13 @@
  */
 import type { QueryRequest, QueryResponse } from "../types";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const DEFAULT_PROD_URL = "https://sih26088-cooperative-ai.onrender.com";
+const DEFAULT_DEV_URL = "http://localhost:8000";
+
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.PROD ? DEFAULT_PROD_URL : DEFAULT_DEV_URL);
+
 
 // ── Health ────────────────────────────────────────────────────────────────────
 
