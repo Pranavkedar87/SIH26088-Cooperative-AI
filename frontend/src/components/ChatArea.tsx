@@ -13,7 +13,7 @@ interface Props {
 }
 
 // Rotating contextual loading messages
-const LOADING_MESSAGES: Record<LanguageCode, string[]> = {
+const LOADING_MESSAGES: Record<string, string[]> = {
   en: [
     "🔎 Understanding your question…",
     "📚 Checking verified knowledge…",
@@ -34,7 +34,7 @@ const LOADING_MESSAGES: Record<LanguageCode, string[]> = {
   ],
 };
 
-const EMPTY_TEXT: Record<LanguageCode, string> = {
+const EMPTY_TEXT: Record<string, string> = {
   en: "Ask your question below to get started.",
   hi: "शुरू करने के लिए नीचे अपना प्रश्न पूछें।",
   mr: "प्रारंभ करण्यासाठी खाली तुमचा प्रश्न विचारा.",
@@ -64,7 +64,7 @@ const ChatArea: React.FC<Props> = ({
       return;
     }
     setLoadingMsgIdx(0);
-    const msgs = LOADING_MESSAGES[language];
+    const msgs = LOADING_MESSAGES[language] ?? LOADING_MESSAGES.en;
     const id = setInterval(() => {
       setLoadingMsgIdx((prev) => (prev + 1) % msgs.length);
     }, 1800);
@@ -76,7 +76,7 @@ const ChatArea: React.FC<Props> = ({
       {messages.length === 0 && !isLoading && (
         <div className="chat-empty">
           <span className="chat-empty__icon">🤝</span>
-          <p>{EMPTY_TEXT[language]}</p>
+          <p>{EMPTY_TEXT[language] ?? EMPTY_TEXT.en}</p>
         </div>
       )}
 

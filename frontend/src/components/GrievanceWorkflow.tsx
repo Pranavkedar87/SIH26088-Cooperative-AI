@@ -52,7 +52,7 @@ const GrievanceWorkflow: React.FC<Props> = ({ language, onSaveHistory }) => {
     document.body.removeChild(element);
   };
 
-  const categoryName = category[language] ?? category.en;
+  const categoryName = (category as any)[language] ?? category.en;
 
   const generatedSummary = `=== FORMAL COOPERATIVE GRIEVANCE SUMMARY ===
 Date: ${new Date().toLocaleDateString()}
@@ -133,7 +133,7 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
                   onClick={() => setCategory(cat)}
                 >
                   <span className="cat-radio">{category.id === cat.id ? "●" : "○"}</span>
-                  <span className="cat-label">{cat[language] ?? cat.en}</span>
+                  <span className="cat-label">{(cat as any)[language] ?? cat.en}</span>
                 </button>
               ))}
             </div>

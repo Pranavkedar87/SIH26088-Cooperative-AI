@@ -210,12 +210,12 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
 
   const IconComp = config.icon;
   const title = language === "hi" ? config.titleHi : language === "mr" ? config.titleMr : config.titleEn;
-  const q1 = config.step1Question[language] ?? config.step1Question.en;
-  const q2 = config.step2Question[language] ?? config.step2Question.en;
+  const q1 = (config.step1Question as any)[language] ?? config.step1Question.en;
+  const q2 = (config.step2Question as any)[language] ?? config.step2Question.en;
 
   const handleFinish = () => {
-    const s1Text = step1Val ? (step1Val[language] ?? step1Val.en) : "";
-    const s2Text = step2Val ? (step2Val[language] ?? step2Val.en) : "";
+    const s1Text = step1Val ? ((step1Val as any)[language] ?? step1Val.en) : "";
+    const s2Text = step2Val ? ((step2Val as any)[language] ?? step2Val.en) : "";
     const prompt = config.promptTemplate(s1Text, s2Text);
     onAskAI(prompt);
   };
@@ -271,7 +271,7 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
                   onClick={() => setStep1Val(opt)}
                 >
                   <span className="opt-indicator">{step1Val?.id === opt.id ? "●" : "○"}</span>
-                  <span className="opt-text">{opt[language] ?? opt.en}</span>
+                  <span className="opt-text">{(opt as any)[language] ?? opt.en}</span>
                 </button>
               ))}
             </div>
@@ -298,7 +298,7 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
                   onClick={() => setStep2Val(opt)}
                 >
                   <span className="opt-indicator">{step2Val?.id === opt.id ? "●" : "○"}</span>
-                  <span className="opt-text">{opt[language] ?? opt.en}</span>
+                  <span className="opt-text">{(opt as any)[language] ?? opt.en}</span>
                 </button>
               ))}
             </div>
@@ -340,7 +340,7 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
                 {config.checklist.map((item, idx) => (
                   <li key={idx}>
                     <CheckIcon size={14} color="#2F855A" />
-                    <span>{item[language] ?? item.en}</span>
+                    <span>{(item as any)[language] ?? item.en}</span>
                   </li>
                 ))}
               </ul>

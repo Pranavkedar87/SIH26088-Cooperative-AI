@@ -21,7 +21,7 @@ interface Props {
 }
 
 const HERO_TEXT: Record<
-  LanguageCode,
+  string,
   { headline: string; sub: string; voiceBtn: string; typeOr: string; placeholder: string; helpHeader: string; helpSub: string }
 > = {
   mr: {
@@ -200,7 +200,7 @@ const AssistanceHub: React.FC<Props> = ({
         <div className="hub-services-grid" role="list">
           {SERVICE_CARDS.map((card) => {
             const IconComp = card.icon;
-            const title = card[language] ?? card.en;
+            const title = (card as any)[language] ?? card.en;
             const desc =
               language === "hi"
                 ? card.descHi

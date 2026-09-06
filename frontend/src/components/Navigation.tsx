@@ -32,7 +32,7 @@ const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
       <div className="nav-container">
         {TAB_CONFIG.map((tab) => {
           const IconComp = tab.icon;
-          const label = tab[language] ?? tab.en;
+          const label = (tab as any)[language] ?? tab.en;
           const isActive = activeTab === tab.id;
 
           return (

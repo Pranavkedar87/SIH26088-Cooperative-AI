@@ -30,13 +30,13 @@ const SUGGESTED: SuggestedQuestion[] = [
   },
 ];
 
-const HERO_HEADING: Record<LanguageCode, string> = {
+const HERO_HEADING: Record<string, string> = {
   en: "What do you need help with?",
   hi: "आपको किस विषय में सहायता चाहिए?",
   mr: "तुम्हाला कोणत्या विषयात मदत हवी आहे?",
 };
 
-const HERO_SUB: Record<LanguageCode, string> = {
+const HERO_SUB: Record<string, string> = {
   en: "Get simple, trusted guidance on cooperative laws, government schemes, PACS services, crop insurance, financial literacy and grievances.",
   hi: "सहकारी कानूनों, सरकारी योजनाओं, पैक्स सेवाओं, फसल बीमा, वित्तीय साक्षरता और शिकायतों पर सरल व विश्वसनीय मार्गदर्शन प्राप्त करें।",
   mr: "सहकारी कायदे, सरकारी योजना, पॅक्स सेवा, पीक विमा, आर्थिक साक्षरता आणि तक्रारींबाबत सुलभ व विश्वसनीय मार्गदर्शन मिळवा.",
@@ -97,10 +97,10 @@ const WelcomeHero: React.FC<Props> = ({ language, onSelect }) => {
             type="button"
             className="suggestion-btn"
             role="listitem"
-            onClick={() => onSelect(q[language])}
+            onClick={() => onSelect((q as any)[language] ?? q.en)}
           >
             <span className="suggestion-btn__bullet">•</span>
-            <span>{q[language]}</span>
+            <span>{(q as any)[language] ?? q.en}</span>
           </button>
         ))}
       </div>

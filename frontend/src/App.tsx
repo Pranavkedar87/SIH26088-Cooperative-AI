@@ -2,7 +2,11 @@ import React, { useState, useCallback, useEffect } from "react";
 import type { ChatMessage, LanguageCode, AppTab, HistoryItem } from "./types";
 import { sendQuery } from "./api/client";
 import { useTextToSpeech } from "./hooks/useTextToSpeech";
-import LanguageSelector from "./components/LanguageSelector";
+import { Header } from "./components/Header";
+import { SideDrawer } from "./components/SideDrawer";
+import { LocationModal } from "./components/LocationModal";
+import { NotificationCenterModal, type NotificationItem } from "./components/NotificationCenterModal";
+import { LanguageModal } from "./components/LanguageSelector";
 import Navigation from "./components/Navigation";
 import AssistanceHub from "./components/AssistanceHub";
 import GuidedAssistance from "./components/GuidedAssistance";
@@ -11,7 +15,7 @@ import GrievanceWorkflow from "./components/GrievanceWorkflow";
 import ChatArea from "./components/ChatArea";
 import ChatInput from "./components/ChatInput";
 import VoiceModeView from "./components/VoiceModeView";
-import { SahkaarSetuLogo } from "./components/Icons";
+import { detectUserLocation, type UserLocationData } from "./services/locationService";
 import "./App.css";
 
 let _id = 0;
@@ -33,6 +37,36 @@ const App: React.FC = () => {
 
   // Dedicated Voice Mode Overlay state
   const [isVoiceModeOpen, setIsVoiceModeOpen] = useState(false);
+
+  // Modals and Header UI States
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+
+  // Location State
+  const [locationData, setLocationData] = useState<UserLocationData>({
+    status: "idle",
+    displayName: "Location unavailable",
+    shortDisplayName: "Location",
+  });
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+
+  // Notifications State (extensible architecture)
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  // Automatically detect location on initial app load
+  const handleDetectLocation = useCallback(async () => {
+    setIsDetectingLocation(true);
+    setLocationData((prev) => ({ ...prev, status: "detecting" }));
+    const loc = await detectUserLocation();
+    setLocationData(loc);
+    setIsDetectingLocation(false);
+  }, []);
+
+  useEffect(() => {
+    handleDetectLocation();
+  }, [handleDetectLocation]);
 
   // Local storage history
   const [history, setHistory] = useState<HistoryItem[]>(() => {
@@ -135,29 +169,60 @@ const App: React.FC = () => {
     handleSendQuery(prompt);
   };
 
+  const handleMarkAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
   return (
     <div className="platform-app">
-      {/* Clean Institutional Header */}
-      <header className="platform-header">
-        <div className="header-brand-block">
-          <div className="header-brand-row">
-            <SahkaarSetuLogo size={26} color="#126B62" />
-            <h1 className="brand-name">SahkaarSetu</h1>
-          </div>
-          <span className="brand-tagline">
-            {language === "hi"
-              ? "आपका सहकारी साथी"
-              : language === "mr"
-              ? "तुमचा सहकारी साथी"
-              : "Your Cooperative Companion"}
-          </span>
-        </div>
+      {/* Top Header Component */}
+      <Header
+        language={language}
+        locationData={locationData}
+        unreadNotificationCount={notifications.filter((n) => !n.read).length}
+        onOpenMenu={() => setIsDrawerOpen(true)}
+        onOpenLocation={() => setIsLocationModalOpen(true)}
+        onOpenNotifications={() => setIsNotificationModalOpen(true)}
+        onOpenLanguage={() => setIsLanguageModalOpen(true)}
+      />
 
-        {/* Compact Language Selector Dropdown */}
-        <div className="header-controls">
-          <LanguageSelector selected={language} onChange={setLanguage} />
-        </div>
-      </header>
+      {/* Hamburger Navigation Drawer */}
+      <SideDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          setActiveGuidedFlow(null);
+          setIsVoiceModeOpen(false);
+          setActiveTab(tab);
+        }}
+        language={language}
+      />
+
+      {/* Location Details Modal */}
+      <LocationModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        locationData={locationData}
+        onRefreshLocation={handleDetectLocation}
+        isDetecting={isDetectingLocation}
+      />
+
+      {/* Notification Center Modal */}
+      <NotificationCenterModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        notifications={notifications}
+        onMarkAllRead={handleMarkAllNotificationsRead}
+      />
+
+      {/* 22 Scheduled Languages Selector Modal */}
+      <LanguageModal
+        isOpen={isLanguageModalOpen}
+        onClose={() => setIsLanguageModalOpen(false)}
+        selected={language}
+        onChange={setLanguage}
+      />
 
       {/* Main Multi-Tab Viewport */}
       <main className="platform-main">

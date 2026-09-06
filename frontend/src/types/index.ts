@@ -1,6 +1,28 @@
 // ── Language support ──────────────────────────────────────────────────────────
 
-export type LanguageCode = "en" | "hi" | "mr";
+export type LanguageCode =
+  | "hi"
+  | "en"
+  | "mr"
+  | "gu"
+  | "bn"
+  | "ta"
+  | "te"
+  | "kn"
+  | "ml"
+  | "pa"
+  | "or"
+  | "as"
+  | "ur"
+  | "sa"
+  | "ks"
+  | "kok"
+  | "mai"
+  | "mni"
+  | "ne"
+  | "brx"
+  | "sat"
+  | "sd";
 
 export interface Language {
   code: LanguageCode;
@@ -9,9 +31,28 @@ export interface Language {
 }
 
 export const LANGUAGES: Language[] = [
-  { code: "mr", label: "Marathi", nativeLabel: "मराठी" },
   { code: "hi", label: "Hindi", nativeLabel: "हिंदी" },
   { code: "en", label: "English", nativeLabel: "English" },
+  { code: "mr", label: "Marathi", nativeLabel: "मराठी" },
+  { code: "gu", label: "Gujarati", nativeLabel: "ગુજરાતી" },
+  { code: "bn", label: "Bengali", nativeLabel: "বাংলা" },
+  { code: "ta", label: "Tamil", nativeLabel: "தமிழ்" },
+  { code: "te", label: "Telugu", nativeLabel: "తెలుగు" },
+  { code: "kn", label: "Kannada", nativeLabel: "ಕನ್ನಡ" },
+  { code: "ml", label: "Malayalam", nativeLabel: "മലയാളം" },
+  { code: "pa", label: "Punjabi", nativeLabel: "ਪੰਜਾਬੀ" },
+  { code: "or", label: "Odia", nativeLabel: "ଓଡ଼ିଆ" },
+  { code: "as", label: "Assamese", nativeLabel: "অসমীয়া" },
+  { code: "ur", label: "Urdu", nativeLabel: "اردو" },
+  { code: "sa", label: "Sanskrit", nativeLabel: "संस्कृतम्" },
+  { code: "ks", label: "Kashmiri", nativeLabel: "کٲشُر" },
+  { code: "kok", label: "Konkani", nativeLabel: "कोंकणी" },
+  { code: "mai", label: "Maithili", nativeLabel: "मैथिली" },
+  { code: "mni", label: "Manipuri", nativeLabel: "मৈতৈলোন্" },
+  { code: "ne", label: "Nepali", nativeLabel: "नेपाली" },
+  { code: "brx", label: "Bodo", nativeLabel: "बड़ो" },
+  { code: "sat", label: "Santali", nativeLabel: "ᱥᱟᱱᱛᱟᱲᱤ" },
+  { code: "sd", label: "Sindhi", nativeLabel: "سنڌي" },
 ];
 
 // ── Application Navigation Tabs ───────────────────────────────────────────────

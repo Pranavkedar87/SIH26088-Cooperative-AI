@@ -11,13 +11,13 @@ interface Props {
   onChange: (value: string) => void;
 }
 
-const PLACEHOLDER: Record<LanguageCode, string> = {
+const PLACEHOLDER: Record<string, string> = {
   en: "Ask about cooperative services, schemes or laws…",
   hi: "सहकारी सेवाओं, योजनाओं या कानून के बारे में पूछें…",
   mr: "सहकारी सेवा, योजना किंवा कायद्याबद्दल विचारा…",
 };
 
-const STT_STATUS_LABEL: Record<LanguageCode, { listening: string; processing: string }> = {
+const STT_STATUS_LABEL: Record<string, { listening: string; processing: string }> = {
   en: { listening: "Listening… Speak now", processing: "Processing speech…" },
   hi: { listening: "सुन रहा हूँ… अब बोलें", processing: "आवाज संसाधित हो रही है…" },
   mr: { listening: "ऐकत आहे… आता बोला", processing: "आवाज प्रक्रिया सुरू आहे…" },
@@ -94,12 +94,12 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
       {status === "listening" && (
         <div className="stt-status-bar stt-status-bar--listening" role="status" aria-live="polite">
           <MicIcon size={14} color="#B94A48" />
-          <span>{STT_STATUS_LABEL[language].listening}</span>
+          <span>{(STT_STATUS_LABEL[language] ?? STT_STATUS_LABEL.en).listening}</span>
         </div>
       )}
       {status === "processing" && (
         <div className="stt-status-bar stt-status-bar--processing" role="status" aria-live="polite">
-          <span>{STT_STATUS_LABEL[language].processing}</span>
+          <span>{(STT_STATUS_LABEL[language] ?? STT_STATUS_LABEL.en).processing}</span>
         </div>
       )}
       {errorMessage && status === "error" && (
@@ -123,7 +123,7 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
           value={value}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder={PLACEHOLDER[language]}
+          placeholder={PLACEHOLDER[language] ?? PLACEHOLDER.en}
           rows={1}
           disabled={isLoading}
           aria-label="Message input"
