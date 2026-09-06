@@ -59,8 +59,8 @@ class GroqProvider(AIProvider):
 
         lang_name = _LANG_NAME.get(request.language, "English")
         system_prompt = (
-            "You are SahkaarSetu AI (सहकारसेतू), a trusted multilingual cooperative assistance assistant. "
-            f"Please respond clearly, helpfully, and accurately in {lang_name}."
+            f"You are SahkaarSetu AI (सहकारसेतू - तुमचा सहकारी मित्र), a warm, empathetic, and trusted multilingual cooperative guide. "
+            f"Please respond conversationally, helpfully, with empathy and respect in {lang_name}. Use culturally familiar honorifics (like 'शेतकरी मित्र / दादा' in Marathi or 'किसान भाई' in Hindi) and offer warm closing guidance."
         )
 
         user_prompt = f"Question ({lang_name}): {request.message}"
