@@ -2933,6 +2933,69 @@
   .language-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* ── Conversational Answer Styling (ChatGPT-Style Response UX) ────────────── */
+.conversational-answer-container {
+  max-width: 740px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.conversational-body {
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: #1F2937;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.conversational-body[data-lang="hi"],
+.conversational-body[data-lang="mr"] {
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.conversational-heading {
+  font-size: 17.5px;
+  font-weight: 700;
+  color: #111827;
+  margin: 10px 0 2px 0;
+  letter-spacing: -0.01em;
+}
+
+.conversational-p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.conversational-ol,
+.conversational-ul {
+  margin: 4px 0 4px 18px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.conversational-ol li,
+.conversational-ul li {
+  line-height: 1.6;
+}
+
+.conversational-link {
+  color: #126B62;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.conversational-link:hover {
+  color: #0E524B;
+}
+
 
 
 

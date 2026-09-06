@@ -17,10 +17,10 @@ export const NextStepCard: React.FC<Props> = ({
 
   const headerTitle =
     language === "hi"
-      ? "आगे क्या करें?"
+      ? "सुझाए गए प्रश्न"
       : language === "en"
-      ? "What Should I Do Now?"
-      : "पुढे काय करावे?";
+      ? "Suggested Follow-ups"
+      : "पुढील पर्याय";
 
   return (
     <div className="guidance-next-steps">

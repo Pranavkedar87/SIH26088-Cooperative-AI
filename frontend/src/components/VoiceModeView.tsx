@@ -129,7 +129,8 @@ export const VoiceModeView: React.FC<Props> = ({
         `[VOICE_LATENCY] Captured: "${trimmed}" | Detected lang: ${detectedLang} | Intent: ${response.intent} | Time: ${elapsed}ms`
       );
 
-      const cleanedAnswer = stripMarkdown(response.answer);
+      const rawVoiceText = response.spoken_answer || response.answer || "";
+      const cleanedAnswer = stripMarkdown(rawVoiceText);
 
       const assistantMsg: ChatMessage = {
         id: `voice-msg-${Date.now()}`,

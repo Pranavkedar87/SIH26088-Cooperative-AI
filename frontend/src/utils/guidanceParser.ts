@@ -180,7 +180,7 @@ function detectDomain(text: string): { domain: ResponseDomain; label: string } {
 /**
  * Dynamic fallback Next Actions mapping based on answer_focus
  */
-function getContextualActions(_domain: ResponseDomain, lang: string, answerFocus?: string): NextAction[] {
+export function getContextualActions(_domain: ResponseDomain, lang: string, answerFocus?: string): NextAction[] {
   const focus = (answerFocus || "OVERVIEW").toUpperCase();
 
   if (lang === "hi") {

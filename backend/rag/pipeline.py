@@ -399,73 +399,68 @@ class RAGPipeline:
             llm_spoken = json_payload.get("spoken_answer") or disp_obj.get("spoken_answer") or ""
 
             md_blocks = []
-            if title:
+            if title and not re.search(r"official guidance|cooperative guidance", title, re.I):
                 md_blocks.append(f"### {title}")
             if summary:
                 md_blocks.append(summary)
 
             if actions and isinstance(actions, list):
                 if answer_focus == "PROCEDURE":
-                    action_header = "Official Step-by-Step Procedure:"
+                    action_header = "### Step-by-Step Procedure"
                     if detected_language == "mr":
-                        action_header = "अधिकृत टप्पा-निहाय प्रक्रिया:"
+                        action_header = "### टप्पा-निहाय प्रक्रिया"
                     elif detected_language == "hi":
-                        action_header = "आधिकारिक चरण-दर-चरण प्रक्रिया:"
+                        action_header = "### चरण-दर-चरण प्रक्रिया"
                 elif answer_focus == "DOCUMENTS":
-                    action_header = "Required Documents & Proofs:"
+                    action_header = "### Required Documents"
                     if detected_language == "mr":
-                        action_header = "आवश्यक कागदपत्रे व पुरावे:"
+                        action_header = "### आवश्यक कागदपत्रे"
                     elif detected_language == "hi":
-                        action_header = "आवश्यक दस्तावेज और प्रमाण:"
+                        action_header = "### आवश्यक दस्तावेज"
                 elif answer_focus == "CONTACT":
-                    action_header = "Helpline & Contact Details:"
+                    action_header = "### Official Contact Details"
                     if detected_language == "mr":
-                        action_header = "अधिकृत हेल्पलाईन व संपर्क:"
+                        action_header = "### अधिकृत संपर्क व हेल्पलाईन"
                     elif detected_language == "hi":
-                        action_header = "आधिकारिक हेल्पलाइन और संपर्क:"
+                        action_header = "### आधिकारिक संपर्क एवं हेल्पलाइन"
                 elif answer_focus == "ELIGIBILITY":
-                    action_header = "Eligibility & Guidelines:"
+                    action_header = "### Eligibility Criteria"
                     if detected_language == "mr":
-                        action_header = "पात्रता निकष व नियम:"
+                        action_header = "### पात्रता निकष"
                     elif detected_language == "hi":
-                        action_header = "पात्रता मापदंड और नियम:"
+                        action_header = "### पात्रता मापदंड"
                 else:
-                    action_header = "Key Action Guidance:"
+                    action_header = "### Key Points"
                     if detected_language == "mr":
-                        action_header = "मार्गदर्शक पावले:"
+                        action_header = "### मुख्य मुद्दे"
                     elif detected_language == "hi":
-                        action_header = "मुख्य मार्गदर्शन:"
+                        action_header = "### मुख्य बातें"
 
-                act_lines = [f"**{action_header}**"]
+                act_lines = [action_header]
                 for idx, act in enumerate(actions, 1):
                     if isinstance(act, dict):
                         act_title = act.get("title", f"Step {idx}")
                         act_content = act.get("content", "")
-                        act_lines.append(f"{idx}. {act_title}: {act_content}")
+                        if answer_focus == "PROCEDURE":
+                            act_lines.append(f"{idx}. **{act_title}:** {act_content}")
+                        else:
+                            act_lines.append(f"- **{act_title}:** {act_content}")
                     elif isinstance(act, str) and act.strip():
                         act_str = act.strip()
-                        if not re.match(r'^\d+\.', act_str):
+                        if answer_focus == "PROCEDURE" and not re.match(r'^\d+\.', act_str):
                             act_lines.append(f"{idx}. {act_str}")
+                        elif not re.match(r'^[-*•]', act_str):
+                            act_lines.append(f"- {act_str}")
                         else:
                             act_lines.append(act_str)
                 if len(act_lines) > 1:
                     md_blocks.append("\n".join(act_lines))
 
             if details:
-                det_header = "Detailed Information:"
-                if detected_language == "mr":
-                    det_header = "सविस्तर माहिती:"
-                elif detected_language == "hi":
-                    det_header = "विस्तृत जानकारी:"
-                md_blocks.append(f"**{det_header}**\n{details}")
+                md_blocks.append(details)
 
             if next_guidance:
-                guid_header = "Next Guidance:"
-                if detected_language == "mr":
-                    guid_header = "पुढील मार्गदर्शन:"
-                elif detected_language == "hi":
-                    guid_header = "आगे का मार्गदर्शन:"
-                md_blocks.append(f"**{guid_header}**\n{next_guidance}")
+                md_blocks.append(f"**Note:** {next_guidance}")
 
             parsed_display = "\n\n".join(md_blocks).strip()
 
