@@ -54,8 +54,8 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
     ),
     (
         ["crop loan", "agricultural loan", "farming loan", "farm loan", "agricultural support",
-         "loan", "loans", "land", "acres", "acre", "कर्ज", "ऋण", "जमीन", "एकर", "एकड़",
-         "krishi", "कृषि", "शेती", "fertilizer", "seed", "peek", "पीक", "पिक", "kharab", "नुकसान"],
+         "kcc", "land loan", "acres loan", "कर्ज", "ऋण", "कृषि ऋण", "शेती कर्ज",
+         "krishi loan", "fertilizer loan", "seed loan"],
         "AGRICULTURAL_SUPPORT",
     ),
     # Casual intents evaluated if no domain intent matched
@@ -102,7 +102,7 @@ def extract_topic_and_goal(message: str) -> tuple[str, str]:
 
     if any(kw in msg_lower for kw in ["tractor", "machinery", "equipment", "ट्रॅक्टर", "ट्रैक्टर", "अवजारे", "उपकरण"]):
         return "TRACTOR_PURCHASE", "FINANCIAL_ASSISTANCE_FOR_AGRICULTURAL_MACHINERY"
-    if any(kw in msg_lower for kw in ["loan", "acres", "land", "कर्ज", "ऋण", "जमीन", "एकर", "एकड़"]):
+    if any(kw in msg_lower for kw in ["crop loan", "agricultural loan", "farm loan", "kcc", "कर्ज", "ऋण"]):
         return "AGRICULTURAL_LOAN", "APPLY_FOR_CROP_LOAN_CREDIT"
     if any(kw in msg_lower for kw in ["pmfby", "crop insurance", "फसल बीमा", "पीक विमा", "पिक विमा"]):
         return "CROP_INSURANCE", "ENROLL_OR_CLAIM_CROP_INSURANCE"

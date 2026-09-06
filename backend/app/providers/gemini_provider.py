@@ -307,7 +307,7 @@ def query_gemini_llm(
 
         stats["llm_actually_called"] = True
         client = genai.Client(api_key=api_key)
-        models = ["gemini-2.5-flash", "gemini-1.5-flash"]
+        models = ["gemini-2.5-flash", "gemini-3.6-flash", "gemini-3.5-flash"]
         for model_name in models:
             try:
                 config_kwargs: dict[str, Any] = {

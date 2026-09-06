@@ -94,16 +94,11 @@ def clean_speech_text(text: str) -> str:
 def generate_structured_answer(
     system_instruction: str,
     user_prompt: str,
-    max_tokens: int = 850,
+    max_tokens: int = 1500,
 ) -> tuple[Optional[dict[str, Any]], str, dict[str, Any]]:
     """
-    Provider-agnostic generator that attempts to produce a canonical structured JSON answer.
-    Fallback Chain:
-      1. Gemini Primary (gemini-2.5-flash) with response_mime_type="application/json"
-      2. Groq Primary (llama-3.3-70b-versatile) with response_format={"type": "json_object"}
-      3. Groq Fallback (llama-3.1-8b-instant) with response_format={"type": "json_object"}
+    Primary synthesis generator using Gemini API (gemini-2.5-flash).
     """
-    # 1. Gemini Primary
     raw_answer, used_model, gemini_stats = query_gemini_llm(
         system_instruction=system_instruction,
         user_prompt=user_prompt,
@@ -114,23 +109,8 @@ def generate_structured_answer(
     if raw_answer:
         payload = extract_json_payload(raw_answer)
         if payload and isinstance(payload, dict) and ("display_answer" in payload or "summary" in payload or "title" in payload):
-            logger.info(f"[PROVIDER-AGNOSTIC LLM] Structured output generated via Gemini ({used_model})")
+            logger.info(f"[PRIMARY LLM] Structured output generated via Gemini ({used_model})")
             return payload, f"GEMINI ({used_model})", gemini_stats
-
-    # 2 & 3. Groq Fallback Chain
-    logger.info("[PROVIDER-AGNOSTIC LLM] Gemini primary unavailable or returned non-JSON. Trying Groq fallback chain...")
-    raw_answer, used_model, groq_stats = query_groq_llm(
-        system_instruction=system_instruction,
-        user_prompt=user_prompt,
-        max_tokens=max_tokens,
-        temperature=0.2,
-        response_format={"type": "json_object"},
-    )
-    if raw_answer:
-        payload = extract_json_payload(raw_answer)
-        if payload and isinstance(payload, dict) and ("display_answer" in payload or "summary" in payload or "title" in payload):
-            logger.info(f"[PROVIDER-AGNOSTIC LLM] Structured output generated via Groq ({used_model})")
-            return payload, f"GROQ ({used_model})", groq_stats
 
     return None, "none", {}
 
@@ -167,16 +147,56 @@ class RAGPipeline:
 
         # Stage 2: Intent Classification & Topic/Goal Extraction
         intent_start = time.perf_counter()
-        intent = classify_intent(message)
+        raw_intent = classify_intent(message)
         extracted_topic, extracted_goal = extract_topic_and_goal(message)
         intent_latency_ms = (time.perf_counter() - intent_start) * 1000.0
 
-        # Topic & Goal Persistence across turns
+        # Contextual Follow-up Detection Logic
+        followup_keywords = [
+            "document", "documents", "land", "record", "records", "proof", "paper", "papers",
+            "procedure", "process", "step", "steps", "how", "what", "where", "deadline", "date",
+            "time", "hours", "contact", "helpline", "number", "office", "authority", "form", "apply",
+            "status", "claim", "money", "payout", "compensation", "eligibility", "criteria", "fee",
+            "cost", "which", "can i", "do i", "need", "required", "kaun", "kya", "kaise",
+            "कागदपत्रे", "पुरावे", "प्रक्रिया", "संपर्क", "हेल्पलाईन", "दस्तावेज", "प्रमाण", "हेल्पलाइन",
+            "नुकसान", "पिक", "बीमा", "विमा", "अर्जाची"
+        ]
+
+        msg_lower = message.lower()
+        has_followup_kw = any(kw in msg_lower for kw in followup_keywords)
+
+        is_contextual_followup = (
+            bool(session.topic) and
+            session.topic != "GENERAL_COOPERATIVE_QUERY" and
+            len(session.history) > 0 and
+            has_followup_kw and
+            extracted_topic == "GENERAL_COOPERATIVE_QUERY"
+        )
+
         if extracted_topic != "GENERAL_COOPERATIVE_QUERY":
+            # Explicit domain topic switch (e.g. user asks about tractor or pacs explicitly)
             session.topic = extracted_topic
             session.user_goal = extracted_goal
-        elif session.topic:
+            intent = raw_intent
+        elif is_contextual_followup:
+            # Preserve session topic for contextual follow-up turn
             context_used = True
+            if session.topic == "CROP_INSURANCE":
+                intent = "PMFBY"
+            elif session.topic == "PACS_MEMBERSHIP":
+                intent = "PACS_SERVICE"
+            elif session.topic == "TRACTOR_PURCHASE":
+                intent = "MINISTRY_SCHEME"
+            elif session.topic == "AGRICULTURAL_LOAN":
+                intent = "AGRICULTURAL_SUPPORT"
+            else:
+                intent = raw_intent
+        else:
+            # Topic reset for independent non-domain query (e.g., "Who is the Prime Minister of India?")
+            if session.history and not has_followup_kw:
+                session.topic = None
+                session.user_goal = None
+            intent = raw_intent
 
         current_topic = session.topic or extracted_topic
         current_goal = session.user_goal or extracted_goal
@@ -187,19 +207,18 @@ class RAGPipeline:
         router_mode = routing_decision.mode
         router_latency_ms = (time.perf_counter() - router_start) * 1000.0
 
-
-
         # Stage 4: AI Search Query Generation & Knowledge Retrieval (RAG)
         rag_start = time.perf_counter()
-        is_followup = (
-            len(message.split()) <= 6 and 
-            session.topic and 
-            session.topic != "GENERAL_COOPERATIVE_QUERY" and 
-            len(session.history) > 0
-        )
 
-        if is_followup:
-            effective_search_query = f"{session.topic} {message}"
+        if is_contextual_followup and session.topic:
+            topic_query_prefix = session.topic
+            if session.topic == "CROP_INSURANCE":
+                topic_query_prefix = "PMFBY crop insurance"
+            elif session.topic == "PACS_MEMBERSHIP":
+                topic_query_prefix = "PACS cooperative society"
+            elif session.topic == "TRACTOR_PURCHASE":
+                topic_query_prefix = "SMAM tractor subsidy scheme"
+            effective_search_query = f"{topic_query_prefix} {message}"
         else:
             effective_search_query = message
 
@@ -333,7 +352,7 @@ class RAGPipeline:
         prompt_build_latency_ms = (time.perf_counter() - prompt_start) * 1000.0
 
         # Stage 8: Call Provider-Agnostic LLM Engine (Gemini Primary -> Groq Fallback)
-        max_tokens = 350 if resp_mode == "voice" else 850
+        max_tokens = 350 if resp_mode == "voice" else 1500
         json_payload, used_model, llm_stats = generate_structured_answer(
             system_instruction=system_instruction,
             user_prompt=user_prompt,
@@ -409,18 +428,14 @@ class RAGPipeline:
             else:
                 spoken_answer = clean_speech_text(summary or display_answer)
         else:
-            logger.warning("All LLM providers (Gemini & Groq) failed or returned invalid JSON. Using controlled source snippet fallback.")
+            logger.warning("Gemini primary provider failed or returned invalid JSON. Using controlled error fallback.")
             action_hdr = "What Should I Do Now:"
             if detected_language == "mr":
                 action_hdr = "तुम्ही काय करू शकता:"
             elif detected_language == "hi":
                 action_hdr = "आप क्या करें:"
 
-            if web_results:
-                top_snippets = [f"{idx}. {w.get('title')}: {w.get('snippet')}" for idx, w in enumerate(web_results[:3], 1)]
-                raw_fallback = f"### Official Guidance\n\n**{action_hdr}**\n" + "\n".join(top_snippets)
-            else:
-                raw_fallback = f"### Official Guidance\n\n**{action_hdr}**\n1. Verify Details: {get_intent_fallback(intent, detected_language)}"
+            raw_fallback = f"### Official Guidance\n\n**{action_hdr}**\n1. Verify Details: {get_intent_fallback(intent, detected_language)}"
 
             sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(
                 raw_answer=raw_fallback,
@@ -430,6 +445,10 @@ class RAGPipeline:
             )
             display_answer = sanitized_answer.strip()
             spoken_answer = clean_speech_text(sanitized_answer)
+
+            # SOURCE DISSOCIATION: Disassociate retrieved sources on technical generation failure
+            sources_list = []
+            primary_source = None
 
         g_status, overall_auth_level, claims_validated = evaluate_grounding_status(
             sources_list=sources_list,

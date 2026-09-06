@@ -163,6 +163,8 @@ def search_web_knowledge(query: str, max_results: int = 4) -> List[Dict[str, Any
                 clean_snippet = re.sub(r'<[^>]+>', '', raw_snippet).strip()
 
                 if clean_snippet and len(clean_snippet) > 15:
+                    if "wikipedia.org" in actual_url.lower():
+                        continue
                     auth = get_authority_level(actual_url)
                     source_name = urllib.parse.urlparse(actual_url).netloc or "web_source"
                     item = {
@@ -179,30 +181,6 @@ def search_web_knowledge(query: str, max_results: int = 4) -> List[Dict[str, Any
                         general_results.append(item)
     except Exception as exc:
         logger.debug("Live DuckDuckGo HTML search exception: %s", exc)
-
-    # 3. Secondary Wikipedia Search (General fallback)
-    try:
-        wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote_plus(clean_query)}&format=json"
-        req = urllib.request.Request(wiki_url, headers={"User-Agent": "SahkaarSetu-AI/1.0"})
-        with urllib.request.urlopen(req, timeout=4.0) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            search_items = data.get("query", {}).get("search", [])
-            for item in search_items[:2]:
-                title = item.get("title", "")
-                snippet = re.sub(r"<[^>]+>", "", item.get("snippet", "")).strip()
-                page_url = f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title)}"
-
-                if snippet and len(snippet) > 15:
-                    general_results.append({
-                        "title": f"Wikipedia — {title}",
-                        "source_url": page_url,
-                        "source_name": "en.wikipedia.org",
-                        "snippet": snippet,
-                        "authority_level": "GENERAL",
-                        "is_trusted": True,
-                    })
-    except Exception as exc:
-        logger.debug("Wikipedia API search error: %s", exc)
 
     # Combine & Prioritize Official Government Sources First
     all_candidate_results = official_results + general_results
