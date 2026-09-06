@@ -21,11 +21,10 @@ logger = logging.getLogger(__name__)
 
 GROQ_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# Primary & High-Speed Fallback Groq models (No slow or timing-out endpoints)
+# Primary & High-Speed Fallback Groq models (official Groq model IDs)
 GROQ_MODELS = [
-    "groq/compound-mini",
-    "openai/gpt-oss-20b",
-    "openai/gpt-oss-120b",
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
 ]
 
 _LANG_NAME = {

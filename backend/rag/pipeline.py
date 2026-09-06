@@ -14,6 +14,7 @@ from typing import Any, Optional, Dict, List
 
 from app.config import get_settings
 from app.providers.groq_provider import query_groq_llm, GROQ_MODELS
+from app.providers.gemini_provider import query_gemini_llm
 from app.schemas.query import IntentCode, QueryRequest, QueryResponse
 from rag.intent import classify_intent, extract_topic_and_goal
 from rag.prompts import RAG_SYSTEM_INSTRUCTION, DIRECT_RESPONSES, NO_KNOWLEDGE_FALLBACK, NO_KNOWLEDGE_FALLBACK_WITH_STATE, get_intent_fallback
@@ -245,7 +246,7 @@ class RAGPipeline:
 
         prompt_build_latency_ms = (time.perf_counter() - prompt_start) * 1000.0
 
-        # Stage 8: Call Groq LLM API Engine
+        # Stage 8: Call LLM API Engine (Primary: Groq llama-3.3-70b / llama-3.1-8b, Secondary: Gemini)
         max_tokens = 250 if resp_mode == "voice" else 450
         raw_answer, used_model, llm_stats = query_groq_llm(
             system_instruction=system_instruction,
@@ -255,6 +256,16 @@ class RAGPipeline:
         )
 
         if not raw_answer:
+            logger.info("Groq LLM returned None. Falling back to GeminiProvider LLM synthesis...")
+            raw_answer, used_model, gemini_stats = query_gemini_llm(
+                system_instruction=system_instruction,
+                user_prompt=user_prompt,
+                max_tokens=max_tokens,
+                temperature=0.2,
+            )
+
+        if not raw_answer:
+            logger.warning("All LLM providers (Groq & Gemini) failed. Using controlled source snippet fallback.")
             if web_results:
                 top_snippets = [f"• {w.get('title')}: {w.get('snippet')}" for w in web_results[:2]]
                 raw_answer = f"Based on live internet research for '{message}':\n\n" + "\n".join(top_snippets)

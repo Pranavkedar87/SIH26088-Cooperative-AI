@@ -282,3 +282,52 @@ class GeminiProvider(AIProvider):
         except Exception as exc:
             logger.error("Failed to extract Gemini response text: %s", exc)
             return _ERROR_ANSWER.get(language, _ERROR_ANSWER["en"])
+
+
+def query_gemini_llm(
+    system_instruction: str,
+    user_prompt: str,
+    max_tokens: int = 800,
+    temperature: float = 0.2,
+) -> tuple[Optional[str], str, dict[str, Any]]:
+    """
+    Helper to query Gemini API as LLM provider.
+    Returns (response_text, model_used, telemetry_stats).
+    """
+    import time
+    start_time = time.perf_counter()
+    stats = {"llm_actually_called": False, "latency_ms": 0.0}
+    try:
+        settings = get_settings()
+        api_key = settings.gemini_api_key.strip()
+        if not api_key:
+            return None, "none", stats
+
+        stats["llm_actually_called"] = True
+        client = genai.Client(api_key=api_key)
+        models = ["gemini-2.5-flash", "gemini-1.5-flash"]
+        for model_name in models:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=user_prompt,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=temperature,
+                        max_output_tokens=max_tokens,
+                    ),
+                )
+                if response and response.text and response.text.strip():
+                    dur = (time.perf_counter() - start_time) * 1000.0
+                    stats["latency_ms"] = dur
+                    logger.info(f"[AI PROVIDER] GEMINI | [MODEL] {model_name} | [STATUS] 200 SUCCESS ({dur:.2f}ms)")
+                    return response.text.strip(), model_name, stats
+            except Exception as exc:
+                logger.warning("Gemini model '%s' failed: %s", model_name, exc)
+                continue
+    except Exception as exc:
+        logger.error("Gemini API execution error: %s", exc)
+
+    stats["latency_ms"] = (time.perf_counter() - start_time) * 1000.0
+    return None, "none", stats
+
