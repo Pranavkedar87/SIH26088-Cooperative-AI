@@ -189,11 +189,22 @@ class RAGPipeline:
 
 
 
-        # Stage 4: Knowledge Retrieval (RAG)
+        # Stage 4: AI Search Query Generation & Knowledge Retrieval (RAG)
         rag_start = time.perf_counter()
-        effective_search_query = message
+        is_followup = (
+            len(message.split()) <= 6 and 
+            session.topic and 
+            session.topic != "GENERAL_COOPERATIVE_QUERY" and 
+            len(session.history) > 0
+        )
+
+        if is_followup:
+            effective_search_query = f"{session.topic} {message}"
+        else:
+            effective_search_query = message
+
         if session.collected_slots.get("state"):
-            effective_search_query = f"{message} {current_topic} {session.collected_slots.get('state')} Maharashtra scheme"
+            effective_search_query += f" {session.collected_slots.get('state')}"
 
         rag_chunks: list[RetrievedChunk] = []
         if routing_decision.trigger_rag:
@@ -210,14 +221,15 @@ class RAGPipeline:
                 rag_chunks = []
         rag_latency_ms = (time.perf_counter() - rag_start) * 1000.0
 
-        # Stage 5: Live Internet Web Research (Always search internet for user query)
+        # Stage 5: Live Internet Web Research
         web_start = time.perf_counter()
         web_results: List[Dict[str, Any]] = []
-        try:
-            web_results = search_web_knowledge(effective_search_query, max_results=4)
-        except Exception as exc:
-            logger.warning(f"Web search execution exception: {exc}")
-            web_results = []
+        if routing_decision.trigger_web or (router_mode not in {RouterMode.GREETING, RouterMode.CONVERSATIONAL}):
+            try:
+                web_results = search_web_knowledge(effective_search_query, max_results=4)
+            except Exception as exc:
+                logger.warning(f"Web search execution exception: {exc}")
+                web_results = []
         web_search_latency_ms = (time.perf_counter() - web_start) * 1000.0
 
         # Stage 6: Extract and combine verified source citations with Authority Levels
@@ -252,11 +264,10 @@ class RAGPipeline:
                     "authority_level": web_item.get("authority_level", "GENERAL"),
                 })
 
-        # Filter out non-authoritative sources (e.g. Wikipedia) and enrich with authority levels and timestamps
         sources_list = sanitize_source_citations(sources_list, is_legal_or_gov_query=True)
         primary_source = sources_list[0]["title"] if sources_list else "SahkaarSetu Cooperative Guidance"
 
-        # Stage 7: Construct Grounded Prompt for Groq AI Engine
+        # Stage 7: Construct Grounded Prompt for Gemini AI Engine
         prompt_start = time.perf_counter()
         context_parts = []
         if rag_chunks:
@@ -275,24 +286,25 @@ class RAGPipeline:
 
         combined_context = "\n".join(context_parts)
 
-        # Build language-tailored prompt
         lang_names = {"en": "English", "hi": "Hindi", "mr": "Marathi"}
         target_lang = lang_names.get(detected_language, "English")
 
         system_instruction = RAG_SYSTEM_INSTRUCTION
         user_prompt = (
+            f"ORIGINAL USER QUESTION: {message}\n"
             f"STRICT RESPONSE LANGUAGE: {target_lang}\n"
-            f"Active Session Turn: {session.turn_number}\n"
             f"Detected Intent: {intent}\n"
-            f"Active Topic: {current_topic}\n"
-            f"Active User Goal: {current_goal}\n"
-            f"Collected Session Slots: {session.collected_slots}\n"
-            f"Pending Slot Before Turn: {pending_slot_before}\n"
-            f"Knowledge Router Mode: {router_mode.value}\n\n"
-            f"OFFICIAL GROUNDED CONTEXT:\n{combined_context}\n\n"
-            f"USER QUERY:\n{message}\n\n"
-            f"STRICT INSTRUCTIONS:\n"
-            f"- Answer ONLY and COMPLETELY in {target_lang}.\n"
+            f"Active Session Turn: {session.turn_number}\n"
+        )
+
+        if session.history:
+            history_lines = [f"{h['role'].upper()}: {h['content']}" for h in session.history[-4:]]
+            user_prompt += f"\nPREVIOUS CONVERSATION HISTORY:\n" + "\n".join(history_lines) + "\n"
+
+        user_prompt += (
+            f"\nOFFICIAL GROUNDED CONTEXT:\n{combined_context}\n\n"
+            f"STRICT INSTRUCTION: Synthesize the grounded context to answer the user's EXACT ORIGINAL QUESTION ('{message}') in {target_lang}. "
+            f"Generate dynamic, question-specific action steps under 'what_should_i_do_now' and a direct spoken answer."
         )
 
         # Context-resolution guidance when state is already collected
@@ -398,11 +410,17 @@ class RAGPipeline:
                 spoken_answer = clean_speech_text(summary or display_answer)
         else:
             logger.warning("All LLM providers (Gemini & Groq) failed or returned invalid JSON. Using controlled source snippet fallback.")
+            action_hdr = "What Should I Do Now:"
+            if detected_language == "mr":
+                action_hdr = "तुम्ही काय करू शकता:"
+            elif detected_language == "hi":
+                action_hdr = "आप क्या करें:"
+
             if web_results:
-                top_snippets = [f"• {w.get('title')}: {w.get('snippet')}" for w in web_results[:2]]
-                raw_fallback = "\n\n".join(top_snippets)
+                top_snippets = [f"{idx}. {w.get('title')}: {w.get('snippet')}" for idx, w in enumerate(web_results[:3], 1)]
+                raw_fallback = f"### Official Guidance\n\n**{action_hdr}**\n" + "\n".join(top_snippets)
             else:
-                raw_fallback = get_intent_fallback(intent, detected_language)
+                raw_fallback = f"### Official Guidance\n\n**{action_hdr}**\n1. Verify Details: {get_intent_fallback(intent, detected_language)}"
 
             sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(
                 raw_answer=raw_fallback,
