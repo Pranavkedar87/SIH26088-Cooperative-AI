@@ -268,7 +268,7 @@ class RAGPipeline:
             logger.warning("All LLM providers (Groq & Gemini) failed. Using controlled source snippet fallback.")
             if web_results:
                 top_snippets = [f"• {w.get('title')}: {w.get('snippet')}" for w in web_results[:2]]
-                raw_answer = f"Based on live internet research for '{message}':\n\n" + "\n".join(top_snippets)
+                raw_answer = "\n\n".join(top_snippets)
             else:
                 raw_answer = get_intent_fallback(intent, detected_language)
 

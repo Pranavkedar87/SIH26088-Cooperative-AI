@@ -58,6 +58,10 @@ export interface StructuredGuidance {
 export function cleanMarkdown(text: string): string {
   if (!text) return "";
   return text
+    .replace(/^Based on (?:live internet|web) research (?:for|on) ['"][^'"]+['"]:?\s*/gm, "")
+    .replace(/^Based on (?:live internet|web) research (?:for|on) [^:]+:?\s*/gm, "")
+    .replace(/^Based on (?:live internet|web) research[^:\n]*:?\s*/gm, "")
+    .replace(/^According to (?:search results|web research|internet research)[^:\n]*:?\s*/gm, "")
     .replace(/^#{1,6}\s*/gm, "") // strip headers # ## ###
     .replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1") // strip bold/italic **text**, *text*
     .replace(/_{1,3}([^_]+)_{1,3}/g, "$1") // strip underline _text_
@@ -286,7 +290,14 @@ export function parseGuidance(rawText: string, lang: string = "mr"): StructuredG
   const lines = rawText
     .split("\n")
     .map((l) => l.trim())
-    .filter((l) => l.length > 0 && l !== "---" && l !== "***");
+    .filter((l) => {
+      if (!l || l === "---" || l === "***") return false;
+      const cleaned = cleanMarkdown(l);
+      if (!cleaned || cleaned.length < 2) return false;
+      if (/^Based on (?:live internet|web) research/i.test(l)) return false;
+      if (/^According to (?:search results|web research|internet research)/i.test(l)) return false;
+      return true;
+    });
 
   const keyFacts: KeyFact[] = [];
   const steps: GuidanceStep[] = [];
