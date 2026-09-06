@@ -16,7 +16,7 @@ from app.config import get_settings
 from app.providers.groq_provider import query_groq_llm, GROQ_MODELS
 from app.schemas.query import IntentCode, QueryRequest, QueryResponse
 from rag.intent import classify_intent, extract_topic_and_goal
-from rag.prompts import RAG_SYSTEM_INSTRUCTION, DIRECT_RESPONSES, NO_KNOWLEDGE_FALLBACK, NO_KNOWLEDGE_FALLBACK_WITH_STATE
+from rag.prompts import RAG_SYSTEM_INSTRUCTION, DIRECT_RESPONSES, NO_KNOWLEDGE_FALLBACK, NO_KNOWLEDGE_FALLBACK_WITH_STATE, get_intent_fallback
 from rag.retriever import retrieve_relevant_knowledge, RetrievedChunk
 from rag.router import route_query, RouterMode, RoutingDecision
 from rag.session_state import (
@@ -308,10 +308,7 @@ class RAGPipeline:
         )
 
         if not raw_answer:
-            if session.collected_slots.get("state"):
-                raw_answer = NO_KNOWLEDGE_FALLBACK_WITH_STATE.get(detected_language, NO_KNOWLEDGE_FALLBACK_WITH_STATE["en"])
-            else:
-                raw_answer = NO_KNOWLEDGE_FALLBACK.get(detected_language, NO_KNOWLEDGE_FALLBACK["en"])
+            raw_answer = get_intent_fallback(intent, detected_language)
 
         # Stage 8.5: Factual Claim Grounding & Source Validation Stage
         sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(

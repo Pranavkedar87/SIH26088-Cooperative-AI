@@ -97,31 +97,91 @@ def build_grounded_prompt(
     return base_prompt
 
 
-NO_KNOWLEDGE_FALLBACK: dict[str, str] = {
-    "en": (
-        "Yes, government assistance and subsidy schemes for agricultural equipment (such as tractors) exist under the Sub-Mission on Agricultural Mechanization (SMAM) and state agriculture department portals. "
-        "Eligibility and subsidy amounts depend on your state and farmer category. Which state are you from? I can check the official details for you."
-    ),
-    "hi": (
-        "हाँ, कृषि उपकरणों (जैसे ट्रैक्टर) के लिए 'कृषि मशीनीकरण पर उप-मिशन' (SMAM) और राज्य कृषि विभाग के पोर्टलों के तहत सब्सिडी सहायता योजनाएं उपलब्ध हैं। "
-        "पात्रता और सब्सिडी आपके राज्य और श्रेणी पर निर्भर करती है। आप किस राज्य से हैं?"
-    ),
-    "mr": (
-        "होय, ट्रॅक्टर आणि कृषी अवजारांसाठी 'कृषी यांत्रिकीकरण उप-अभियान' (SMAM) आणि राज्य कृषी विभागाच्या योजनांतर्गत अनुदान उपलब्ध आहे. "
-        "अनुदान आणि पात्रता ही तुमच्या राज्यावर आणि शेतकरी वर्गावर अवलंबून असते. तुम्ही कोणत्या राज्यातील आहात?"
-    ),
+INTENT_FALLBACKS: dict[str, dict[str, str]] = {
+    "PMFBY": {
+        "en": (
+            "If your crop has suffered damage due to unseasonal rain, inundation, or natural calamity under PMFBY, "
+            "it is mandatory to intimate the insurance company, bank, or local Agriculture Officer within 72 hours. "
+            "Please keep your 7/12 land extract, Aadhaar card, and bank passbook ready."
+        ),
+        "hi": (
+            "PMFBY फसल बीमा के तहत यदि आपकी फसल (जैसे सोयाबीन, कपास, धान) प्राकृतिक आपदा या अत्यधिक बारिश से खराब हुई है, "
+            "तो 72 घंटे के भीतर बीमा कंपनी, ऐप (Crop Insurance App) या स्थानीय कृषि अधिकारी को सूचित करना अनिवार्य है। "
+            "अपना 7/12 खसरा खतौनी, आधार कार्ड और बैंक पासबुक तैयार रखें।"
+        ),
+        "mr": (
+            "PMFBY पीक विम्याअंतर्गत अवेळी पाऊस किंवा नैसर्गिक आपत्तीमुळे पिकाचे नुकसान झाल्यास, "
+            "७२ तासांच्या आत विमा कंपनी, PMFBY ॲप किंवा स्थानिक कृषी अधिकाऱ्याकडे तक्रार नोंदवणे बंधनकारक आहे. "
+            "आपला ७/१२ उतारा, आधार कार्ड आणि बँक पासबुक तयार ठेवा."
+        ),
+    },
+    "PACS_SERVICE": {
+        "en": (
+            "Primary Agricultural Credit Societies (PACS) provide short-term crop loans, fertilizers, seeds, and storage support to farmers. "
+            "To apply for benefits or membership, submit your 7/12 land extract and Aadhaar card to your local PACS Secretary."
+        ),
+        "hi": (
+            "प्राथमिक कृषि साख समितियों (PACS) के माध्यम से किसानों को अल्पकालिक फसल ऋण, उर्वरक और बीज उपलब्ध कराए जाते हैं। "
+            "सदस्यता या ऋण के लिए अपने 7/12 खसरा रिकॉर्ड और आधार कार्ड के साथ स्थानीय PACS सचिव से संपर्क करें।"
+        ),
+        "mr": (
+            "प्राथमिक कृषी पतसंस्था (PACS) मार्फत शेतकऱ्यांना अल्पमुदत पीक कर्ज, खते व बियाणे पुरवले जातात. "
+            "सभासदत्व किंवा कर्जासाठी आपल्या ७/१२ उतारा व आधार कार्डसह स्थानिक PACS सचिवांशी संपर्क साधा."
+        ),
+    },
+    "GRIEVANCE": {
+        "en": (
+            "For disputes, unfair decisions, or delay in cooperative society services, you can file an official grievance with the District Deputy Registrar (DDR) or local Cooperative Officer. Keep your society receipts and written application ready."
+        ),
+        "hi": (
+            "सहकारी समिति या संस्था के विवाद या शिकायत के लिए आप जिला उप-निबंधक (DDR) या सहकारी अधिकारी के पास लिखित शिकायत दर्ज करा सकते हैं। अपने दस्तावेज और आवेदन तैयार रखें।"
+        ),
+        "mr": (
+            "सहकारी संस्थेतील तक्रार किंवा वादासाठी तुम्ही जिल्हा उपनिबंधक (DDR) किंवा सहकार अधिकाऱ्याकडे लेखी तक्रार नोंदवू शकता. अर्जाची प्रत व पावती सोबत ठेवा."
+        ),
+    },
+    "TRACTOR_PURCHASE": {
+        "en": (
+            "Government subsidy schemes for agricultural equipment (such as tractors) exist under the Sub-Mission on Agricultural Mechanization (SMAM) and state agriculture department portals. Eligibility ranges from 40% to 50% depending on farmer category."
+        ),
+        "hi": (
+            "कृषि उपकरणों (जैसे ट्रैक्टर) के लिए 'कृषि मशीनीकरण पर उप-मिशन' (SMAM) और राज्य कृषि विभाग के पोर्टलों के तहत 40% से 50% तक सब्सिडी सहायता योजनाएं उपलब्ध हैं।"
+        ),
+        "mr": (
+            "ट्रॅक्टर आणि कृषी अवजारांसाठी 'कृषी यांत्रिकीकरण उप-अभियान' (SMAM) आणि राज्य कृषी विभागाच्या योजनांतर्गत ४०% ते ५०% अनुदान उपलब्ध आहे."
+        ),
+    },
+    "MINISTRY_SCHEME": {
+        "en": (
+            "Government subsidy schemes for agricultural equipment (such as tractors) exist under the Sub-Mission on Agricultural Mechanization (SMAM) and state agriculture department portals. Eligibility ranges from 40% to 50% depending on farmer category."
+        ),
+        "hi": (
+            "कृषि उपकरणों (जैसे ट्रैक्टर) के लिए 'कृषि मशीनीकरण पर उप-मिशन' (SMAM) और राज्य कृषि विभाग के पोर्टलों के तहत 40% से 50% तक सब्सिडी सहायता योजनाएं उपलब्ध हैं।"
+        ),
+        "mr": (
+            "ट्रॅक्टर आणि कृषी अवजारांसाठी 'कृषी यांत्रिकीकरण उप-अभियान' (SMAM) आणि राज्य कृषी विभागाच्या योजनांतर्गत ४०% ते ५०% अनुदान उपलब्ध आहे."
+        ),
+    },
+    "DEFAULT": {
+        "en": (
+            "For guidance on cooperative laws, agricultural schemes, and PACS services, please verify with your local District Agriculture Office, PACS center, or official government portal."
+        ),
+        "hi": (
+            "सहकारी नियमों, सरकारी योजनाओं और PACS सेवाओं के संबंध में अधिकृत जानकारी के लिए कृपया निकटतम कृषि कार्यालय, PACS केंद्र या सरकारी पोर्टल से संपर्क करें।"
+        ),
+        "mr": (
+            "सहकारी नियम, शासकीय योजना व PACS सेवांच्या अधिकृत माहितीसाठी कृपया आपल्या स्थानिक कृषी कार्यालय, PACS केंद्र किंवा शासकीय पोर्टलशी संपर्क साधा."
+        ),
+    },
 }
 
-NO_KNOWLEDGE_FALLBACK_WITH_STATE: dict[str, str] = {
-    "en": (
-        "Under SMAM and state agriculture programs, registered farmers can apply for tractor purchase subsidy (ranging from 40% to 50% depending on category) directly through your state portal or local District Agriculture Officer / PACS secretary. Prepare your 7/12 land extract, Aadhaar card, bank passbook, and quotation."
-    ),
-    "hi": (
-        "SMAM और राज्य कृषि कार्यक्रमों के तहत, किसान ट्रैक्टर खरीद सब्सिडी (40% से 50%) के लिए अपने राज्य पोर्टल या स्थानीय जिला कृषि अधिकारी / PACS सचिव के माध्यम से आवेदन कर सकते हैं। अपना 7/12 भूमि रिकॉर्ड, आधार कार्ड, बैंक पासबुक और कोटेशन तैयार रखें।"
-    ),
-    "mr": (
-        "SMAM आणि राज्य कृषी योजनांतर्गत, ट्रॅक्टर खरेदी अनुदानासाठी (४०% ते ५०%) शेतकरी आपल्या राज्य पोर्टलवर किंवा स्थानिक जिल्हा कृषी अधिकारी / PACS सचिवांमार्फत अर्ज करू शकतात. आपले ७/१२ उतारा, आधार कार्ड, बँक पासबुक आणि कोटेशन तयार ठेवा."
-    ),
-}
+NO_KNOWLEDGE_FALLBACK = INTENT_FALLBACKS["DEFAULT"]
+NO_KNOWLEDGE_FALLBACK_WITH_STATE = INTENT_FALLBACKS["DEFAULT"]
+
+def get_intent_fallback(intent: str, language: str = "mr") -> str:
+    intent_key = (intent or "").upper()
+    fallback_dict = INTENT_FALLBACKS.get(intent_key) or INTENT_FALLBACKS.get("DEFAULT")
+    lang_code = language.lower() if language in ["en", "hi", "mr"] else "mr"
+    return fallback_dict.get(lang_code) or fallback_dict["en"]
 
 

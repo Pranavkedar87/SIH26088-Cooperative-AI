@@ -40,11 +40,20 @@ function generateFallbackResponse(request: QueryRequest): QueryResponse {
     msg.includes("crop") ||
     msg.includes("insurance") ||
     msg.includes("पिक") ||
+    msg.includes("फसल") ||
     msg.includes("विमा") ||
+    msg.includes("बीमा") ||
     msg.includes("नुकसान") ||
     msg.includes("खरीप") ||
     msg.includes("रब्बी") ||
-    msg.includes("72")
+    msg.includes("72") ||
+    msg.includes("सोयाबीन") ||
+    msg.includes("soyabean") ||
+    msg.includes("soybean") ||
+    msg.includes("खराब") ||
+    msg.includes("ख़राब") ||
+    msg.includes("क्षति") ||
+    msg.includes("बर्बाद")
   ) {
     if (isVoice) {
       const voiceAns =
