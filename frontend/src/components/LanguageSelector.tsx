@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { LanguageCode } from "../types";
 import { LANGUAGES } from "../types";
-import { GlobeIcon, XIcon, CheckIcon } from "./Icons";
+import { GlobeIcon, CheckIcon } from "./Icons";
 
 interface Props {
   selected: LanguageCode;
@@ -17,6 +17,23 @@ export const LanguageModal: React.FC<Props> = ({
   onClose,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -36,62 +53,55 @@ export const LanguageModal: React.FC<Props> = ({
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="lang-dropdown-overlay" onClick={onClose}>
       <div
-        className="modal-panel language-modal-panel"
+        ref={dropdownRef}
+        className="lang-dropdown-popover"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal-header">
-          <div className="modal-header-title">
-            <GlobeIcon size={20} color="#126B62" />
-            <h3>भाषा चुनें / Select Language</h3>
-          </div>
-          <button
-            type="button"
-            className="modal-close-btn"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <XIcon size={18} />
-          </button>
+        {/* Dropdown Header */}
+        <div className="lang-dropdown-header">
+          <span className="lang-dropdown-title">भाषा चुनें</span>
+          <GlobeIcon size={18} color="#126B62" />
         </div>
 
-        <div className="language-search-bar">
+        {/* Optional Search Bar */}
+        <div className="lang-dropdown-search">
           <input
             type="text"
-            className="language-search-input"
+            className="lang-search-input"
             placeholder="Search language / भाषा खोजें..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            autoFocus
           />
         </div>
 
-        <div className="modal-body language-modal-body">
-          <div className="language-grid">
-            {filteredLanguages.map((lang) => {
-              const isSelected = selected === lang.code;
-              return (
-                <button
-                  key={lang.code}
-                  type="button"
-                  className={`language-option-card ${
-                    isSelected ? "language-option-card--selected" : ""
-                  }`}
-                  onClick={() => handleSelect(lang.code)}
-                >
-                  <div className="language-option-text">
-                    <span className="language-native-name">{lang.nativeLabel}</span>
-                    <span className="language-english-name">{lang.label}</span>
+        {/* Vertical Scrollable List */}
+        <div className="lang-dropdown-list">
+          {filteredLanguages.map((lang) => {
+            const isSelected = selected === lang.code;
+            return (
+              <button
+                key={lang.code}
+                type="button"
+                className={`lang-dropdown-item ${
+                  isSelected ? "lang-dropdown-item--selected" : ""
+                }`}
+                onClick={() => handleSelect(lang.code)}
+              >
+                <div className="lang-dropdown-item-labels">
+                  <span className="lang-native-label">{lang.nativeLabel}</span>
+                  <span className="lang-english-label">{lang.label}</span>
+                </div>
+                {isSelected && (
+                  <div className="lang-selected-check">
+                    <CheckIcon size={16} color="#FFFFFF" />
                   </div>
-                  {isSelected && (
-                    <div className="language-checkmark">
-                      <CheckIcon size={18} color="#126B62" />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -99,3 +109,4 @@ export const LanguageModal: React.FC<Props> = ({
 };
 
 export default LanguageModal;
+
