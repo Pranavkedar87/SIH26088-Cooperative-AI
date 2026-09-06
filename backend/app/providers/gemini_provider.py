@@ -142,6 +142,7 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
     ),
     (
         ["crop loan", "agricultural loan", "farming loan", "farm loan", "agricultural support",
+         "loan", "loans", "land", "acres", "acre", "कर्ज", "ऋण", "जमीन", "एकर",
          "krishi", "कृषि", "शेती", "fertilizer", "seed", "peek", "पीक", "पिक", "kharab", "नुकसान"],
         "AGRICULTURAL_SUPPORT",
     ),
@@ -152,12 +153,21 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
 def _classify_intent(message: str) -> IntentCode:
     """
     Lightweight rule-based intent classification.
-    Returns the first matching intent or GENERAL_COOPERATIVE.
+    Prioritizes specific domain intents (loans, PACS, PMFBY, laws) over casual greetings
+    when the query contains substantive domain questions.
     """
-    msg_lower = message.lower()
-    for keywords, intent in _INTENT_RULES:
+    msg_lower = message.lower().strip()
+
+    # Check domain rules first (rules index 4 onwards in _INTENT_RULES)
+    for keywords, intent in _INTENT_RULES[4:]:
         if any(kw in msg_lower for kw in keywords):
             return intent
+
+    # Check casual intents (rules index 0 to 3)
+    for keywords, intent in _INTENT_RULES[:4]:
+        if any(kw in msg_lower for kw in keywords):
+            return intent
+
     return "GENERAL_COOPERATIVE"
 
 

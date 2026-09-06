@@ -1,28 +1,33 @@
 """
-RAG Pipeline orchestrator.
+RAG + Web Research Pipeline orchestrator powered by Groq.
 
-Coordinates Intent Detection -> Retrieval -> Grounded Generation -> Source Extraction.
+Coordinates Intent Classification -> Knowledge Retrieval (RAG) / Live Web Search -> Grounded Groq Generation -> Structured Output.
 """
 from __future__ import annotations
 
 import asyncio
 import logging
 import re
-from typing import Any, Optional
-
-
-from google import genai
-from google.genai import types as genai_types
+from typing import Any, Optional, Dict, List
 
 from app.config import get_settings
-from app.providers.gemini_provider import _classify_intent, _ERROR_ANSWER
+from app.providers.gemini_provider import _classify_intent
+from app.providers.groq_provider import query_groq_llm, GROQ_MODELS
 from app.schemas.query import IntentCode, QueryRequest, QueryResponse
-from rag.prompts import RAG_SYSTEM_INSTRUCTION, build_grounded_prompt, NO_KNOWLEDGE_FALLBACK
+from rag.prompts import RAG_SYSTEM_INSTRUCTION, build_grounded_prompt, NO_KNOWLEDGE_FALLBACK, DIRECT_RESPONSES
 from rag.retriever import retrieve_relevant_knowledge, RetrievedChunk
+from rag.web_search import search_web_knowledge
 
 logger = logging.getLogger(__name__)
 
-# Intents that require strict knowledge retrieval
+# Intents requiring live web search for current/changing information
+TIME_SENSITIVE_INTENTS: set[str] = {
+    "MINISTRY_SCHEME",
+    "PMFBY",
+    "AGRICULTURAL_SUPPORT",
+}
+
+# Intents requiring strict RAG knowledge retrieval
 STRICT_KNOWLEDGE_INTENTS: set[str] = {
     "COOPERATIVE_LAW",
     "COOPERATIVE_BYLAW",
@@ -36,67 +41,52 @@ STRICT_KNOWLEDGE_INTENTS: set[str] = {
 }
 
 
-
 def clean_speech_text(text: str) -> str:
     """Strips markdown formatting, headings, bullet markers, URLs, and symbols for clean TTS playback."""
     if not text:
         return ""
-    # Strip URLs
     cleaned = re.sub(r'https?://\S+', '', text)
-    # Strip markdown headings, bold, italics, code
     cleaned = re.sub(r'#+\s*', '', cleaned)
-    cleaned = re.sub(r'\*+', '', cleaned)
-    cleaned = re.sub(r'_+', '', cleaned)
-    cleaned = re.sub(r'`+', '', cleaned)
+    cleaned = re.sub(r'[\*\_\`]', '', cleaned)
     cleaned = re.sub(r'^\s*[-*+]\s+', '', cleaned, flags=re.MULTILINE)
     cleaned = re.sub(r'^\s*\d+\.\s+', '', cleaned, flags=re.MULTILINE)
-    # Strip markdown link syntax [label](url)
     cleaned = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', cleaned)
-    # Normalize whitespace
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
 
 class RAGPipeline:
-    """Orchestrates end-to-end grounded query answering."""
-
-    _client: Optional[genai.Client] = None
-
-    def _get_client(self) -> genai.Client:
-        if RAGPipeline._client is None:
-            settings = get_settings()
-            api_key = settings.gemini_api_key.strip()
-            if not api_key:
-                raise RuntimeError("GEMINI_API_KEY is not configured in backend/.env")
-            RAGPipeline._client = genai.Client(api_key=api_key)
-        return RAGPipeline._client
+    """Orchestrates end-to-end grounded query answering using Groq AI Engine."""
 
     async def process_query(self, request: QueryRequest) -> tuple[QueryResponse, list[dict[str, Any]]]:
         """
-        Process user query through RAG pipeline.
-
-        Returns:
-            (QueryResponse, sources_list)
+        Process user query through RAG + Live Web Search + Groq Pipeline.
         """
         message = request.message.strip()
         language = request.language
         resp_mode = getattr(request, "response_mode", "text") or "text"
 
-        # 1. Intent classification
+        # Step 1: Intent classification
         intent = _classify_intent(message)
 
         # FAST PATH FOR CASUAL GREETINGS, THANKS, IDENTITY & UNCLEAR:
-        # MUST NOT TRIGGER VECTOR SEARCH OR RAG RETRIEVAL
         CASUAL_INTENTS = {"CASUAL_GREETING", "CASUAL_THANKS", "CASUAL_IDENTITY", "UNCLEAR", "GREETING"}
         if intent in CASUAL_INTENTS:
-            from rag.prompts import DIRECT_RESPONSES
             mapped_intent = "CASUAL_GREETING" if intent == "GREETING" else intent
             lang_dict = DIRECT_RESPONSES.get(mapped_intent, DIRECT_RESPONSES["CASUAL_GREETING"])
             ans_text = lang_dict.get(language) or lang_dict.get("mr") or lang_dict["en"]
 
             logger.info(
-                "[VOICE]\nTranscript: %s\nDetected language: %s\nQuery type: %s\nIntent: %s\nRAG triggered: false\nLLM: Direct Fast-Path\nResponse language: %s\nResponse mode: %s\nTTS language: %s",
-                message, language, intent, intent, language, resp_mode, language
+                "\n========================================================\n"
+                "[AI PROVIDER] GROQ (Fast-Path Greeting)\n"
+                f"[MODEL] Direct Localized Response (<10ms)\n"
+                f"[STT PROVIDER] WEB_SPEECH_API\n"
+                f"[TTS PROVIDER] BROWSER_SPEECH_SYNTHESIS\n"
+                f"[QUERY] '{message}'\n"
+                f"[INTENT] {intent}\n"
+                f"[RAG TRIGGERED] false\n"
+                f"[WEB SEARCH TRIGGERED] false\n"
+                "========================================================"
             )
 
             return QueryResponse(
@@ -109,9 +99,10 @@ class RAGPipeline:
                 session_id=request.session_id,
             ), []
 
-        # 2. Knowledge Retrieval (Domain Queries Only)
+        # Step 2: Knowledge Retrieval from RAG Vector DB
+        rag_chunks: list[RetrievedChunk] = []
         try:
-            chunks: list[RetrievedChunk] = retrieve_relevant_knowledge(
+            rag_chunks = retrieve_relevant_knowledge(
                 query=message,
                 language=language,
                 intent=intent,
@@ -119,94 +110,125 @@ class RAGPipeline:
                 match_threshold=0.45,
             )
         except Exception as exc:
-            logger.error("Knowledge retrieval failed (falling back to controlled refusal): %s", exc)
-            chunks = []
+            logger.error("Knowledge retrieval exception: %s", exc)
+            rag_chunks = []
 
-        logger.info("RAG Pipeline | retrieved %d chunks for intent %s", len(chunks), intent)
+        # Step 3: Check if Live Web Search is justified (Current/Time-Sensitive or Complex Query)
+        web_results: List[Dict[str, Any]] = []
+        trigger_web_search = intent in TIME_SENSITIVE_INTENTS or not rag_chunks
 
-        # 3. Handle No-Context for specific domain intents
-        if not chunks and intent in STRICT_KNOWLEDGE_INTENTS:
-            logger.info("No matching knowledge found for strict intent %s. Returning controlled fallback.", intent)
-            fallback_text = NO_KNOWLEDGE_FALLBACK.get(language, NO_KNOWLEDGE_FALLBACK["en"])
+        if trigger_web_search:
+            try:
+                web_results = search_web_knowledge(message, max_results=3)
+            except Exception as exc:
+                logger.warning(f"Web search execution exception: {exc}")
+                web_results = []
 
-            return QueryResponse(
-                answer=fallback_text,
-                language=language,
-                intent=intent,
-                source=None,
-                next_action="VERIFY_WITH_OFFICIAL",
-                session_id=request.session_id,
-            ), []
-
-        # 4. Extract unique sources from chunks
+        # Step 4: Extract and combine sources
         sources_list: list[dict[str, Any]] = []
-        seen_titles = set()
+        seen_urls = set()
 
-        for chunk in chunks:
-            title = chunk.get("title") or "Official Source"
-            if title not in seen_titles:
-                seen_titles.add(title)
+        for chunk in rag_chunks:
+            title = chunk.get("title") or "Official Knowledge Base"
+            url = chunk.get("source_url") or ""
+            if title not in seen_urls:
+                seen_urls.add(title)
                 sources_list.append({
                     "title": title,
-                    "source_name": chunk.get("source_name"),
-                    "source_url": chunk.get("source_url"),
+                    "source_name": chunk.get("source_name") or "Cooperative DB",
+                    "source_url": url,
                     "document_id": chunk.get("document_id"),
                 })
 
-        primary_source = sources_list[0]["title"] if sources_list else None
+        for web_item in web_results:
+            url = web_item.get("source_url") or ""
+            if url and url not in seen_urls:
+                seen_urls.add(url)
+                sources_list.append({
+                    "title": web_item.get("title") or "Live Government Notice",
+                    "source_name": web_item.get("source_name") or "Government Web Portal",
+                    "source_url": url,
+                    "document_id": None,
+                })
 
-        # 5. Build grounded prompt & call Gemini using fast candidate fallback
-        answer = None
-        used_model = "fallback"
-        client = self._get_client()
-        prompt = build_grounded_prompt(message, language, intent, chunks, response_mode=resp_mode)
+        primary_source = sources_list[0]["title"] if sources_list else "SahkaarSetu Cooperative Knowledge"
 
-        model_candidates = [
-            "gemini-3.5-flash-lite",
-            "gemini-3.5-flash",
-            "gemini-3.6-flash",
-            "gemini-2.5-flash",
-        ]
+        # Step 5: Format context chunks for Groq prompt
+        combined_context_text = ""
+        if rag_chunks:
+            combined_context_text += "--- STABLE OFFICIAL RAG KNOWLEDGE CONTEXT ---\n"
+            for idx, chunk in enumerate(rag_chunks, 1):
+                combined_context_text += f"[{idx}] {chunk.get('title')}: {chunk.get('content')}\n"
 
-        max_tokens = 250 if resp_mode == "voice" else 1024
+        if web_results:
+            combined_context_text += "\n--- CURRENT LIVE WEB RESEARCH CONTEXT ---\n"
+            for idx, item in enumerate(web_results, 1):
+                combined_context_text += f"[Web-{idx}] {item.get('title')} ({item.get('source_name')}): {item.get('snippet')}\n"
 
-        for model_name in model_candidates:
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config=genai_types.GenerateContentConfig(
-                        system_instruction=RAG_SYSTEM_INSTRUCTION,
-                        temperature=0.2,  # Low temperature for strict factual grounding
-                        max_output_tokens=max_tokens,
-                    ),
-                )
-                if response and response.text:
-                    answer = response.text.strip()
-                    if answer:
-                        used_model = model_name
-                        logger.info("RAG generation succeeded using model '%s'", model_name)
-                        break
-            except Exception as exc:
-                logger.warning("Model '%s' generation failed/quota hit (%s). Trying next candidate...", model_name, exc)
-                continue
+        if not combined_context_text.strip():
+            combined_context_text = "NO SPECIFIC CONTEXT FOUND IN DATABASE. USE GENERAL COOPERATIVE GOVERNANCE KNOWLEDGE GROUNDED IN INDIAN LAWS AND PACS RULES."
 
-        if not answer:
-            logger.warning("Gemini returned empty response text or failed generation.")
-            answer = _ERROR_ANSWER.get(language, _ERROR_ANSWER["en"])
-            sources_list = []
-            primary_source = None
+        # Step 6: Construct Deep Structured Prompt for Groq
+        prompt = build_grounded_prompt(
+            message=message,
+            language=language,
+            intent=intent,
+            context_chunks=rag_chunks,
+            response_mode=resp_mode,
+        )
 
-        if resp_mode == "voice" and answer:
-            answer = clean_speech_text(answer)
+        if web_results:
+            prompt += f"\n\nLIVE WEB RESEARCH CONTEXT:\n{combined_context_text}"
 
+        # Deep structured answer guidance for agricultural & credit queries
+        if any(w in message.lower() for w in ["acre", "land", "loan", "कर्ज", "पिक कर्ज", "जमीन", "एकड"]):
+            prompt += (
+                "\n\nSPECIAL GUIDANCE FOR LAND / FARMING LOAN QUERY:\n"
+                "Explain comprehensively and helpfully:\n"
+                "1. Relevant credit options (PACS Short-term Crop Loan / Kisan Credit Card / KCC)\n"
+                "2. Factors determining eligibility (Land ownership 7/12 extract, active PACS membership share)\n"
+                "3. Documents needed (7/12 & 8A extracts, Aadhaar, PAN, Bank Passbook, Society Membership)\n"
+                "4. Step-by-step application process\n"
+                "5. Important questions to ask at the PACS or bank branch\n"
+                "6. Relevant government support schemes (Interest Subvention Scheme / Subsidies)\n"
+                "7. Important conditions or what to verify next\n"
+                "Format using clear headings and bullet points."
+            )
+
+        # Step 7: Invoke Groq LLM API Engine
+        max_tokens = 300 if resp_mode == "voice" else 1000
+        answer_text, used_model = query_groq_llm(
+            system_instruction=RAG_SYSTEM_INSTRUCTION,
+            user_prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=0.2,
+        )
+
+        if not answer_text:
+            logger.warning("[AI PROVIDER] GROQ returned empty response. Falling back to default error text.")
+            answer_text = NO_KNOWLEDGE_FALLBACK.get(language, NO_KNOWLEDGE_FALLBACK["en"])
+
+        if resp_mode == "voice" and answer_text:
+            answer_text = clean_speech_text(answer_text)
+
+        # Structured Development Audit Logging
         logger.info(
-            "[VOICE]\nTranscript: %s\nDetected language: %s\nQuery type: DOMAIN\nIntent: %s\nRAG triggered: true\nRAG collection: %s\nRetrieved chunks: %d\nLLM model: %s\nResponse language: %s\nResponse mode: %s\nTTS language: %s",
-            message, language, intent, intent, len(chunks), used_model, language, resp_mode, language
+            "\n========================================================\n"
+            f"[AI PROVIDER] GROQ\n"
+            f"[MODEL] {used_model}\n"
+            f"[STT PROVIDER] WEB_SPEECH_API\n"
+            f"[TTS PROVIDER] BROWSER_SPEECH_SYNTHESIS\n"
+            f"[QUERY] '{message}'\n"
+            f"[LANGUAGE] {language}\n"
+            f"[INTENT] {intent}\n"
+            f"[RAG TRIGGERED] {bool(rag_chunks)} ({len(rag_chunks)} chunks)\n"
+            f"[WEB SEARCH TRIGGERED] {bool(web_results)} ({len(web_results)} results)\n"
+            f"[RESPONSE MODE] {resp_mode}\n"
+            "========================================================"
         )
 
         response_obj = QueryResponse(
-            answer=answer,
+            answer=answer_text,
             language=language,
             intent=intent,
             source=primary_source,
@@ -215,6 +237,3 @@ class RAGPipeline:
         )
 
         return response_obj, sources_list
-
-
-
