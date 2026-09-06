@@ -337,6 +337,7 @@ class RAGPipeline:
                 f"CRITICAL MULTI-TURN INSTRUCTION:\n"
                 f"The user is asking a SPECIFIC FOLLOW-UP question ('{message}') focused on '{answer_focus}' for the ongoing topic '{session.topic or intent}'.\n"
                 f"DO NOT repeat the previous broad overview answer from conversation history!\n"
+                f"DO NOT include greetings on follow-up turns.\n"
                 f"Generate a NEW, highly focused answer specifically concentrating on '{answer_focus}'.\n"
             )
             if answer_focus == "PROCEDURE":
@@ -348,7 +349,10 @@ class RAGPipeline:
             elif answer_focus == "NEXT_STEP":
                 user_prompt += "Focus heavily on what immediate next practical step the user must execute right now.\n"
         else:
-            user_prompt += f"Generate dynamic, question-specific action steps under 'what_should_i_do_now' and a direct spoken answer."
+            if session.turn_number == 1:
+                user_prompt += f"\nInclude a brief, warm greeting at the beginning of 'summary' (e.g. 'Hello! Welcome to SahkaarSetu.'). Generate dynamic, question-specific action points or key details under 'what_should_i_do_now' matching '{answer_focus}'."
+            else:
+                user_prompt += f"\nDo NOT include greetings. Generate dynamic, question-specific action points under 'what_should_i_do_now' matching '{answer_focus}'."
 
         # Context-resolution guidance when state is already collected
         if session.collected_slots.get("state"):
@@ -401,11 +405,37 @@ class RAGPipeline:
                 md_blocks.append(summary)
 
             if actions and isinstance(actions, list):
-                action_header = "What Should I Do Now:"
-                if detected_language == "mr":
-                    action_header = "तुम्ही काय करू शकता:"
-                elif detected_language == "hi":
-                    action_header = "आप क्या करें:"
+                if answer_focus == "PROCEDURE":
+                    action_header = "Official Step-by-Step Procedure:"
+                    if detected_language == "mr":
+                        action_header = "अधिकृत टप्पा-निहाय प्रक्रिया:"
+                    elif detected_language == "hi":
+                        action_header = "आधिकारिक चरण-दर-चरण प्रक्रिया:"
+                elif answer_focus == "DOCUMENTS":
+                    action_header = "Required Documents & Proofs:"
+                    if detected_language == "mr":
+                        action_header = "आवश्यक कागदपत्रे व पुरावे:"
+                    elif detected_language == "hi":
+                        action_header = "आवश्यक दस्तावेज और प्रमाण:"
+                elif answer_focus == "CONTACT":
+                    action_header = "Helpline & Contact Details:"
+                    if detected_language == "mr":
+                        action_header = "अधिकृत हेल्पलाईन व संपर्क:"
+                    elif detected_language == "hi":
+                        action_header = "आधिकारिक हेल्पलाइन और संपर्क:"
+                elif answer_focus == "ELIGIBILITY":
+                    action_header = "Eligibility & Guidelines:"
+                    if detected_language == "mr":
+                        action_header = "पात्रता निकष व नियम:"
+                    elif detected_language == "hi":
+                        action_header = "पात्रता मापदंड और नियम:"
+                else:
+                    action_header = "Key Action Guidance:"
+                    if detected_language == "mr":
+                        action_header = "मार्गदर्शक पावले:"
+                    elif detected_language == "hi":
+                        action_header = "मुख्य मार्गदर्शन:"
+
                 act_lines = [f"**{action_header}**"]
                 for idx, act in enumerate(actions, 1):
                     if isinstance(act, dict):

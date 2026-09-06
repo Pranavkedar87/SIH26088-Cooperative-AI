@@ -70,10 +70,32 @@ export function cleanMarkdown(text: string): string {
     .replace(/^---+$|^\*\*\*+$/gm, "") // strip horizontal rules
     .replace(/^DIRECT ANSWER:?\s*/i, "")
     .replace(/^WHAT YOU CAN DO:?\s*/i, "")
+    .replace(/^WHAT SHOULD I DO NOW:?\s*/i, "")
+    .replace(/^KEY ACTION GUIDANCE:?\s*/i, "")
+    .replace(/^OFFICIAL STEP-BY-STEP PROCEDURE:?\s*/i, "")
+    .replace(/^REQUIRED DOCUMENTS & PROOFS:?\s*/i, "")
+    .replace(/^HELPLINE & CONTACT DETAILS:?\s*/i, "")
+    .replace(/^ELIGIBILITY & GUIDELINES:?\s*/i, "")
     .replace(/^IMPORTANT:?\s*/i, "")
     .replace(/^NEXT STEP:?\s*/i, "")
+    .replace(/^NEXT GUIDANCE:?\s*/i, "")
+    .replace(/^DETAILED INFORMATION:?\s*/i, "")
     .replace(/^थेट उत्तर:?\s*/i, "")
     .replace(/^तुम्ही काय करू शकता:?\s*/i, "")
+    .replace(/^मार्गदर्शक पावले:?\s*/i, "")
+    .replace(/^अधिकृत टप्पा-निहाय प्रक्रिया:?\s*/i, "")
+    .replace(/^आवश्यक कागदपत्रे व पुरावे:?\s*/i, "")
+    .replace(/^अधिकृत हेल्पलाईन व संपर्क:?\s*/i, "")
+    .replace(/^पात्रता निकष व नियम:?\s*/i, "")
+    .replace(/^सविस्तर माहिती:?\s*/i, "")
+    .replace(/^पुढील मार्गदर्शन:?\s*/i, "")
+    .replace(/^मुख्य मार्गदर्शन:?\s*/i, "")
+    .replace(/^आधिकारिक चरण-दर-चरण प्रक्रिया:?\s*/i, "")
+    .replace(/^आवश्यक दस्तावेज और प्रमाण:?\s*/i, "")
+    .replace(/^आधिकारिक हेल्पलाइन और संपर्क:?\s*/i, "")
+    .replace(/^पात्रता मापदंड और नियम:?\s*/i, "")
+    .replace(/^विस्तृत जानकारी:?\s*/i, "")
+    .replace(/^आगे का मार्गदर्शन:?\s*/i, "")
     .replace(/^महत्त्वाचे:?\s*/i, "")
     .replace(/^पुढील पाऊल:?\s*/i, "")
     .replace(/\s+/g, " ") // normalize spacing
@@ -275,7 +297,7 @@ export function parseGuidance(rawText: string, lang: string = "mr"): StructuredG
 
     // Check if entering Next Steps / Action section
     if (
-      /^(what you can do|what should i do|what should i do now|next steps|next guidance|पुढील पाऊल|आगे क्या करें|तुम्ही काय करू शकता|आप क्या करें)/i.test(
+      /^(what you can do|what should i do|what should i do now|key action guidance|official step-by-step procedure|required documents & proofs|helpline & contact details|eligibility & guidelines|next steps|next guidance|पुढील पाऊल|आगे क्या करें|तुम्ही काय करू शकता|आप क्या करें|मार्गदर्शक पावले|अधिकृत टप्पा-निहाय प्रक्रिया|आवश्यक कागदपत्रे|अधिकृत हेल्पलाईन|पात्रता निकष|मुख्य मार्गदर्शन)/i.test(
         cleanMarkdown(rawLine)
       )
     ) {
