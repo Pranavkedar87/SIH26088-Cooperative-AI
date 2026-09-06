@@ -185,17 +185,14 @@ class RAGPipeline:
                 rag_chunks = []
         rag_latency_ms = (time.perf_counter() - rag_start) * 1000.0
 
-        # Stage 5: Live Official Web Research
+        # Stage 5: Live Internet Web Research (Always search internet for user query)
         web_start = time.perf_counter()
         web_results: List[Dict[str, Any]] = []
-        trigger_web = routing_decision.trigger_web or not rag_chunks
-
-        if trigger_web:
-            try:
-                web_results = search_web_knowledge(effective_search_query, max_results=3)
-            except Exception as exc:
-                logger.warning(f"Web search execution exception: {exc}")
-                web_results = []
+        try:
+            web_results = search_web_knowledge(effective_search_query, max_results=4)
+        except Exception as exc:
+            logger.warning(f"Web search execution exception: {exc}")
+            web_results = []
         web_search_latency_ms = (time.perf_counter() - web_start) * 1000.0
 
         # Stage 6: Extract and combine verified source citations with Authority Levels
@@ -308,7 +305,11 @@ class RAGPipeline:
         )
 
         if not raw_answer:
-            raw_answer = get_intent_fallback(intent, detected_language)
+            if web_results:
+                top_snippets = [f"• {w.get('title')}: {w.get('snippet')}" for w in web_results[:2]]
+                raw_answer = f"Based on live internet research for '{message}':\n\n" + "\n".join(top_snippets)
+            else:
+                raw_answer = get_intent_fallback(intent, detected_language)
 
         # Stage 8.5: Factual Claim Grounding & Source Validation Stage
         sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(

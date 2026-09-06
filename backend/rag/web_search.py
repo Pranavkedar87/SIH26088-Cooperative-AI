@@ -98,7 +98,7 @@ def search_web_knowledge(query: str, max_results: int = 4) -> List[Dict[str, Any
     # 1. Match Official Portal Registry First (Highest Priority)
     for portal in OFFICIAL_PORTALS:
         dom = portal["domain"]
-        if dom == "pmfby.gov.in" and any(w in query_lower for w in ["pmfby", "bima", "insurance", "विमा", "बीमा", "नुकसान"]):
+        if dom == "pmfby.gov.in" and any(w in query_lower for w in ["pmfby", "bima", "insurance", "विमा", "बीमा", "नुकसान", "फसल", "सोयाबीन", "खराब", "ख़राब"]):
             official_results.append({
                 "title": portal["title"],
                 "source_url": portal["url"],
@@ -135,34 +135,52 @@ def search_web_knowledge(query: str, max_results: int = 4) -> List[Dict[str, Any
                 "is_trusted": True,
             })
 
-    # 2. DuckDuckGo Instant Answer Search
+    # 2. Live Internet Web Search via DuckDuckGo HTML Parser
     try:
-        ddg_url = f"https://api.duckduckgo.com/?q={urllib.parse.quote_plus(clean_query)}&format=json"
-        req = urllib.request.Request(ddg_url, headers={"User-Agent": "SahkaarSetu-AI/1.0"})
-        with urllib.request.urlopen(req, timeout=4.0) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            abstract = data.get("AbstractText")
-            abs_url = data.get("AbstractURL")
-            abs_source = data.get("AbstractSource") or "Official Search"
+        ddg_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote_plus(clean_query)}"
+        req = urllib.request.Request(
+            ddg_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            },
+        )
+        with urllib.request.urlopen(req, timeout=5.0) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+            # Extract URLs, titles, and snippets
+            matches = re.findall(
+                r'<a class="result__url" href="([^"]+)"[^>]*>\s*(.*?)\s*</a>.*?<a class="result__snippet"[^>]*>(.*?)</a>',
+                html,
+                re.DOTALL,
+            )
+            for raw_url, raw_title, raw_snippet in matches[:5]:
+                # Extract target URL from DuckDuckGo redirect link
+                uddg_match = re.search(r'uddg=([^&]+)', raw_url)
+                actual_url = urllib.parse.unquote(uddg_match.group(1)) if uddg_match else raw_url
+                if actual_url.startswith("//"):
+                    actual_url = "https:" + actual_url
 
-            if abstract and abs_url:
-                auth = get_authority_level(abs_url)
-                item = {
-                    "title": f"{abs_source} — {clean_query}",
-                    "source_url": abs_url,
-                    "source_name": abs_source,
-                    "snippet": abstract,
-                    "authority_level": auth,
-                    "is_trusted": True,
-                }
-                if auth == "OFFICIAL_GOVERNMENT":
-                    official_results.append(item)
-                else:
-                    general_results.append(item)
+                clean_title = re.sub(r'<[^>]+>', '', raw_title).strip()
+                clean_snippet = re.sub(r'<[^>]+>', '', raw_snippet).strip()
+
+                if clean_snippet and len(clean_snippet) > 15:
+                    auth = get_authority_level(actual_url)
+                    source_name = urllib.parse.urlparse(actual_url).netloc or "web_source"
+                    item = {
+                        "title": clean_title or f"Live Web Result — {clean_query}",
+                        "source_url": actual_url,
+                        "source_name": source_name,
+                        "snippet": clean_snippet,
+                        "authority_level": auth,
+                        "is_trusted": True,
+                    }
+                    if auth == "OFFICIAL_GOVERNMENT":
+                        official_results.append(item)
+                    else:
+                        general_results.append(item)
     except Exception as exc:
-        logger.debug("DuckDuckGo API search error: %s", exc)
+        logger.debug("Live DuckDuckGo HTML search exception: %s", exc)
 
-    # 3. Wikipedia Search (Secondary / General)
+    # 3. Secondary Wikipedia Search (General fallback)
     try:
         wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote_plus(clean_query)}&format=json"
         req = urllib.request.Request(wiki_url, headers={"User-Agent": "SahkaarSetu-AI/1.0"})
@@ -174,7 +192,7 @@ def search_web_knowledge(query: str, max_results: int = 4) -> List[Dict[str, Any
                 snippet = re.sub(r"<[^>]+>", "", item.get("snippet", "")).strip()
                 page_url = f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title)}"
 
-                if any(w in title.lower() for w in ["cooperation", "co-operation", "minister", "agriculture", "pmfby", "india", "pacs"]):
+                if snippet and len(snippet) > 15:
                     general_results.append({
                         "title": f"Wikipedia — {title}",
                         "source_url": page_url,
@@ -186,17 +204,18 @@ def search_web_knowledge(query: str, max_results: int = 4) -> List[Dict[str, Any
     except Exception as exc:
         logger.debug("Wikipedia API search error: %s", exc)
 
-    # Combined & Prioritize Official Government Sources First
+    # Combine & Prioritize Official Government Sources First
     all_candidate_results = official_results + general_results
 
     # Deduplicate results by source_url while preserving authority order
     unique_results = []
     seen = set()
     for r in all_candidate_results:
-        if r["source_url"] not in seen:
-            seen.add(r["source_url"])
+        url_key = r.get("source_url") or r.get("title")
+        if url_key not in seen:
+            seen.add(url_key)
             unique_results.append(r)
 
     final_results = unique_results[:max_results]
-    logger.info(f"[WEB RESEARCH] Retrieved {len(final_results)} sources for '{clean_query}' (Official: {len(official_results)})")
+    logger.info(f"[WEB RESEARCH] Retrieved {len(final_results)} live internet sources for '{clean_query}' (Official: {len(official_results)})")
     return final_results
