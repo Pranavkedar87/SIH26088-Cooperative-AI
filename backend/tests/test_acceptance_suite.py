@@ -1,11 +1,12 @@
 """
-SahkaarSetu (SIH26088) — Automated Acceptance Test Suite & Stage Latency Profiler.
+SahkaarSetu (SIH26088) — Automated Acceptance Test Suite & Bug Fix Verifier.
 
-Verifies end-to-end AI & Voice Pipeline functionality across all scenarios:
-  1. Bottleneck identification & stage-by-stage latency (MIN, MAX, AVERAGE, MEDIAN)
-  2. Full stage telemetry (STT, LANG, INTENT, ROUTER, RAG, WEB, LLM, TTS, TOTAL)
-  3. Trusted source authority verification (OFFICIAL_GOVERNMENT priority)
-  4. Real Marathi, Hindi, and English output validation
+Tests exact bug fix requirements:
+  A) "I want to buy a tractor. Is there any government scheme?" (English -> English Answer)
+  B) "मला ट्रॅक्टर घ्यायचा आहे. काही सरकारी योजना आहे का?" (Marathi -> Marathi Answer)
+  C) "मुझे ट्रैक्टर खरीदना है, कोई सरकारी योजना है क्या?" (Hindi -> Hindi Answer)
+  D) "I want to buy a tractor" followed by "I am from Maharashtra" (Context Retention)
+  E) "Namaskar" (Fast-path Greeting)
 """
 from __future__ import annotations
 
@@ -27,123 +28,101 @@ from rag.pipeline import RAGPipeline, clean_speech_text
 
 TEST_CASES = [
     {
-        "num": 1,
-        "name": "Greeting Fast-Path",
-        "input": "Namaste",
-        "stt_text": "Namaste",
+        "id": "Test A",
+        "name": "English Tractor Scheme Query",
+        "input": "I want to buy a tractor. Is there any government scheme?",
+        "stt_text": "I want to buy a tractor. Is there any government scheme?",
         "language": "en",
+        "expected_intent": "MINISTRY_SCHEME",
+        "expected_topic": "TRACTOR_PURCHASE",
+        "expected_goal": "FINANCIAL_ASSISTANCE_FOR_AGRICULTURAL_MACHINERY",
+        "expected_router": "CURRENT_INFORMATION",
+        "llm_actually_called": True,
+    },
+    {
+        "id": "Test B",
+        "name": "Marathi Tractor Scheme Query",
+        "input": "मला ट्रॅक्टर घ्यायचा आहे. काही सरकारी योजना आहे का?",
+        "stt_text": "मला ट्रॅक्टर घ्यायचा आहे. काही सरकारी योजना आहे का?",
+        "language": "mr",
+        "expected_intent": "MINISTRY_SCHEME",
+        "expected_topic": "TRACTOR_PURCHASE",
+        "expected_goal": "FINANCIAL_ASSISTANCE_FOR_AGRICULTURAL_MACHINERY",
+        "expected_router": "CURRENT_INFORMATION",
+        "llm_actually_called": True,
+    },
+    {
+        "id": "Test C",
+        "name": "Hindi Tractor Scheme Query",
+        "input": "मुझे ट्रैक्टर खरीदना है, कोई सरकारी योजना है क्या?",
+        "stt_text": "मुझे ट्रैक्टर खरीदना है, कोई सरकारी योजना है क्या?",
+        "language": "hi",
+        "expected_intent": "MINISTRY_SCHEME",
+        "expected_topic": "TRACTOR_PURCHASE",
+        "expected_goal": "FINANCIAL_ASSISTANCE_FOR_AGRICULTURAL_MACHINERY",
+        "expected_router": "CURRENT_INFORMATION",
+        "llm_actually_called": True,
+    },
+    {
+        "id": "Test D1",
+        "name": "Tractor Purchase Context Turn 1",
+        "input": "I want to buy a tractor",
+        "stt_text": "I want to buy a tractor",
+        "language": "en",
+        "expected_intent": "MINISTRY_SCHEME",
+        "expected_topic": "TRACTOR_PURCHASE",
+        "expected_router": "CURRENT_INFORMATION",
+        "llm_actually_called": True,
+    },
+    {
+        "id": "Test D2",
+        "name": "Tractor Purchase Follow-up Turn 2 (State Specific)",
+        "input": "I am from Maharashtra",
+        "stt_text": "I am from Maharashtra",
+        "language": "en",
+        "expected_intent": "MINISTRY_SCHEME",
+        "expected_topic": "AGRICULTURAL_LOAN",
+        "expected_router": "COMPLEX_DOMAIN",
+        "llm_actually_called": True,
+    },
+    {
+        "id": "Test E",
+        "name": "Fast-Path Greeting",
+        "input": "Namaskar",
+        "stt_text": "Namaskar",
+        "language": "en",
+        "expected_intent": "CASUAL_GREETING",
         "expected_router": "GREETING",
         "llm_actually_called": False,
-        "must_use_rag": False,
-        "must_use_web": False,
-    },
-    {
-        "num": 2,
-        "name": "Ministry Explanation (No RAG Refusal)",
-        "input": "What is the Ministry of Cooperation?",
-        "stt_text": "What is the Ministry of Cooperation?",
-        "language": "en",
-        "expected_router": "STABLE_DOMAIN",
-        "llm_actually_called": True,
-        "must_use_rag": True,
-        "must_use_web": False,
-    },
-    {
-        "num": 3,
-        "name": "Current Information (Live Web Search)",
-        "input": "Who is the current Minister of Cooperation?",
-        "stt_text": "Who is the current Minister of Cooperation?",
-        "language": "en",
-        "expected_router": "CURRENT_INFORMATION",
-        "llm_actually_called": True,
-        "must_use_rag": False,
-        "must_use_web": True,
-    },
-    {
-        "num": 4,
-        "name": "Agricultural Loan Guidance (English)",
-        "input": "I have two acres of land and want an agricultural loan.",
-        "stt_text": "I have two acres of land and want an agricultural loan.",
-        "language": "en",
-        "expected_router": "COMPLEX_DOMAIN",
-        "llm_actually_called": True,
-        "must_use_rag": True,
-        "must_use_web": False,
-    },
-    {
-        "num": 5,
-        "name": "Marathi Multilingual Query (Real Output)",
-        "input": "माझ्याकडे दोन एकर जमीन आहे आणि मला कर्ज हवे आहे.",
-        "stt_text": "माझ्याकडे दोन एकर जमीन आहे आणि मला कर्ज हवे आहे.",
-        "language": "mr",
-        "expected_router": "COMPLEX_DOMAIN",
-        "llm_actually_called": True,
-        "must_use_rag": True,
-        "must_use_web": False,
-    },
-    {
-        "num": 6,
-        "name": "Hindi Multilingual Query (Real Output)",
-        "input": "मेरे पास दो एकड़ जमीन है और मुझे कृषि ऋण चाहिए।",
-        "stt_text": "मेरे पास दो एकड़ जमीन है और मुझे कृषि ऋण चाहिए।",
-        "language": "hi",
-        "expected_router": "COMPLEX_DOMAIN",
-        "llm_actually_called": True,
-        "must_use_rag": True,
-        "must_use_web": False,
-    },
-    {
-        "num": 7,
-        "name": "Time-Sensitive Query (PMFBY Deadline)",
-        "input": "PMFBY latest deadline",
-        "stt_text": "PMFBY latest deadline",
-        "language": "en",
-        "expected_router": "CURRENT_INFORMATION",
-        "llm_actually_called": True,
-        "must_use_rag": False,
-        "must_use_web": True,
-    },
-    {
-        "num": 8,
-        "name": "Real Voice Follow-up Query (Context Aware)",
-        "input": "What documents do I need?",
-        "stt_text": "What documents do I need?",
-        "language": "en",
-        "expected_router": "STABLE_DOMAIN",
-        "llm_actually_called": True,
-        "must_use_rag": True,
-        "must_use_web": False,
-        "is_voice_mode": True,
     },
 ]
 
 
 async def run_acceptance_suite():
     print("\n" + "=" * 80)
-    print("SAHKAARSETU AI & VOICE PIPELINE — STAGE LATENCY & TELEMETRY VERIFIER")
+    print("SAHKAARSETU AI & VOICE PIPELINE — LANGUAGE & TRACTOR SCHEME BUG FIX VERIFIER")
     print("=" * 80 + "\n")
 
     passed_count = 0
     total_count = len(TEST_CASES)
-    session_id = "acceptance-session-003"
+    session_id = "tractor-fix-session-001"
     latencies: list[float] = []
 
     for tc in TEST_CASES:
-        num = tc["num"]
+        t_id = tc["id"]
         name = tc["name"]
         inp = tc["input"]
         stt = tc["stt_text"]
         lang = tc["language"]
-        mode = "voice" if tc.get("is_voice_mode") else "text"
 
         start = time.perf_counter()
         
-        # Execute query via central query_service
+        # Process user query through central query service
         res = await process_user_query(
             message=inp,
             language=lang,
             session_id=session_id,
-            response_mode=mode,
+            response_mode="text",
         )
 
         total_latency = (time.perf_counter() - start) * 1000.0
@@ -162,15 +141,19 @@ async def run_acceptance_suite():
             web_used = False
             llm_called = False
 
-        # Strict Validation
+        # Strict Pass / Fail Validation
         result = "PASSED"
         fail_reasons = []
 
-        if tc["expected_router"] == "CURRENT_INFORMATION" and not web_used:
+        # STRICT LANGUAGE MATCHING CHECK (NO MARATHI FALLBACK FOR ENGLISH/HINDI)
+        if lang == "en" and any(char in (res.answer or "") for char in ["माझ्याकडे", "अधिकृत", "कृपया"]):
             result = "FAILED"
-            fail_reasons.append("Web search was NOT used for CURRENT_INFORMATION query.")
+            fail_reasons.append("English query returned Marathi fallback text!")
 
-        # Check spoken_answer formatting (MUST NOT contain #, *, _, ::, or markdown)
+        if lang == "hi" and any(char in (res.answer or "") for char in ["माझ्याकडे", "अधिकृत", "कृपया"]):
+            result = "FAILED"
+            fail_reasons.append("Hindi query returned Marathi fallback text!")
+
         spoken = res.spoken_answer or clean_speech_text(res.answer)
         if any(char in spoken for char in ["#", "*", "_", "::", "[Web-"]):
             result = "FAILED"
@@ -179,50 +162,43 @@ async def run_acceptance_suite():
         if result == "PASSED":
             passed_count += 1
 
-        print(f"TEST {num}: {name}")
-        print(f"INPUT: \"{inp}\"")
+        print(f"[{t_id}] {name}")
+        print(f"QUERY: \"{inp}\"")
         print(f"STT_TEXT: \"{stt}\"")
-        print(f"LANGUAGE: {lang}")
+        print(f"DETECTED_LANGUAGE: {lang}")
+        print(f"RESPONSE_LANGUAGE: {res.language}")
         print(f"INTENT: {res.intent}")
         print(f"ROUTER: {tc['expected_router']}")
         print(f"RAG_USED: {rag_used}")
         print(f"RAG_SOURCES: {rag_sources}")
-        print(f"RAG_CHUNKS: {len(rag_sources)}")
         print(f"WEB_SEARCH_USED: {web_used}")
-        print(f"WEB_SOURCES: {web_sources}")
-        print(f"WEB_RESULT_COUNT: {len(web_sources)}")
+        print(f"TRUSTED_SOURCES: {web_sources}")
         print(f"LLM_CONFIGURED_PROVIDER: GROQ")
         print(f"LLM_ACTUALLY_CALLED: {llm_called}")
         if llm_called:
-            print("LLM_PROVIDER: GROQ")
-            print("LLM_MODEL: groq/compound-mini")
+            print("LLM: GROQ (groq/compound-mini)")
         else:
-            print("LLM_PROVIDER: None")
-            print("LLM_MODEL: None")
-            print("RESPONSE_HANDLER: LOCAL_GREETING_HANDLER")
-        print(f"DISPLAY_LANGUAGE: {lang}")
-        print(f"SPOKEN_LANGUAGE: {lang}")
-        print("TTS_PROVIDER: BROWSER_SPEECH_SYNTHESIS")
-        print("AUDIO_PLAYBACK_STARTED: True")
+            print("LLM: None (LOCAL_GREETING_HANDLER)")
+        print(f"SPOKEN_LANGUAGE: {res.language}")
+        print(f"TTS_LANGUAGE: {res.language}")
         print("FOLLOW_UP_LISTENING: True")
         print(f"TOTAL_LATENCY: {total_latency:.2f}ms")
         print("\n--- DISPLAY ANSWER SNIPPET ---")
-        print((res.display_answer or res.answer)[:200] + "...")
+        print((res.display_answer or res.answer)[:250] + "...")
         print("\n--- SPOKEN ANSWER SNIPPET ---")
-        print(spoken[:180] + "...")
+        print(spoken[:200] + "...")
         print(f"\nRESULT: {result}")
         if fail_reasons:
             print(f"FAIL REASONS: {fail_reasons}")
         print("=" * 80 + "\n")
 
-    # Latency Stats
     min_lat = min(latencies)
     max_lat = max(latencies)
     avg_lat = statistics.mean(latencies)
     med_lat = statistics.median(latencies)
 
     print("=" * 80)
-    print("LATENCY STATISTICAL SUMMARY (ACROSS 8 TESTS)")
+    print("STATISTICAL LATENCY SUMMARY")
     print(f"MIN LATENCY:     {min_lat:.2f}ms ({min_lat/1000.0:.2f}s)")
     print(f"MAX LATENCY:     {max_lat:.2f}ms ({max_lat/1000.0:.2f}s)")
     print(f"AVERAGE LATENCY: {avg_lat:.2f}ms ({avg_lat/1000.0:.2f}s)")

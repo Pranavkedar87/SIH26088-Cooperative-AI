@@ -1,8 +1,8 @@
 """
-Neutral Intent Classification Router for SahkaarSetu (SIH26088).
+Neutral Intent Classification & Topic Extraction Router for SahkaarSetu (SIH26088).
 
 Decoupled from AI providers — uses lightweight regex and keyword rules
-to route queries to appropriate domain handlers.
+to route queries to appropriate domain handlers and extract user goals.
 """
 from __future__ import annotations
 
@@ -13,7 +13,6 @@ from app.schemas.query import IntentCode
 logger = logging.getLogger(__name__)
 
 # Intent rules evaluated in priority order.
-# (Keywords list, Intent Code)
 _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
     # Domain specific rules evaluated first
     (
@@ -50,13 +49,13 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
         "FINANCIAL_LITERACY",
     ),
     (
-        ["scheme", "योजना", "yojana", "subsidy", "अनुदान", "benefit",
+        ["tractor", "machinery", "equipment", "ट्रॅक्टर", "ट्रैक्टर", "scheme", "योजना", "yojana", "subsidy", "अनुदान", "benefit",
          "ministry", "government scheme", "sarkar", "सरकार", "ministry of cooperation", "सहकार मंत्रालय", "सहकारिता मंत्रालय"],
         "MINISTRY_SCHEME",
     ),
     (
         ["crop loan", "agricultural loan", "farming loan", "farm loan", "agricultural support",
-         "loan", "loans", "land", "acres", "acre", "कर्ज", "ऋण", "जमीन", "एकर",
+         "loan", "loans", "land", "acres", "acre", "कर्ज", "ऋण", "जमीन", "एकर", "एकड़",
          "krishi", "कृषि", "शेती", "fertilizer", "seed", "peek", "पीक", "पिक", "kharab", "नुकसान"],
         "AGRICULTURAL_SUPPORT",
     ),
@@ -83,7 +82,6 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
 def classify_intent(message: str) -> IntentCode:
     """
     Classify user message into an IntentCode using rule-based keyword matching.
-    Returns domain intent if present, casual greeting if purely casual, or GENERAL_COOPERATIVE as default.
     """
     msg_lower = message.lower().strip()
 
@@ -92,6 +90,27 @@ def classify_intent(message: str) -> IntentCode:
             return intent
 
     return "GENERAL_COOPERATIVE"
+
+
+def extract_topic_and_goal(message: str) -> tuple[str, str]:
+    """
+    Extract practical topic and user goal from the message.
+    Example:
+      "I want to buy a tractor any government scheme available for that"
+      -> topic="TRACTOR_PURCHASE", user_goal="FINANCIAL_ASSISTANCE_FOR_AGRICULTURAL_MACHINERY"
+    """
+    msg_lower = message.lower().strip()
+
+    if any(kw in msg_lower for kw in ["tractor", "machinery", "equipment", "ट्रॅक्टर", "ट्रैक्टर", "अवजारे", "उपकरण"]):
+        return "TRACTOR_PURCHASE", "FINANCIAL_ASSISTANCE_FOR_AGRICULTURAL_MACHINERY"
+    if any(kw in msg_lower for kw in ["loan", "acres", "land", "कर्ज", "ऋण", "जमीन", "एकर", "एकड़"]):
+        return "AGRICULTURAL_LOAN", "APPLY_FOR_CROP_LOAN_CREDIT"
+    if any(kw in msg_lower for kw in ["pmfby", "crop insurance", "फसल बीमा", "पीक विमा", "पिक विमा"]):
+        return "CROP_INSURANCE", "ENROLL_OR_CLAIM_CROP_INSURANCE"
+    if any(kw in msg_lower for kw in ["pacs", "पैक्स", "पॅक्स"]):
+        return "PACS_MEMBERSHIP", "ACCESS_PACS_COOPERATIVE_SERVICES"
+
+    return "GENERAL_COOPERATIVE_QUERY", "INFORMATION_ASSISTANCE"
 
 
 # Backwards compatibility alias

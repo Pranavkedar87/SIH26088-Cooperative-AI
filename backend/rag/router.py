@@ -5,8 +5,8 @@ Routes user query into 6 explicit execution paths BEFORE database retrieval:
 1. GREETING: Fast-path direct response (0 RAG, 0 Web Search, 0 LLM).
 2. CONVERSATIONAL: Direct Groq response (0 RAG unless requested).
 3. STABLE_DOMAIN: Vector RAG search first (Web search ONLY if RAG yields 0 chunks).
-4. CURRENT_INFORMATION: Live official web search (cooperation.gov.in, pmfby.gov.in, pib.gov.in).
-5. COMPLEX_DOMAIN: RAG search first (Web search ONLY if RAG yields 0 chunks or current info needed).
+4. CURRENT_INFORMATION: Live official web search (cooperation.gov.in, pmfby.gov.in, pib.gov.in, agri.gov.in).
+5. COMPLEX_DOMAIN: RAG search first + live official web search for current scheme eligibility.
 6. UNKNOWN: Best available reasoning via Groq.
 """
 from __future__ import annotations
@@ -39,6 +39,8 @@ class RoutingDecision(NamedTuple):
 CURRENT_INFO_KEYWORDS: set[str] = {
     "current minister", "who is the minister", "latest deadline", "last date",
     "today", "notification", "recent", "latest news", "current officer",
+    "tractor", "farm machinery", "equipment", "subsidy", "smam",
+    "ट्रॅक्टर", "ट्रैक्टर", "अनुदान", "अवजारे", "उपकरण", "सब्सिडी",
     "वर्तमान मंत्री", "मंत्री कौन हैं", "नवीनतम तारीख", "अंतिम तिथि",
     "सध्याचे मंत्री", "मंत्री कोण आहेत", "शेवटची तारीख", "नवीन बातमी",
 }
@@ -65,13 +67,13 @@ def route_query(message: str, intent: IntentCode) -> RoutingDecision:
     if intent in {"CASUAL_THANKS", "CASUAL_IDENTITY", "UNCLEAR"}:
         return RoutingDecision(RouterMode.CONVERSATIONAL, trigger_rag=False, trigger_web=False)
 
-    # Rule 3: Current Information Queries (Live Web Search required)
+    # Rule 3: Current Information & Government Machinery Schemes (Live Web Search required)
     if any(kw in msg_lower for kw in CURRENT_INFO_KEYWORDS):
-        return RoutingDecision(RouterMode.CURRENT_INFORMATION, trigger_rag=False, trigger_web=True)
+        return RoutingDecision(RouterMode.CURRENT_INFORMATION, trigger_rag=True, trigger_web=True)
 
-    # Rule 4: Complex Domain Queries (Land, Loans) -> RAG search first
+    # Rule 4: Complex Domain Queries (Land, Loans) -> RAG search + Web
     if any(kw in msg_lower for kw in COMPLEX_KEYWORDS) or intent == "AGRICULTURAL_SUPPORT":
-        return RoutingDecision(RouterMode.COMPLEX_DOMAIN, trigger_rag=True, trigger_web=False)
+        return RoutingDecision(RouterMode.COMPLEX_DOMAIN, trigger_rag=True, trigger_web=True)
 
     # Rule 5: Stable Knowledge Domains (PACS, By-laws, Laws, PMFBY overview)
     if intent in {"PACS_SERVICE", "COOPERATIVE_BYLAW", "COOPERATIVE_LAW", "PMFBY", "MINISTRY_SCHEME", "FINANCIAL_LITERACY", "GRIEVANCE"}:

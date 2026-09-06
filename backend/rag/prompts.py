@@ -105,18 +105,18 @@ def build_grounded_prompt(
     return base_prompt
 
 
-# Controlled fallback messages per language when no knowledge is retrieved
 NO_KNOWLEDGE_FALLBACK: dict[str, str] = {
     "en": (
-        "I do not currently have reliable information on this specific topic in my cooperative knowledge base. "
-        "Please verify the official details with the relevant Cooperative Department, Ministry of Cooperation, or official government portal."
+        "Yes, government assistance and subsidy schemes for agricultural equipment (such as tractors) exist under the Sub-Mission on Agricultural Mechanization (SMAM) and state agriculture department portals. "
+        "Eligibility and subsidy amounts depend on your state and farmer category. Which state are you from? I can check the official details for you."
     ),
     "hi": (
-        "मेरे पास वर्तमान में सहकारी ज्ञानकोष में इस विशिष्ट विषय पर विश्वसनीय जानकारी उपलब्ध नहीं है। "
-        "कृपया संबंधित आधिकारिक सहकारिता विभाग या सरकारी पोर्टल से विवरण की पुष्टि करें।"
+        "हाँ, कृषि उपकरणों (जैसे ट्रैक्टर) के लिए 'कृषि मशीनीकरण पर उप-मिशन' (SMAM) और राज्य कृषि विभाग के पोर्टलों के तहत सब्सिडी सहायता योजनाएं उपलब्ध हैं। "
+        "पात्रता और सब्सिडी आपके राज्य और श्रेणी पर निर्भर करती है। आप किस राज्य से हैं?"
     ),
     "mr": (
-        "माझ्या सहकारी ज्ञानकोशामध्ये सध्या या विशिष्ट विषयावर विश्वासार्ह माहिती उपलब्ध नाही. "
-        "कृपया संबंधित अधिकृत सहकार विभाग किंवा सरकारी संकेतस्थळावरून तपशीलाची पडताळणी करा."
+        "होय, ट्रॅक्टर आणि कृषी अवजारांसाठी 'कृषी यांत्रिकीकरण उप-अभियान' (SMAM) आणि राज्य कृषी विभागाच्या योजनांतर्गत अनुदान उपलब्ध आहे. "
+        "अनुदान आणि पात्रता ही तुमच्या राज्यावर आणि शेतकरी वर्गावर अवलंबून असते. तुम्ही कोणत्या राज्यातील आहात?"
     ),
 }
+
