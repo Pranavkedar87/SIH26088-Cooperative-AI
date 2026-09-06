@@ -83,7 +83,7 @@ export const GuidanceRenderer: React.FC<Props> = ({
       {renderWarnings && <WarningCard warnings={guidance.warnings} language={language} />}
 
       {/* 3. Compact Key Facts / Contact Grid */}
-      {renderFacts && <KeyFactCard facts={guidance.keyFacts} language={language} />}
+      {renderFacts && <KeyFactCard facts={guidance.keyFacts} language={language} answerFocus={focus} />}
 
       {/* 4. Step-by-Step Procedure Timeline (Rendered ONLY when focus = PROCEDURE) */}
       {renderSteps && <StepTimeline steps={guidance.steps} language={language} />}

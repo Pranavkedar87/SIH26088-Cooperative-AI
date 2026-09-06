@@ -489,7 +489,7 @@ class RAGPipeline:
             elif detected_language == "hi":
                 action_hdr = "आप क्या करें:"
 
-            raw_fallback = f"### Official Guidance\n\n**{action_hdr}**\n1. Verify Details: {get_intent_fallback(intent, detected_language)}"
+            raw_fallback = f"### Official Guidance\n\n**{action_hdr}**\n1. Details: {get_intent_fallback(intent, detected_language, answer_focus)}"
 
             sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(
                 raw_answer=raw_fallback,

@@ -203,13 +203,48 @@ INTENT_FALLBACKS: dict[str, dict[str, str]] = {
     },
 }
 
+CONTACT_FALLBACKS: dict[str, dict[str, str]] = {
+    "PMFBY": {
+        "en": "Official PMFBY Crop Insurance helpline: 14447 (Toll-Free). Portal: pmfby.gov.in. Contact Authority: District Agriculture Officer (DAO) or local PACS Secretary.",
+        "hi": "PMFBY फसल बीमा आधिकारिक हेल्पलाइन: 14447 (टोल-फ्री)। वेब पोर्टल: pmfby.gov.in। संपर्क अधिकारी: जिला कृषि अधिकारी या स्थानीय PACS सचिव।",
+        "mr": "PMFBY पीक विमा अधिकृत हेल्पलाईन: १४४४७ (टोल-फ्री). अधिकृत पोर्टल: pmfby.gov.in. संपर्क अधिकारी: जिल्हा कृषी अधिकारी किंवा स्थानिक PACS सचिव.",
+    },
+    "DEFAULT": {
+        "en": "Official Agriculture & Cooperative Helpline: 14447 (Toll-Free) or contact your local District Agriculture Office / DDR.",
+        "hi": "आधिकारिक कृषि एवं सहकार हेल्पलाइन: 14447 (टोल-फ्री) या निकटतम जिला कृषि कार्यालय / DDR से संपर्क करें।",
+        "mr": "अधिकृत कृषी व सहकार हेल्पलाईन: १४४४७ (टोल-फ्री) किंवा आपल्या जिल्हा कृषी कार्यालय / DDR शी संपर्क साधा.",
+    },
+}
+
+DOCUMENT_FALLBACKS: dict[str, dict[str, str]] = {
+    "PMFBY": {
+        "en": "Required documents: 7/12 land extract, 8A record, Aadhaar card, bank passbook copy, and claim application form.",
+        "hi": "आवश्यक दस्तावेज: 7/12 खसरा, 8A खतौनी, आधार कार्ड, बैंक पासबुक और आवेदन पत्र।",
+        "mr": "आवश्यक कागदपत्रे: ७/१२ उतारा, ८अ दाखला, आधार कार्ड, बँक पासबुक आणि अर्ज.",
+    },
+    "DEFAULT": {
+        "en": "Required documents: 7/12 land extract, identity proof (Aadhaar card), bank passbook, and society application form.",
+        "hi": "आवश्यक दस्तावेज: 7/12 रिकॉर्ड, पहचान पत्र (आधार कार्ड), बैंक पासबुक और आवेदन पत्र।",
+        "mr": "आवश्यक कागदपत्रे: ७/१२ उतारा, ओळखपत्र (आधार कार्ड), बँक पासबुक आणि अर्ज.",
+    },
+}
+
 NO_KNOWLEDGE_FALLBACK = INTENT_FALLBACKS["DEFAULT"]
 NO_KNOWLEDGE_FALLBACK_WITH_STATE = INTENT_FALLBACKS["DEFAULT"]
 
-def get_intent_fallback(intent: str, language: str = "mr") -> str:
+def get_intent_fallback(intent: str, language: str = "mr", focus: str = "OVERVIEW") -> str:
     intent_key = (intent or "").upper()
-    fallback_dict = INTENT_FALLBACKS.get(intent_key) or INTENT_FALLBACKS.get("DEFAULT")
+    focus_key = (focus or "OVERVIEW").upper()
     lang_code = language.lower() if language in ["en", "hi", "mr"] else "mr"
-    return fallback_dict.get(lang_code) or fallback_dict["en"]
+
+    if focus_key == "CONTACT":
+        fb_dict = CONTACT_FALLBACKS.get(intent_key) or CONTACT_FALLBACKS["DEFAULT"]
+        return fb_dict.get(lang_code) or fb_dict["en"]
+    elif focus_key == "DOCUMENTS":
+        fb_dict = DOCUMENT_FALLBACKS.get(intent_key) or DOCUMENT_FALLBACKS["DEFAULT"]
+        return fb_dict.get(lang_code) or fb_dict["en"]
+    else:
+        fb_dict = INTENT_FALLBACKS.get(intent_key) or INTENT_FALLBACKS["DEFAULT"]
+        return fb_dict.get(lang_code) or fb_dict["en"]
 
 
