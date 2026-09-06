@@ -18,13 +18,28 @@ interface Props {
 
 export const GuidanceRenderer: React.FC<Props> = ({
   rawContent,
-  userQuestion: _userQuestion,
+  userQuestion,
   language = "mr",
   onExecuteAction,
   sources: _sources,
 }) => {
   const guidance: StructuredGuidance = parseGuidance(rawContent, language);
-  const [showExtraDetails, setShowExtraDetails] = useState<boolean>(false);
+  
+  const isProcedureOrDetailRequested = React.useMemo(() => {
+    if (!userQuestion) return false;
+    const q = userQuestion.toLowerCase();
+    return (
+      q.includes("procedure") ||
+      q.includes("step") ||
+      q.includes("detailed") ||
+      q.includes("प्रक्रिया") ||
+      q.includes("टप्पा") ||
+      q.includes("सविस्तर") ||
+      q.includes("दस्तावेज")
+    );
+  }, [userQuestion]);
+
+  const [showExtraDetails, setShowExtraDetails] = useState<boolean>(isProcedureOrDetailRequested);
 
   const hasFacts = guidance.keyFacts.length > 0;
   const hasSteps = guidance.steps.length > 0;

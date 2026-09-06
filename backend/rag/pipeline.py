@@ -46,7 +46,7 @@ from app.config import get_settings
 from app.providers.groq_provider import query_groq_llm, GROQ_MODELS
 from app.providers.gemini_provider import query_gemini_llm
 from app.schemas.query import IntentCode, QueryRequest, QueryResponse
-from rag.intent import classify_intent, extract_topic_and_goal
+from rag.intent import classify_intent, extract_topic_and_goal, extract_answer_focus
 from rag.prompts import RAG_SYSTEM_INSTRUCTION, DIRECT_RESPONSES, NO_KNOWLEDGE_FALLBACK, NO_KNOWLEDGE_FALLBACK_WITH_STATE, get_intent_fallback
 from rag.retriever import retrieve_relevant_knowledge, RetrievedChunk
 from rag.router import route_query, RouterMode, RoutingDecision
@@ -147,8 +147,11 @@ class RAGPipeline:
 
         # Stage 2: Intent Classification & Topic/Goal Extraction
         intent_start = time.perf_counter()
+        # Stage 2: Intent Classification & Topic/Goal Extraction
+        intent_start = time.perf_counter()
         raw_intent = classify_intent(message)
         extracted_topic, extracted_goal = extract_topic_and_goal(message)
+        answer_focus = extract_answer_focus(message)
         intent_latency_ms = (time.perf_counter() - intent_start) * 1000.0
 
         # Contextual Follow-up Detection Logic
@@ -218,7 +221,7 @@ class RAGPipeline:
                 topic_query_prefix = "PACS cooperative society"
             elif session.topic == "TRACTOR_PURCHASE":
                 topic_query_prefix = "SMAM tractor subsidy scheme"
-            effective_search_query = f"{topic_query_prefix} {message}"
+            effective_search_query = f"{topic_query_prefix} {answer_focus.lower()} {message}"
         else:
             effective_search_query = message
 
@@ -313,6 +316,7 @@ class RAGPipeline:
             f"ORIGINAL USER QUESTION: {message}\n"
             f"STRICT RESPONSE LANGUAGE: {target_lang}\n"
             f"Detected Intent: {intent}\n"
+            f"Answer Focus: {answer_focus}\n"
             f"Active Session Turn: {session.turn_number}\n"
         )
 
@@ -323,8 +327,28 @@ class RAGPipeline:
         user_prompt += (
             f"\nOFFICIAL GROUNDED CONTEXT:\n{combined_context}\n\n"
             f"STRICT INSTRUCTION: Synthesize the grounded context to answer the user's EXACT ORIGINAL QUESTION ('{message}') in {target_lang}. "
-            f"Generate dynamic, question-specific action steps under 'what_should_i_do_now' and a direct spoken answer."
         )
+
+        if is_contextual_followup:
+            user_prompt += (
+                f"\n\n--- MULTI-TURN CONTEXT RESOLUTION & ANSWER FOCUS ---\n"
+                f"Active Conversation Topic: {session.topic or intent}\n"
+                f"Requested Answer Focus: {answer_focus}\n"
+                f"CRITICAL MULTI-TURN INSTRUCTION:\n"
+                f"The user is asking a SPECIFIC FOLLOW-UP question ('{message}') focused on '{answer_focus}' for the ongoing topic '{session.topic or intent}'.\n"
+                f"DO NOT repeat the previous broad overview answer from conversation history!\n"
+                f"Generate a NEW, highly focused answer specifically concentrating on '{answer_focus}'.\n"
+            )
+            if answer_focus == "PROCEDURE":
+                user_prompt += "Focus heavily on listing the exact 1, 2, 3 numbered step-by-step procedural steps under 'what_should_i_do_now' and 'summary'.\n"
+            elif answer_focus == "DOCUMENTS":
+                user_prompt += "Focus heavily on listing the required land records (7/12 extract, 8A), proofs, bank passbook, and application documents.\n"
+            elif answer_focus == "CONTACT":
+                user_prompt += "Focus heavily on providing official helpline numbers, toll-free contacts, portal URLs (pmfby.gov.in), and local authorities (DDR / District Agriculture Officer).\n"
+            elif answer_focus == "NEXT_STEP":
+                user_prompt += "Focus heavily on what immediate next practical step the user must execute right now.\n"
+        else:
+            user_prompt += f"Generate dynamic, question-specific action steps under 'what_should_i_do_now' and a direct spoken answer."
 
         # Context-resolution guidance when state is already collected
         if session.collected_slots.get("state"):

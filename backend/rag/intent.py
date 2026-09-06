@@ -112,5 +112,30 @@ def extract_topic_and_goal(message: str) -> tuple[str, str]:
     return "GENERAL_COOPERATIVE_QUERY", "INFORMATION_ASSISTANCE"
 
 
+def extract_answer_focus(message: str) -> str:
+    """
+    Extract internal answer focus (PROCEDURE, DOCUMENTS, CONTACT, ELIGIBILITY, DEADLINE, NEXT_STEP, COMPLAINT, OVERVIEW)
+    from user message to drive targeted follow-up responses.
+    """
+    msg_lower = message.lower().strip()
+
+    if any(kw in msg_lower for kw in ["procedure", "process", "step", "steps", "how to", "how do i", "guideline", "guidelines", "प्रक्रिया", "टप्पा", "टप्पे", "कसे करावे", "चरण", "प्रक्रिया क्या"]):
+        return "PROCEDURE"
+    if any(kw in msg_lower for kw in ["document", "documents", "record", "records", "paper", "papers", "proof", "7/12", "7-12", "8a", "khasra", "khatauni", "passbook", "aadhaar", "कागदपत्रे", "दस्तावेज", "पुरावे"]):
+        return "DOCUMENTS"
+    if any(kw in msg_lower for kw in ["contact", "helpline", "number", "phone", "email", "office", "officer", "authority", "ddr", "call", "who to contact", "who should i contact", "sampark", "संपर्क", "हेल्पलाईन", "हेल्पलाइन", "अधिकारी"]):
+        return "CONTACT"
+    if any(kw in msg_lower for kw in ["eligibility", "eligible", "criteria", "who can apply", "qualification", "पात्रता", "अहर्ता"]):
+        return "ELIGIBILITY"
+    if any(kw in msg_lower for kw in ["deadline", "date", "time", "hours", "72 hours", "last date", "due date", "मुदत", "वेळ", "तास"]):
+        return "DEADLINE"
+    if any(kw in msg_lower for kw in ["next", "what next", "after this", "what should i do next", "पुढे काय", "आगे क्या"]):
+        return "NEXT_STEP"
+    if any(kw in msg_lower for kw in ["complaint", "grievance", "dispute", "appeal", "redressal", "तक्रार", "शिकायत"]):
+        return "COMPLAINT"
+
+    return "OVERVIEW"
+
+
 # Backwards compatibility alias
 _classify_intent = classify_intent
