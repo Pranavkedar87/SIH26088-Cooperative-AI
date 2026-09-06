@@ -1517,6 +1517,151 @@
   width: 100%;
 }
 
+/* ── SahkaarSetu Official Guidance Note Layout ──────────────────────────────── */
+.guidance-note-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding: 4px;
+}
+
+.guidance-note-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.guidance-note-brand {
+  display: flex;
+  flex-direction: column;
+}
+
+.guidance-note-title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #126B62;
+}
+
+.guidance-note-subtitle {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.guidance-domain-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #F7F4EA;
+  border: 1px solid #1B806F;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #126B62;
+}
+
+.guidance-note-banner {
+  background: #F7F4EA;
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
+  text-align: center;
+  border: 1px solid #E5DFCF;
+}
+
+.guidance-note-banner h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #126B62;
+  margin: 0;
+}
+
+.guidance-question-box {
+  background: #F9F6ED;
+  border-left: 4px solid #D6A52F;
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  padding: 12px 16px;
+}
+
+.guidance-question-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #B8860B;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.guidance-question-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #173C3A;
+  font-style: italic;
+}
+
+.guidance-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.guidance-section-heading {
+  font-size: 13px;
+  font-weight: 800;
+  color: #126B62;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 4px;
+  margin-top: 4px;
+}
+
+.guidance-sources-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.guidance-source-item {
+  font-size: 13px;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.source-bullet {
+  color: #126B62;
+  font-weight: bold;
+}
+
+.source-title {
+  font-weight: 600;
+}
+
+.source-authority {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.guidance-note-footer {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding-top: 8px;
+  border-top: 1px dashed var(--color-border);
+  font-weight: 600;
+}
+
 .action-btn--primary {
   background: var(--color-primary) !important;
   color: #FFFFFF !important;
