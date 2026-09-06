@@ -75,12 +75,31 @@ export function useTextToSpeech(options?: { onEnd?: () => void }): UseTextToSpee
 
   const findBestVoice = useCallback((lang: LanguageCode, availableVoices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
     const preferences = LANG_VOICE_PREFERENCES[lang] || ["en-IN", "en"];
+    // Recognized female voice identifiers across Chrome, Safari, Edge, Android, iOS & Windows
+    const femaleRegex = /female|woman|lady|swara|zira|samantha|victoria|heera|aditi|kalpana|neerja|jenny|aria|shreya|raveena|veena|kiran|sonia|ananya|wavenet-a|wavenet-c|wavenet-d|standard-a|standard-c/i;
+
+    // 1. First priority: Exact language match WITH explicit female voice signature
+    for (const pref of preferences) {
+      const femaleMatch = availableVoices.find(
+        (v) =>
+          (v.lang.toLowerCase() === pref.toLowerCase() || v.lang.toLowerCase().startsWith(pref.toLowerCase())) &&
+          femaleRegex.test(v.name)
+      );
+      if (femaleMatch) return femaleMatch;
+    }
+
+    // 2. Second priority: Any matching language voice
     for (const pref of preferences) {
       const match = availableVoices.find(
         (v) => v.lang.toLowerCase() === pref.toLowerCase() || v.lang.toLowerCase().startsWith(pref.toLowerCase())
       );
       if (match) return match;
     }
+
+    // 3. Third priority: Any available female voice in system
+    const fallbackFemale = availableVoices.find((v) => femaleRegex.test(v.name));
+    if (fallbackFemale) return fallbackFemale;
+
     return availableVoices[0] || null;
   }, []);
 
@@ -125,7 +144,7 @@ export function useTextToSpeech(options?: { onEnd?: () => void }): UseTextToSpee
       const bestVoice = findBestVoice(language, voices);
       const preferredLangCode = LANG_VOICE_PREFERENCES[language]?.[0] || "en-IN";
 
-      console.info(`[TTS] Request started | lang: ${language} | text len: ${cleanText.length} | voice: ${bestVoice?.name || preferredLangCode}`);
+      console.info(`[TTS] Request started | lang: ${language} | text len: ${cleanText.length} | female voice: ${bestVoice?.name || preferredLangCode}`);
 
       try {
         window.speechSynthesis.resume();
@@ -136,6 +155,10 @@ export function useTextToSpeech(options?: { onEnd?: () => void }): UseTextToSpee
         if (bestVoice) {
           utterance.voice = bestVoice;
         }
+
+        // Configure warm female voice parameters
+        utterance.pitch = 1.1; // Warm, natural female voice pitch
+        utterance.rate = 0.95;  // Slightly relaxed rate for clear regional speech
 
         utterance.onstart = () => {
           console.info("[TTS] Audio playback started.");
