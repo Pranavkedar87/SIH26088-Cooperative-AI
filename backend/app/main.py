@@ -8,7 +8,15 @@ Startup order:
   4. Mount routers
 """
 from __future__ import annotations
+import sys
 import logging
+from pathlib import Path
+
+# Guarantee backend directory is in sys.path for Render / Uvicorn deployments
+_backend_dir = Path(__file__).resolve().parent.parent
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
