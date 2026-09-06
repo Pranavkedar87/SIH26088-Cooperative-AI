@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 import urllib.request
 import urllib.error
@@ -124,7 +125,7 @@ def query_groq_llm(
     """
     start_time = time.perf_counter()
     settings = get_settings()
-    api_key = settings.groq_api_key.strip()
+    api_key = (settings.groq_api_key or os.getenv("GROQ_API_KEY", "")).strip()
 
     stats = {
         "llm_actually_called": False,

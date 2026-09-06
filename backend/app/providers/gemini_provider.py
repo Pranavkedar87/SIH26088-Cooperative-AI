@@ -12,6 +12,7 @@ Security:
 from __future__ import annotations
 
 import logging
+import os
 import re
 from typing import TYPE_CHECKING
 
@@ -166,7 +167,7 @@ class GeminiProvider(AIProvider):
         """Return a cached Gemini client, initializing it on first call."""
         if GeminiProvider._client is None:
             settings = get_settings()
-            api_key = settings.gemini_api_key.strip()
+            api_key = (settings.gemini_api_key or os.getenv("GEMINI_API_KEY", "")).strip()
             if not api_key:
                 raise RuntimeError(
                     "GEMINI_API_KEY is not set. "
@@ -299,7 +300,7 @@ def query_gemini_llm(
     stats = {"llm_actually_called": False, "latency_ms": 0.0}
     try:
         settings = get_settings()
-        api_key = settings.gemini_api_key.strip()
+        api_key = (settings.gemini_api_key or os.getenv("GEMINI_API_KEY", "")).strip()
         if not api_key:
             return None, "none", stats
 
