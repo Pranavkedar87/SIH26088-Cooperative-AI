@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import type { LanguageCode } from "../types";
 import { LANGUAGES } from "../types";
 import { GlobeIcon, CheckIcon } from "./Icons";
@@ -16,7 +16,6 @@ export const LanguageModal: React.FC<Props> = ({
   isOpen,
   onClose,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on outside click
@@ -37,16 +36,6 @@ export const LanguageModal: React.FC<Props> = ({
 
   if (!isOpen) return null;
 
-  const filteredLanguages = LANGUAGES.filter((lang) => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      lang.label.toLowerCase().includes(q) ||
-      lang.nativeLabel.toLowerCase().includes(q) ||
-      lang.code.toLowerCase().includes(q)
-    );
-  });
-
   const handleSelect = (code: LanguageCode) => {
     onChange(code);
     onClose();
@@ -65,21 +54,9 @@ export const LanguageModal: React.FC<Props> = ({
           <GlobeIcon size={18} color="#126B62" />
         </div>
 
-        {/* Optional Search Bar */}
-        <div className="lang-dropdown-search">
-          <input
-            type="text"
-            className="lang-search-input"
-            placeholder="Search language / भाषा खोजें..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-          />
-        </div>
-
         {/* Vertical Scrollable List */}
         <div className="lang-dropdown-list">
-          {filteredLanguages.map((lang) => {
+          {LANGUAGES.map((lang) => {
             const isSelected = selected === lang.code;
             return (
               <button
