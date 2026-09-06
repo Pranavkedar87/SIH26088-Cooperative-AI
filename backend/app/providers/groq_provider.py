@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 import urllib.request
 import urllib.error
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 
 from app.config import get_settings
 from app.providers.ai_provider import AIProvider
@@ -20,12 +21,11 @@ logger = logging.getLogger(__name__)
 
 GROQ_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-# Primary & Fallback Groq models
+# Primary & High-Speed Fallback Groq models (No slow or timing-out endpoints)
 GROQ_MODELS = [
     "groq/compound-mini",
-    "groq/compound",
     "openai/gpt-oss-20b",
-    "qwen/qwen3.6-27b",
+    "openai/gpt-oss-120b",
 ]
 
 _LANG_NAME = {
@@ -87,7 +87,7 @@ class GroqProvider(AIProvider):
                 method="POST",
             )
             try:
-                with urllib.request.urlopen(req, timeout=12.0) as resp:
+                with urllib.request.urlopen(req, timeout=5.0) as resp:
                     if resp.status == 200:
                         data = json.loads(resp.read().decode("utf-8"))
                         answer_text = data["choices"][0]["message"]["content"].strip()
@@ -116,18 +116,29 @@ class GroqProvider(AIProvider):
 def query_groq_llm(
     system_instruction: str,
     user_prompt: str,
-    max_tokens: int = 1000,
+    max_tokens: int = 800,
     temperature: float = 0.2,
-) -> tuple[Optional[str], str]:
+) -> Tuple[Optional[str], str, Dict[str, Any]]:
     """
-    Synchronous / Thread-safe helper to query Groq LLM API with model fallback chain.
-    Returns (response_text, model_used).
+    Synchronous / Thread-safe helper to query Groq LLM API with high-speed model fallback chain.
+    Returns (response_text, model_used, telemetry_stats).
     """
+    start_time = time.perf_counter()
     settings = get_settings()
     api_key = settings.groq_api_key.strip()
+
+    stats = {
+        "llm_actually_called": False,
+        "retries": 0,
+        "timeouts": 0,
+        "fallbacks": 0,
+        "output_token_count": 0,
+        "latency_ms": 0.0,
+    }
+
     if not api_key:
         logger.error("[AI PROVIDER] GROQ_API_KEY missing in backend/.env")
-        return None, "none"
+        return None, "none", stats
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -135,7 +146,9 @@ def query_groq_llm(
         "User-Agent": "SahkaarSetu-AI/1.0",
     }
 
-    for model_name in GROQ_MODELS:
+    stats["llm_actually_called"] = True
+
+    for idx, model_name in enumerate(GROQ_MODELS):
         payload = {
             "model": model_name,
             "messages": [
@@ -152,18 +165,29 @@ def query_groq_llm(
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=15.0) as resp:
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
                 if resp.status == 200:
                     data = json.loads(resp.read().decode("utf-8"))
                     text = data["choices"][0]["message"]["content"].strip()
-                    logger.info(f"[AI PROVIDER] GROQ | [MODEL] {model_name} | [STATUS] 200 SUCCESS")
-                    return text, model_name
+                    usage = data.get("usage", {})
+                    stats["output_token_count"] = usage.get("completion_tokens", len(text.split()))
+                    stats["latency_ms"] = (time.perf_counter() - start_time) * 1000.0
+                    logger.info(f"[AI PROVIDER] GROQ | [MODEL] {model_name} | [STATUS] 200 SUCCESS ({stats['latency_ms']:.2f}ms)")
+                    return text, model_name, stats
         except urllib.error.HTTPError as exc:
+            stats["retries"] += 1
+            if idx > 0:
+                stats["fallbacks"] += 1
             err_body = exc.read().decode("utf-8", errors="ignore")[:100]
             logger.warning(f"[AI PROVIDER] GROQ Model '{model_name}' HTTP {exc.code}: {err_body}")
             continue
         except Exception as exc:
-            logger.warning(f"[AI PROVIDER] GROQ Model '{model_name}' Error: {exc}")
+            stats["retries"] += 1
+            stats["timeouts"] += 1
+            if idx > 0:
+                stats["fallbacks"] += 1
+            logger.warning(f"[AI PROVIDER] GROQ Model '{model_name}' Exception: {exc}")
             continue
 
-    return None, "fallback_failed"
+    stats["latency_ms"] = (time.perf_counter() - start_time) * 1000.0
+    return None, "none", stats
