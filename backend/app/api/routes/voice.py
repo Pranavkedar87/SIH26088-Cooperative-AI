@@ -168,8 +168,11 @@ async def voice_query(body: VoiceQueryRequest) -> VoiceQueryResponse:
 
         return VoiceQueryResponse(
             answer=res.answer,
+            display_answer=res.display_answer,
+            spoken_answer=res.spoken_answer,
             language=res.language,
             intent=res.intent,
+            answer_focus=res.answer_focus,
             source=res.source,
             sources=res.sources,
             next_action=res.next_action,

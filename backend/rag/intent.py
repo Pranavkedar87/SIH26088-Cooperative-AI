@@ -19,7 +19,9 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
         ["pmfby", "fasal bima", "फसल बीमा", "पीएमएफबीवाय", "पीएमएफबीवाई", "crop insurance",
          "pradhan mantri fasal", "पीक विमा", "पिक विमा", "soyabeen", "soybean", "सोयाबीन",
          "peek kharab", "पिक खराब", "पीक खराब", "paus", "pausa", "pavsa", "पाऊस", "पावसामुळे",
-         "crop damage", "crop damaged", "rain damage", "नुकसान", "पिकाचे नुकसान", "पिकाचे"],
+         "crop damage", "crop damaged", "rain damage", "heavy rain", "crop get damage",
+         "crop suffered damage", "crop loss", "damage because", "damaged because",
+         "excessive rain", "unseasonal rain", "नुकसान", "पिकाचे नुकसान", "पिकाचे"],
         "PMFBY",
     ),
     (

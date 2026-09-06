@@ -68,8 +68,8 @@ logger = logging.getLogger(__name__)
 
 def clean_speech_text(text: str) -> str:
     """
-    Strips markdown formatting, headings, bullet markers, URLs, citations, and '::' artifacts
-    for clean natural speech TTS audio playback.
+    Strips markdown formatting, headings, bullet markers, URLs, citations, '::' artifacts,
+    and legacy header prefixes for clean natural speech TTS audio playback.
     """
     if not text:
         return ""
@@ -78,14 +78,17 @@ def clean_speech_text(text: str) -> str:
     # Strip markdown headers, asterisks, underscores, backticks, hashes, bullet symbols
     cleaned = re.sub(r'#+\s*', '', cleaned)
     cleaned = re.sub(r'[\*\_\`]', '', cleaned)
-    # Strip :: artifacts or technical metadata
-    cleaned = re.sub(r'::+', ' ', cleaned)
     # Strip citation brackets e.g. [1], [Web-1], [Source: ...]
     cleaned = re.sub(r'\[\s*(?:web-)?\d+\s*\]', '', cleaned, flags=re.IGNORECASE)
     cleaned = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', cleaned)
     # Strip leading bullet numbers/markers line by line
     cleaned = re.sub(r'^\s*[-*+•]\s+', '', cleaned, flags=re.MULTILINE)
     cleaned = re.sub(r'^\s*\d+[\.\)]\s+', '', cleaned, flags=re.MULTILINE)
+    # Strip legacy heading prefixes and labels
+    cleaned = re.sub(r'(?:Official Guidance|What Should I Do Now|Details|तुम्ही काय करू शकता|आप क्या करें):?', '', cleaned, flags=re.IGNORECASE)
+    # Strip :: or leftover punctuation at start of text or line
+    cleaned = re.sub(r'^[\s:]+', '', cleaned)
+    cleaned = re.sub(r'::+', ' ', cleaned)
     # Collapse multiple whitespaces & newlines into clean natural speech spacing
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned

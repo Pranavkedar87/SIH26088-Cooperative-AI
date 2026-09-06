@@ -136,6 +136,7 @@ export interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
+  spoken_answer?: string;
   timestamp: Date;
   language: LanguageCode;
   sources?: SourceItem[];

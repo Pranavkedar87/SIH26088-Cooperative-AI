@@ -202,6 +202,50 @@ export async function sendQuery(request: QueryRequest): Promise<QueryResponse> {
   return generateFallbackResponse(request);
 }
 
+// ── Send Voice Query (Targeting /api/voice/query) ────────────────────────────
+
+export async function sendVoiceQuery(request: QueryRequest): Promise<QueryResponse> {
+  let attempts = 0;
+  const maxAttempts = 2;
+
+  const payload = {
+    transcript: request.message,
+    query: request.message,
+    language: request.language,
+    session_id: request.session_id,
+    response_mode: request.response_mode || "voice",
+  };
+
+  while (attempts < maxAttempts) {
+    try {
+      attempts++;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+      const res = await fetch(`${BASE_URL}/api/voice/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.warn(`Voice query attempt ${attempts} failed:`, err);
+      if (attempts < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+    }
+  }
+
+  console.info("Falling back to sendQuery for voice resilience.");
+  return sendQuery(request);
+}
+
 // ── Server-Side STT Audio Transcription ──────────────────────────────────────
 
 export interface TranscribeResponseData {

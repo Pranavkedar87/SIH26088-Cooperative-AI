@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import type { LanguageCode, ChatMessage, VoiceState } from "../types";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { useTextToSpeech } from "../hooks/useTextToSpeech";
-import { sendQuery, wakeUpBackend } from "../api/client";
+import { sendVoiceQuery, wakeUpBackend } from "../api/client";
 import { detectLanguageFromText } from "../utils/languageDetector";
 import {
   SahkaarSetuLogo,
@@ -105,6 +105,7 @@ export const VoiceModeView: React.FC<Props> = ({
     unlockAudio();
 
     setUserTranscript(trimmed);
+    setAiResponse(null); // Clear previous response card immediately for new turn
     setVoiceState("PROCESSING");
     setErrorMsg(null);
 
@@ -116,8 +117,8 @@ export const VoiceModeView: React.FC<Props> = ({
     setVoiceState("THINKING");
 
     try {
-      // Query backend with response_mode = "voice" for fast concise spoken answer
-      const response = await sendQuery({
+      // Query backend with response_mode = "voice" targeting /api/voice/query
+      const response = await sendVoiceQuery({
         message: trimmed,
         language: detectedLang,
         session_id: sessionId,
@@ -129,13 +130,17 @@ export const VoiceModeView: React.FC<Props> = ({
         `[VOICE_LATENCY] Captured: "${trimmed}" | Detected lang: ${detectedLang} | Intent: ${response.intent} | Time: ${elapsed}ms`
       );
 
-      const rawVoiceText = response.spoken_answer || response.answer || "";
-      const cleanedAnswer = stripMarkdown(rawVoiceText);
+      const rawDisplayText = response.display_answer || response.answer || "";
+      const rawSpokenText = response.spoken_answer || response.display_answer || response.answer || "";
+
+      const cleanedDisplay = stripMarkdown(rawDisplayText);
+      const cleanedSpoken = stripMarkdown(rawSpokenText);
 
       const assistantMsg: ChatMessage = {
         id: `voice-msg-${Date.now()}`,
         role: "assistant",
-        content: cleanedAnswer,
+        content: cleanedDisplay,
+        spoken_answer: cleanedSpoken,
         timestamp: new Date(),
         language: response.language || detectedLang,
         sources: response.sources,
@@ -148,7 +153,7 @@ export const VoiceModeView: React.FC<Props> = ({
       setVoiceState("SPEAKING");
       const targetLang = response.language || detectedLang;
 
-      speak(assistantMsg.id, cleanedAnswer, targetLang, () => {
+      speak(assistantMsg.id, cleanedSpoken, targetLang, () => {
         console.info("[VOICE_STATE] Spoken response completed -> transitioning to FOLLOW_UP_LISTENING");
         setVoiceState("FOLLOW_UP_LISTENING");
       });
