@@ -2,7 +2,7 @@
 Unified RAG + Web Research + Knowledge Router Pipeline powered by Groq AI Engine.
 
 Architecture:
-  User Query -> Intent Classification & Topic Extraction -> Knowledge Router -> RAG Search / Web Research -> Groq Engine -> Display & Spoken Answers -> Telemetry
+  User Query -> Session State Resolution -> Intent Classification & Topic Extraction -> Knowledge Router -> RAG Search / Web Research -> Groq Engine -> Display & Spoken Answers -> Telemetry
 """
 from __future__ import annotations
 
@@ -16,9 +16,15 @@ from app.config import get_settings
 from app.providers.groq_provider import query_groq_llm, GROQ_MODELS
 from app.schemas.query import IntentCode, QueryRequest, QueryResponse
 from rag.intent import classify_intent, extract_topic_and_goal
-from rag.prompts import RAG_SYSTEM_INSTRUCTION, DIRECT_RESPONSES, NO_KNOWLEDGE_FALLBACK
+from rag.prompts import RAG_SYSTEM_INSTRUCTION, DIRECT_RESPONSES, NO_KNOWLEDGE_FALLBACK, NO_KNOWLEDGE_FALLBACK_WITH_STATE
 from rag.retriever import retrieve_relevant_knowledge, RetrievedChunk
 from rag.router import route_query, RouterMode, RoutingDecision
+from rag.session_state import (
+    get_or_create_session,
+    extract_slot_from_message,
+    detect_pending_slot_from_answer,
+    SessionState,
+)
 from rag.web_search import search_web_knowledge
 
 logger = logging.getLogger(__name__)
@@ -50,32 +56,58 @@ def clean_speech_text(text: str) -> str:
 
 
 class RAGPipeline:
-    """Orchestrates end-to-end grounded query answering using Groq AI Engine."""
+    """Orchestrates end-to-end grounded query answering using Groq AI Engine with Multi-Turn Conversational State."""
 
     async def process_query(self, request: QueryRequest) -> tuple[QueryResponse, list[dict[str, Any]]]:
         """
-        Process user query through Unified Intelligence Engine with strict language propagation.
+        Process user query through Unified Intelligence Engine with conversational slot resolution.
         """
         request_start = time.perf_counter()
         message = request.message.strip()
+        session_id = request.session_id or "default-session"
         detected_language = request.language or "en"
         response_language = detected_language
         tts_language = detected_language
         resp_mode = getattr(request, "response_mode", "text") or "text"
 
-        # Stage 1: Intent Classification & Topic/Goal Extraction
+        # Stage 1: Conversational Session State Manager
+        session = get_or_create_session(session_id)
+        session.turn_number += 1
+        pending_slot_before = session.pending_slot
+
+        # Slot Extraction from message
+        extracted_slot_name, extracted_slot_val = extract_slot_from_message(message, pending_slot_before)
+        extracted_slot = f"{extracted_slot_name}:{extracted_slot_val}" if extracted_slot_name else None
+        context_used = False
+
+        if extracted_slot_name and extracted_slot_val:
+            session.collected_slots[extracted_slot_name] = extracted_slot_val
+            session.pending_slot = None  # Resolved!
+            context_used = True
+
+        # Stage 2: Intent Classification & Topic/Goal Extraction
         intent_start = time.perf_counter()
         intent = classify_intent(message)
-        topic, user_goal = extract_topic_and_goal(message)
+        extracted_topic, extracted_goal = extract_topic_and_goal(message)
         intent_latency_ms = (time.perf_counter() - intent_start) * 1000.0
 
-        # Stage 2: Pre-Retrieval Knowledge Router
+        # Topic & Goal Persistence across turns
+        if extracted_topic != "GENERAL_COOPERATIVE_QUERY":
+            session.topic = extracted_topic
+            session.user_goal = extracted_goal
+        elif session.topic:
+            context_used = True
+
+        current_topic = session.topic or extracted_topic
+        current_goal = session.user_goal or extracted_goal
+
+        # Stage 3: Pre-Retrieval Knowledge Router
         router_start = time.perf_counter()
         routing_decision = route_query(message, intent)
         router_mode = routing_decision.mode
         router_latency_ms = (time.perf_counter() - router_start) * 1000.0
 
-        # Fast-Path for GREETINGS & CASUAL INTENTS (Strict language response)
+        # Fast-Path for GREETINGS & CASUAL INTENTS
         if router_mode in {RouterMode.GREETING, RouterMode.CONVERSATIONAL}:
             mapped_intent = "CASUAL_GREETING" if intent == "GREETING" else intent
             lang_dict = DIRECT_RESPONSES.get(mapped_intent, DIRECT_RESPONSES["CASUAL_GREETING"])
@@ -86,17 +118,25 @@ class RAGPipeline:
 
             logger.info(
                 f"\n[FULL TELEMETRY]\n"
+                f"SESSION_ID={session_id}\n"
+                f"TURN_NUMBER={session.turn_number}\n"
                 f"QUERY='{message}'\n"
                 f"DETECTED_LANGUAGE={detected_language}\n"
                 f"RESPONSE_LANGUAGE={response_language}\n"
                 f"INTENT={intent}\n"
-                f"TOPIC={topic}\n"
-                f"USER_GOAL={user_goal}\n"
+                f"TOPIC={current_topic}\n"
+                f"USER_GOAL={current_goal}\n"
+                f"PENDING_SLOT_BEFORE={pending_slot_before}\n"
+                f"EXTRACTED_SLOT={extracted_slot}\n"
+                f"PENDING_SLOT_AFTER={session.pending_slot}\n"
+                f"CONTEXT_USED={context_used}\n"
+                f"CONTEXT_FIELDS={session.collected_slots}\n"
                 f"ROUTER={router_mode.value}\n"
                 f"RAG_USED=False\n"
-                f"RAG_SOURCES=[]\n"
                 f"WEB_SEARCH_USED=False\n"
-                f"TRUSTED_SOURCES=[]\n"
+                f"SEARCH_QUERY=''\n"
+                f"SOURCES=[]\n"
+                f"RESPONSE_MODE={resp_mode}\n"
                 f"LLM_ACTUALLY_CALLED=False\n"
                 f"LLM=None\n"
                 f"SPOKEN_LANGUAGE={spoken_greeting[:50]}...\n"
@@ -115,17 +155,21 @@ class RAGPipeline:
                 source="SahkaarSetu Direct Assistance",
                 sources=[],
                 next_action="Ask about PACS, Crop Insurance, or Agricultural Loans",
-                session_id=request.session_id,
+                session_id=session_id,
             )
             return resp_obj, []
 
-        # Stage 3: Knowledge Retrieval (RAG)
+        # Stage 4: Knowledge Retrieval (RAG)
         rag_start = time.perf_counter()
+        effective_search_query = message
+        if session.collected_slots.get("state"):
+            effective_search_query = f"{message} {current_topic} {session.collected_slots.get('state')} Maharashtra scheme"
+
         rag_chunks: list[RetrievedChunk] = []
         if routing_decision.trigger_rag:
             try:
                 rag_chunks = retrieve_relevant_knowledge(
-                    query=message,
+                    query=effective_search_query,
                     language=detected_language,
                     intent=intent,
                     top_k=4,
@@ -136,20 +180,20 @@ class RAGPipeline:
                 rag_chunks = []
         rag_latency_ms = (time.perf_counter() - rag_start) * 1000.0
 
-        # Stage 4: Live Official Web Research
+        # Stage 5: Live Official Web Research
         web_start = time.perf_counter()
         web_results: List[Dict[str, Any]] = []
         trigger_web = routing_decision.trigger_web or not rag_chunks
 
         if trigger_web:
             try:
-                web_results = search_web_knowledge(message, max_results=3)
+                web_results = search_web_knowledge(effective_search_query, max_results=3)
             except Exception as exc:
                 logger.warning(f"Web search execution exception: {exc}")
                 web_results = []
         web_search_latency_ms = (time.perf_counter() - web_start) * 1000.0
 
-        # Stage 5: Extract and combine verified source citations with Authority Levels
+        # Stage 6: Extract and combine verified source citations with Authority Levels
         sources_list: list[dict[str, Any]] = []
         rag_source_titles: list[str] = []
         web_source_urls: list[str] = []
@@ -183,7 +227,7 @@ class RAGPipeline:
 
         primary_source = sources_list[0]["title"] if sources_list else "SahkaarSetu Cooperative Guidance"
 
-        # Stage 6: Construct Grounded Prompt for Groq AI Engine
+        # Stage 7: Construct Grounded Prompt for Groq AI Engine
         prompt_start = time.perf_counter()
         context_parts = []
         if rag_chunks:
@@ -202,45 +246,41 @@ class RAGPipeline:
 
         combined_context = "\n".join(context_parts)
 
-        # Build language-tailored prompt (STRICT LANGUAGE ENFORCEMENT)
+        # Build language-tailored prompt
         lang_names = {"en": "English", "hi": "Hindi", "mr": "Marathi"}
         target_lang = lang_names.get(detected_language, "English")
 
         system_instruction = RAG_SYSTEM_INSTRUCTION
         user_prompt = (
             f"STRICT RESPONSE LANGUAGE: {target_lang}\n"
+            f"Active Session Turn: {session.turn_number}\n"
             f"Detected Intent: {intent}\n"
-            f"Extracted Topic: {topic}\n"
-            f"User Practical Goal: {user_goal}\n"
+            f"Active Topic: {current_topic}\n"
+            f"Active User Goal: {current_goal}\n"
+            f"Collected Session Slots: {session.collected_slots}\n"
+            f"Pending Slot Before Turn: {pending_slot_before}\n"
             f"Knowledge Router Mode: {router_mode.value}\n\n"
             f"OFFICIAL GROUNDED CONTEXT:\n{combined_context}\n\n"
             f"USER QUERY:\n{message}\n\n"
-            f"STRICT LANGUAGE INSTRUCTION: Answer ONLY and COMPLETELY in {target_lang}. Do NOT use any other language.\n"
+            f"STRICT INSTRUCTIONS:\n"
+            f"- Answer ONLY and COMPLETELY in {target_lang}.\n"
         )
 
-        # Specific guidance for Tractor / Farm Machinery queries
-        if topic == "TRACTOR_PURCHASE":
-            if detected_language == "en":
-                user_prompt += (
-                    "\n\nSPECIAL TRACTOR SCHEME INSTRUCTIONS:\n"
-                    "1. Explain clearly that government assistance/subsidy for purchasing tractors and farm machinery is available under schemes like Sub-Mission on Agricultural Mechanization (SMAM) and State Agriculture Departments.\n"
-                    "2. State that eligibility and subsidy percentages depend on your state and farmer category.\n"
-                    "3. Conclude with a helpful follow-up question: 'Which state are you from? I can check the official scheme and subsidy details for your state.'"
-                )
-            elif detected_language == "hi":
-                user_prompt += (
-                    "\n\nSPECIAL TRACTOR SCHEME INSTRUCTIONS:\n"
-                    "1. स्पष्ट बताएं कि ट्रैक्टर और कृषि उपकरण खरीदने के लिए 'कृषि मशीनीकरण पर उप-मिशन' (SMAM) और राज्य कृषि विभागों के तहत सब्सिडी/सहायता उपलब्ध है।\n"
-                    "2. बताएं कि पात्रता और सब्सिडी की राशि राज्य और किसान श्रेणी पर निर्भर करती है।\n"
-                    "3. उपयोगी प्रश्न के साथ समाप्त करें: 'आप किस राज्य से हैं? मैं आपके राज्य के लिए आधिकारिक योजना की जानकारी देख सकता हूँ।'"
-                )
-            elif detected_language == "mr":
-                user_prompt += (
-                    "\n\nSPECIAL TRACTOR SCHEME INSTRUCTIONS:\n"
-                    "1. ट्रॅक्टर आणि कृषी अवजारे खरेदीसाठी 'कृषी यांत्रिकीकरण उप-अभियान' (SMAM) आणि राज्य कृषी विभागाच्या योजनांतर्गत अनुदान उपलब्ध असल्याचे स्पष्ट सांगा.\n"
-                    "2. अनुदान व पात्रता ही तुमच्या राज्यावर आणि शेतकरी वर्गावर अवलंबून असल्याचे सांगा.\n"
-                    "3. शेवटी विचारा: 'तुम्ही कोणत्या राज्यातील आहात? मी तुमच्या राज्यासाठी अधिकृत योजना तपासू शकतो.'"
-                )
+        # Context-resolution guidance when state is already collected
+        if session.collected_slots.get("state"):
+            st_val = session.collected_slots.get("state")
+            user_prompt += (
+                f"\n\nCRITICAL CONVERSATIONAL STATE INSTRUCTION:\n"
+                f"The user has ALREADY provided state = '{st_val}'.\n"
+                f"Do NOT ask 'Which state are you from?' or repeat generic questions under any circumstances!\n"
+                f"Provide state-specific guidance for '{st_val}' (e.g. MahaDBT / Agricultural Mechanization / SMAM subsidy application portal) "
+                f"and outline the next actionable step (e.g. document requirements or application website).\n"
+            )
+        elif current_topic == "TRACTOR_PURCHASE" and not session.collected_slots.get("state"):
+            user_prompt += (
+                "\n\nTRACTOR SCHEME MISSING STATE INSTRUCTION:\n"
+                "Explain generally that tractor subsidies exist under SMAM & State Agriculture Departments, and end by asking: 'Which state are you from?'\n"
+            )
 
         if resp_mode == "voice":
             user_prompt += (
@@ -251,7 +291,7 @@ class RAGPipeline:
 
         prompt_build_latency_ms = (time.perf_counter() - prompt_start) * 1000.0
 
-        # Stage 7: Call Groq LLM API Engine
+        # Stage 8: Call Groq LLM API Engine
         max_tokens = 250 if resp_mode == "voice" else 450
         raw_answer, used_model, llm_stats = query_groq_llm(
             system_instruction=system_instruction,
@@ -261,14 +301,22 @@ class RAGPipeline:
         )
 
         if not raw_answer:
-            raw_answer = NO_KNOWLEDGE_FALLBACK.get(detected_language, NO_KNOWLEDGE_FALLBACK["en"])
+            if session.collected_slots.get("state"):
+                raw_answer = NO_KNOWLEDGE_FALLBACK_WITH_STATE.get(detected_language, NO_KNOWLEDGE_FALLBACK_WITH_STATE["en"])
+            else:
+                raw_answer = NO_KNOWLEDGE_FALLBACK.get(detected_language, NO_KNOWLEDGE_FALLBACK["en"])
 
         display_answer = raw_answer.strip()
         spoken_answer = clean_speech_text(raw_answer)
 
+        # Stage 9: Update Session State Post-Turn
+        session.pending_slot = detect_pending_slot_from_answer(display_answer)
+        session.last_assistant_question = display_answer
+        session.history.append({"role": "user", "content": message})
+        session.history.append({"role": "assistant", "content": display_answer})
+
         total_latency_ms = (time.perf_counter() - request_start) * 1000.0
 
-        # Strict validation of tool execution matching router mode
         rag_executed = bool(rag_chunks)
         web_executed = bool(web_results)
         test_passed = True
@@ -279,17 +327,26 @@ class RAGPipeline:
         # Log Strict Telemetry Format
         logger.info(
             f"\n[FULL TELEMETRY]\n"
+            f"SESSION_ID={session_id}\n"
+            f"TURN_NUMBER={session.turn_number}\n"
             f"QUERY='{message}'\n"
             f"DETECTED_LANGUAGE={detected_language}\n"
             f"RESPONSE_LANGUAGE={response_language}\n"
             f"INTENT={intent}\n"
-            f"TOPIC={topic}\n"
-            f"USER_GOAL={user_goal}\n"
+            f"TOPIC={current_topic}\n"
+            f"USER_GOAL={current_goal}\n"
+            f"PENDING_SLOT_BEFORE={pending_slot_before}\n"
+            f"EXTRACTED_SLOT={extracted_slot}\n"
+            f"PENDING_SLOT_AFTER={session.pending_slot}\n"
+            f"CONTEXT_USED={context_used}\n"
+            f"CONTEXT_FIELDS={session.collected_slots}\n"
             f"ROUTER={router_mode.value}\n"
             f"RAG_USED={rag_executed}\n"
             f"RAG_SOURCES={rag_source_titles}\n"
             f"WEB_SEARCH_USED={web_executed}\n"
             f"TRUSTED_SOURCES={web_source_urls}\n"
+            f"SEARCH_QUERY='{effective_search_query}'\n"
+            f"RESPONSE_MODE={resp_mode}\n"
             f"LLM_ACTUALLY_CALLED=True\n"
             f"LLM=GROQ ({used_model})\n"
             f"SPOKEN_LANGUAGE={spoken_answer[:60]}...\n"
@@ -308,7 +365,7 @@ class RAGPipeline:
             source=primary_source,
             sources=sources_list,
             next_action="Follow up or ask another cooperative query",
-            session_id=request.session_id,
+            session_id=session_id,
         )
 
         return response_obj, sources_list

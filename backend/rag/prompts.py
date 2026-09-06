@@ -120,3 +120,16 @@ NO_KNOWLEDGE_FALLBACK: dict[str, str] = {
     ),
 }
 
+NO_KNOWLEDGE_FALLBACK_WITH_STATE: dict[str, str] = {
+    "en": (
+        "Under SMAM and state agriculture programs, registered farmers can apply for tractor purchase subsidy (ranging from 40% to 50% depending on category) directly through your state portal or local District Agriculture Officer / PACS secretary. Prepare your 7/12 land extract, Aadhaar card, bank passbook, and quotation."
+    ),
+    "hi": (
+        "SMAM और राज्य कृषि कार्यक्रमों के तहत, किसान ट्रैक्टर खरीद सब्सिडी (40% से 50%) के लिए अपने राज्य पोर्टल या स्थानीय जिला कृषि अधिकारी / PACS सचिव के माध्यम से आवेदन कर सकते हैं। अपना 7/12 भूमि रिकॉर्ड, आधार कार्ड, बैंक पासबुक और कोटेशन तैयार रखें।"
+    ),
+    "mr": (
+        "SMAM आणि राज्य कृषी योजनांतर्गत, ट्रॅक्टर खरेदी अनुदानासाठी (४०% ते ५०%) शेतकरी आपल्या राज्य पोर्टलवर किंवा स्थानिक जिल्हा कृषी अधिकारी / PACS सचिवांमार्फत अर्ज करू शकतात. आपले ७/१२ उतारा, आधार कार्ड, बँक पासबुक आणि कोटेशन तयार ठेवा."
+    ),
+}
+
+

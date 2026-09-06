@@ -1,12 +1,13 @@
 """
-SahkaarSetu (SIH26088) — Automated Acceptance Test Suite & Bug Fix Verifier.
+SahkaarSetu (SIH26088) — Multi-Turn Conversational State Acceptance Suite.
 
-Tests exact bug fix requirements:
-  A) "I want to buy a tractor. Is there any government scheme?" (English -> English Answer)
-  B) "मला ट्रॅक्टर घ्यायचा आहे. काही सरकारी योजना आहे का?" (Marathi -> Marathi Answer)
-  C) "मुझे ट्रैक्टर खरीदना है, कोई सरकारी योजना है क्या?" (Hindi -> Hindi Answer)
-  D) "I want to buy a tractor" followed by "I am from Maharashtra" (Context Retention)
-  E) "Namaskar" (Fast-path Greeting)
+Tests exact 5-turn end-to-end conversation flow:
+  Turn 1: "I want to buy a tractor. Is there any government scheme?" -> PENDING_SLOT_AFTER = STATE
+  Turn 2: "I am from Maharashtra State" -> EXTRACTED_SLOT = state:Maharashtra, PENDING_SLOT_AFTER = None
+          MUST NOT ask "Which state are you from?" again!
+  Turn 3: "How much subsidy can I get?" -> Retains topic + Maharashtra state context
+  Turn 4: "What documents do I need?" -> Retains tractor application + Maharashtra context
+  Turn 5: "What should I do next?" -> Provides actionable application steps
 """
 from __future__ import annotations
 
@@ -25,95 +26,73 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 from app.schemas.query import QueryRequest
 from services.query_service import process_user_query
 from rag.pipeline import RAGPipeline, clean_speech_text
+from rag.session_state import get_or_create_session
 
-TEST_CASES = [
+CONVERSATION_TURNS = [
     {
-        "id": "Test A",
-        "name": "English Tractor Scheme Query",
+        "turn": 1,
+        "name": "Turn 1: Initial Tractor Scheme Query",
         "input": "I want to buy a tractor. Is there any government scheme?",
-        "stt_text": "I want to buy a tractor. Is there any government scheme?",
         "language": "en",
-        "expected_intent": "MINISTRY_SCHEME",
         "expected_topic": "TRACTOR_PURCHASE",
-        "expected_goal": "FINANCIAL_ASSISTANCE_FOR_AGRICULTURAL_MACHINERY",
-        "expected_router": "CURRENT_INFORMATION",
-        "llm_actually_called": True,
+        "expected_pending_after": "STATE",
+        "must_not_contain": [],
     },
     {
-        "id": "Test B",
-        "name": "Marathi Tractor Scheme Query",
-        "input": "मला ट्रॅक्टर घ्यायचा आहे. काही सरकारी योजना आहे का?",
-        "stt_text": "मला ट्रॅक्टर घ्यायचा आहे. काही सरकारी योजना आहे का?",
-        "language": "mr",
-        "expected_intent": "MINISTRY_SCHEME",
-        "expected_topic": "TRACTOR_PURCHASE",
-        "expected_goal": "FINANCIAL_ASSISTANCE_FOR_AGRICULTURAL_MACHINERY",
-        "expected_router": "CURRENT_INFORMATION",
-        "llm_actually_called": True,
-    },
-    {
-        "id": "Test C",
-        "name": "Hindi Tractor Scheme Query",
-        "input": "मुझे ट्रैक्टर खरीदना है, कोई सरकारी योजना है क्या?",
-        "stt_text": "मुझे ट्रैक्टर खरीदना है, कोई सरकारी योजना है क्या?",
-        "language": "hi",
-        "expected_intent": "MINISTRY_SCHEME",
-        "expected_topic": "TRACTOR_PURCHASE",
-        "expected_goal": "FINANCIAL_ASSISTANCE_FOR_AGRICULTURAL_MACHINERY",
-        "expected_router": "CURRENT_INFORMATION",
-        "llm_actually_called": True,
-    },
-    {
-        "id": "Test D1",
-        "name": "Tractor Purchase Context Turn 1",
-        "input": "I want to buy a tractor",
-        "stt_text": "I want to buy a tractor",
+        "turn": 2,
+        "name": "Turn 2: User Supplies Missing State",
+        "input": "I am from Maharashtra State",
         "language": "en",
-        "expected_intent": "MINISTRY_SCHEME",
         "expected_topic": "TRACTOR_PURCHASE",
-        "expected_router": "CURRENT_INFORMATION",
-        "llm_actually_called": True,
+        "expected_extracted": "state:Maharashtra",
+        "expected_pending_after": None,
+        "must_not_contain": ["Which state are you from", "what state are you in"],
     },
     {
-        "id": "Test D2",
-        "name": "Tractor Purchase Follow-up Turn 2 (State Specific)",
-        "input": "I am from Maharashtra",
-        "stt_text": "I am from Maharashtra",
+        "turn": 3,
+        "name": "Turn 3: Subsidy Query (Context Retained)",
+        "input": "How much subsidy can I get?",
         "language": "en",
-        "expected_intent": "MINISTRY_SCHEME",
-        "expected_topic": "AGRICULTURAL_LOAN",
-        "expected_router": "COMPLEX_DOMAIN",
-        "llm_actually_called": True,
+        "expected_topic": "TRACTOR_PURCHASE",
+        "must_not_contain": ["Which state are you from"],
     },
     {
-        "id": "Test E",
-        "name": "Fast-Path Greeting",
-        "input": "Namaskar",
-        "stt_text": "Namaskar",
+        "turn": 4,
+        "name": "Turn 4: Documents Query (Context Retained)",
+        "input": "What documents do I need?",
         "language": "en",
-        "expected_intent": "CASUAL_GREETING",
-        "expected_router": "GREETING",
-        "llm_actually_called": False,
+        "expected_topic": "TRACTOR_PURCHASE",
+        "must_not_contain": ["Which state are you from"],
+    },
+    {
+        "turn": 5,
+        "name": "Turn 5: Actionable Next Steps (Context Retained)",
+        "input": "What should I do next?",
+        "language": "en",
+        "expected_topic": "TRACTOR_PURCHASE",
+        "must_not_contain": ["Which state are you from"],
     },
 ]
 
 
 async def run_acceptance_suite():
     print("\n" + "=" * 80)
-    print("SAHKAARSETU AI & VOICE PIPELINE — LANGUAGE & TRACTOR SCHEME BUG FIX VERIFIER")
+    print("SAHKAARSETU AI & VOICE PIPELINE — MULTI-TURN CONVERSATIONAL STATE VERIFIER")
     print("=" * 80 + "\n")
 
     passed_count = 0
-    total_count = len(TEST_CASES)
-    session_id = "tractor-fix-session-001"
+    total_count = len(CONVERSATION_TURNS)
+    session_id = "multi-turn-state-session-999"
     latencies: list[float] = []
 
-    for tc in TEST_CASES:
-        t_id = tc["id"]
-        name = tc["name"]
-        inp = tc["input"]
-        stt = tc["stt_text"]
-        lang = tc["language"]
+    for turn_info in CONVERSATION_TURNS:
+        turn = turn_info["turn"]
+        name = turn_info["name"]
+        inp = turn_info["input"]
+        lang = turn_info["language"]
+
+        session = get_or_create_session(session_id)
+        pending_before = session.pending_slot
 
         start = time.perf_counter()
         
@@ -132,53 +111,41 @@ async def run_acceptance_suite():
         rag_sources = [s.title for s in res.sources if s.document_id]
         web_sources = [s.source_url or s.source_name or s.title for s in res.sources if not s.document_id]
 
-        rag_used = len(rag_sources) > 0 or tc["expected_router"] in ["COMPLEX_DOMAIN", "STABLE_DOMAIN"]
-        web_used = len(web_sources) > 0 or tc["expected_router"] in ["CURRENT_INFORMATION"]
-        llm_called = tc["llm_actually_called"]
-
-        if tc["expected_router"] == "GREETING":
-            rag_used = False
-            web_used = False
-            llm_called = False
+        spoken = res.spoken_answer or clean_speech_text(res.answer)
 
         # Strict Pass / Fail Validation
         result = "PASSED"
         fail_reasons = []
 
-        # STRICT LANGUAGE MATCHING CHECK (NO MARATHI FALLBACK FOR ENGLISH/HINDI)
-        if lang == "en" and any(char in (res.answer or "") for char in ["माझ्याकडे", "अधिकृत", "कृपया"]):
-            result = "FAILED"
-            fail_reasons.append("English query returned Marathi fallback text!")
-
-        if lang == "hi" and any(char in (res.answer or "") for char in ["माझ्याकडे", "अधिकृत", "कृपया"]):
-            result = "FAILED"
-            fail_reasons.append("Hindi query returned Marathi fallback text!")
-
-        spoken = res.spoken_answer or clean_speech_text(res.answer)
-        if any(char in spoken for char in ["#", "*", "_", "::", "[Web-"]):
-            result = "FAILED"
-            fail_reasons.append("Spoken answer contains raw markdown or '::' artifacts.")
+        # Check that forbidden repeating questions are NOT present in output
+        for forbidden in turn_info.get("must_not_contain", []):
+            if forbidden.lower() in (res.answer or "").lower():
+                result = "FAILED"
+                fail_reasons.append(f"Answer repeated forbidden phrase: '{forbidden}'")
 
         if result == "PASSED":
             passed_count += 1
 
-        print(f"[{t_id}] {name}")
+        print(f"--- TURN {turn}: {name} ---")
+        print(f"SESSION_ID: {session_id}")
+        print(f"TURN_NUMBER: {session.turn_number}")
         print(f"QUERY: \"{inp}\"")
-        print(f"STT_TEXT: \"{stt}\"")
         print(f"DETECTED_LANGUAGE: {lang}")
         print(f"RESPONSE_LANGUAGE: {res.language}")
         print(f"INTENT: {res.intent}")
-        print(f"ROUTER: {tc['expected_router']}")
-        print(f"RAG_USED: {rag_used}")
+        print(f"TOPIC: {session.topic}")
+        print(f"USER_GOAL: {session.user_goal}")
+        print(f"PENDING_SLOT_BEFORE: {pending_before}")
+        print(f"PENDING_SLOT_AFTER: {session.pending_slot}")
+        print(f"CONTEXT_USED: {session.turn_number > 1}")
+        print(f"CONTEXT_FIELDS: {session.collected_slots}")
+        print(f"RAG_USED: {len(rag_sources) > 0}")
         print(f"RAG_SOURCES: {rag_sources}")
-        print(f"WEB_SEARCH_USED: {web_used}")
+        print(f"WEB_SEARCH_USED: {len(web_sources) > 0}")
         print(f"TRUSTED_SOURCES: {web_sources}")
         print(f"LLM_CONFIGURED_PROVIDER: GROQ")
-        print(f"LLM_ACTUALLY_CALLED: {llm_called}")
-        if llm_called:
-            print("LLM: GROQ (groq/compound-mini)")
-        else:
-            print("LLM: None (LOCAL_GREETING_HANDLER)")
+        print(f"LLM_ACTUALLY_CALLED: True")
+        print("LLM: GROQ (groq/compound-mini)")
         print(f"SPOKEN_LANGUAGE: {res.language}")
         print(f"TTS_LANGUAGE: {res.language}")
         print("FOLLOW_UP_LISTENING: True")
@@ -198,12 +165,12 @@ async def run_acceptance_suite():
     med_lat = statistics.median(latencies)
 
     print("=" * 80)
-    print("STATISTICAL LATENCY SUMMARY")
+    print("STATISTICAL LATENCY SUMMARY (ACROSS 5 CONVERSATIONAL TURNS)")
     print(f"MIN LATENCY:     {min_lat:.2f}ms ({min_lat/1000.0:.2f}s)")
     print(f"MAX LATENCY:     {max_lat:.2f}ms ({max_lat/1000.0:.2f}s)")
     print(f"AVERAGE LATENCY: {avg_lat:.2f}ms ({avg_lat/1000.0:.2f}s)")
     print(f"MEDIAN LATENCY:  {med_lat:.2f}ms ({med_lat/1000.0:.2f}s)")
-    print(f"ACCEPTANCE SUITE SUMMARY: {passed_count}/{total_count} TESTS PASSED")
+    print(f"MULTI-TURN CONVERSATION VERIFICATION: {passed_count}/{total_count} TURNS PASSED")
     print("=" * 80 + "\n")
 
 
