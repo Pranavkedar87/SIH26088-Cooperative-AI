@@ -290,21 +290,41 @@ export interface TranscribeResponseData {
   latency_ms?: number;
 }
 
+export function wakeUpBackend(): void {
+  try {
+    fetch(`${BASE_URL}/health`, { method: "GET" }).catch(() => {
+      // Non-blocking background health check to wake up cold backend
+    });
+  } catch {
+    // Ignore
+  }
+}
+
 export async function transcribeAudio(
   audioBlob: Blob,
   language: string,
   sessionId?: string
 ): Promise<TranscribeResponseData> {
-  const formData = new FormData();
+  const typeStr = (audioBlob.type || "").toLowerCase();
+  const isAppleDevice =
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent);
+
   let filename = "speech.webm";
-  if (audioBlob.type.includes("mp4") || audioBlob.type.includes("aac")) {
+  if (
+    typeStr.includes("mp4") ||
+    typeStr.includes("aac") ||
+    typeStr.includes("m4a") ||
+    (isAppleDevice && !typeStr.includes("webm"))
+  ) {
     filename = "speech.mp4";
-  } else if (audioBlob.type.includes("wav")) {
+  } else if (typeStr.includes("wav")) {
     filename = "speech.wav";
-  } else if (audioBlob.type.includes("ogg")) {
+  } else if (typeStr.includes("ogg")) {
     filename = "speech.ogg";
   }
 
+  const formData = new FormData();
   formData.append("audio", audioBlob, filename);
   formData.append("language", language);
   if (sessionId) {
@@ -312,30 +332,44 @@ export async function transcribeAudio(
   }
 
   const startTime = performance.now();
-  console.info(`[STT] STT_REQUEST_STARTED provider=groq_whisper lang=${language} size=${audioBlob.size} bytes mime=${audioBlob.type}`);
+  console.info(`[STT] STT_REQUEST_STARTED provider=groq_whisper lang=${language} size=${audioBlob.size} bytes mime=${audioBlob.type} filename=${filename}`);
 
-  try {
-    const res = await fetch(`${BASE_URL}/api/voice/transcribe`, {
-      method: "POST",
-      body: formData,
-    });
+  const maxAttempts = 2;
+  let attempts = 0;
 
-    const elapsed = Math.round(performance.now() - startTime);
+  while (attempts < maxAttempts) {
+    try {
+      attempts++;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout for Render cold-start
 
-    if (!res.ok) {
+      const res = await fetch(`${BASE_URL}/api/voice/transcribe`, {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data: TranscribeResponseData = await res.json();
+        const elapsed = Math.round(performance.now() - startTime);
+        console.info(
+          `[STT] STT_RESPONSE_RECEIVED latency=${elapsed}ms provider=${data.provider} transcript="${data.transcript}"`
+        );
+        return data;
+      }
+
       const errData = await res.json().catch(() => ({ detail: "STT transcription failed" }));
-      console.warn(`[STT] STT_RESPONSE_FAILED status=${res.status} detail=${errData.detail}`);
-      throw new Error(errData.detail || `STT error ${res.status}`);
+      console.warn(`[STT] STT_RESPONSE_FAILED attempt ${attempts} status=${res.status} detail=${errData.detail}`);
+    } catch (err) {
+      console.warn(`[STT] Audio transcription attempt ${attempts} failed:`, err);
+      if (attempts < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 1500)); // wait 1.5s before retry
+      }
     }
-
-    const data: TranscribeResponseData = await res.json();
-    console.info(
-      `[STT] STT_RESPONSE_RECEIVED latency=${elapsed}ms provider=${data.provider} transcript="${data.transcript}"`
-    );
-    return data;
-  } catch (err) {
-    console.error("[STT] Audio transcription request failed:", err);
-    throw err;
   }
+
+  throw new Error("Audio transcription timed out or backend is offline");
 }
 

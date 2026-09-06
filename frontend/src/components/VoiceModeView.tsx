@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import type { LanguageCode, ChatMessage, VoiceState } from "../types";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { useTextToSpeech } from "../hooks/useTextToSpeech";
-import { sendQuery } from "../api/client";
+import { sendQuery, wakeUpBackend } from "../api/client";
 import { detectLanguageFromText } from "../utils/languageDetector";
 import {
   SahkaarSetuLogo,
@@ -190,6 +190,7 @@ export const VoiceModeView: React.FC<Props> = ({
 
   // Initial setup on view mount
   useEffect(() => {
+    wakeUpBackend();
     unlockAudio();
     setVoiceState("LISTENING");
     return () => {
