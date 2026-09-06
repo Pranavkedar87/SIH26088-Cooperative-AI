@@ -125,6 +125,15 @@ export interface QueryResponse {
 
 export type STTStatus = "idle" | "listening" | "processing" | "error" | "unsupported";
 
+export type VoiceState =
+  | "IDLE"
+  | "LISTENING"
+  | "PROCESSING"
+  | "THINKING"
+  | "SPEAKING"
+  | "FOLLOW_UP_LISTENING"
+  | "ERROR";
+
 // ── History & Guidance Items ─────────────────────────────────────────────────
 
 export interface HistoryItem {

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import type { LanguageCode, ChatMessage } from "../types";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import type { LanguageCode, ChatMessage, VoiceState } from "../types";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { useTextToSpeech } from "../hooks/useTextToSpeech";
 import { sendQuery } from "../api/client";
@@ -40,14 +40,27 @@ const LANG_DISPLAY_NAMES: Record<string, string> = {
   mr: "मराठी",
   hi: "हिंदी",
   en: "English",
-  ta: "தமிழ் (Tamil)",
-  te: "తెలుగు (Telugu)",
-  kn: "ಕನ್ನಡ (Kannada)",
-  gu: "ગુજરાતી (Gujarati)",
-  bn: "বাংলা (Bengali)",
-  pa: "ਪੰਜਾਬੀ (Punjabi)",
-  ml: "മലയാളം (Malayalam)",
+  ta: "தமிழ்",
+  te: "తెలుగు",
+  kn: "ಕನ್ನಡ",
+  gu: "ગુજરાતી",
+  bn: "বাংলা",
+  pa: "ਪੰਜਾਬੀ",
+  ml: "മലയാളം",
 };
+
+// Strips raw markdown for visual card display in Voice Mode
+function stripMarkdown(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/#+\s*/g, "")
+    .replace(/[\*\_\`]/g, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .trim();
+}
 
 export const VoiceModeView: React.FC<Props> = ({
   language,
@@ -60,30 +73,50 @@ export const VoiceModeView: React.FC<Props> = ({
   );
 
   const [activeLang, setActiveLang] = useState<LanguageCode>(language);
+  const [voiceState, setVoiceState] = useState<VoiceState>("IDLE");
   const [userTranscript, setUserTranscript] = useState<string>("");
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [aiResponse, setAiResponse] = useState<ChatMessage | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const { speak, isSpeaking, stop: stopSpeaking, unlockAudio } = useTextToSpeech();
+  const voiceStateRef = useRef<VoiceState>(voiceState);
+  useEffect(() => {
+    voiceStateRef.current = voiceState;
+  }, [voiceState]);
+
+  // Forward declaration of TTS completion callback
+  const handleTTSEnd = useCallback(() => {
+    console.info("[VOICE_STATE] TTS finished naturally -> transitioning to FOLLOW_UP_LISTENING");
+    setVoiceState("FOLLOW_UP_LISTENING");
+  }, []);
+
+  const { speak, stop: stopSpeaking, unlockAudio } = useTextToSpeech({
+    onEnd: handleTTSEnd,
+  });
 
   const handleSpeechCaptured = async (text: string) => {
-    if (!text || !text.trim() || isProcessing) return;
+    if (!text || !text.trim() || voiceStateRef.current === "PROCESSING" || voiceStateRef.current === "THINKING") {
+      return;
+    }
 
     const startTime = performance.now();
     const trimmed = text.trim();
-    setUserTranscript(trimmed);
-    setIsProcessing(true);
-    setErrorMsg(null);
+
     stopSpeaking();
     unlockAudio();
+
+    setUserTranscript(trimmed);
+    setVoiceState("PROCESSING");
+    setErrorMsg(null);
 
     // 1. Detect language from spoken input
     const detectedLang = detectLanguageFromText(trimmed, activeLang);
     setActiveLang(detectedLang);
 
+    // 2. Transition to THINKING while querying backend
+    setVoiceState("THINKING");
+
     try {
-      // 2. Query backend with response_mode = "voice" for fast concise spoken answer
+      // Query backend with response_mode = "voice" for fast concise spoken answer
       const response = await sendQuery({
         message: trimmed,
         language: detectedLang,
@@ -96,10 +129,12 @@ export const VoiceModeView: React.FC<Props> = ({
         `[VOICE_LATENCY] Captured: "${trimmed}" | Detected lang: ${detectedLang} | Intent: ${response.intent} | Time: ${elapsed}ms`
       );
 
+      const cleanedAnswer = stripMarkdown(response.answer);
+
       const assistantMsg: ChatMessage = {
         id: `voice-msg-${Date.now()}`,
         role: "assistant",
-        content: response.answer,
+        content: cleanedAnswer,
         timestamp: new Date(),
         language: response.language || detectedLang,
         sources: response.sources,
@@ -108,11 +143,17 @@ export const VoiceModeView: React.FC<Props> = ({
 
       setAiResponse(assistantMsg);
 
-      // 3. AUTOMATIC VOICE PLAYBACK IN DETECTED LANGUAGE
+      // 3. Transition to SPEAKING state and trigger automatic TTS audio
+      setVoiceState("SPEAKING");
       const targetLang = response.language || detectedLang;
-      speak(assistantMsg.id, response.answer, targetLang);
+
+      speak(assistantMsg.id, cleanedAnswer, targetLang, () => {
+        console.info("[VOICE_STATE] Spoken response completed -> transitioning to FOLLOW_UP_LISTENING");
+        setVoiceState("FOLLOW_UP_LISTENING");
+      });
     } catch (err) {
-      console.error("Voice processing error:", err);
+      console.error("[VOICE_ERROR] Voice processing error:", err);
+      setVoiceState("ERROR");
       setErrorMsg(
         detectedLang === "hi"
           ? "उत्तर तैयार करने में समस्या आई। पुनः प्रयास करें।"
@@ -120,50 +161,60 @@ export const VoiceModeView: React.FC<Props> = ({
           ? "Could not process voice input. Please try again."
           : "उत्तर तयार करताना अडचण आली. कृपया पुन्हा प्रयत्न करा."
       );
-    } finally {
-      setIsProcessing(false);
     }
   };
 
-  const { status, startListening, stopListening } = useSpeechRecognition({
+  const { startListening, stopListening } = useSpeechRecognition({
     language: activeLang,
     onTranscript: handleSpeechCaptured,
   });
 
-  // Start listening and unlock audio on initial view mount
+  // Automatically start listening when entering FOLLOW_UP_LISTENING or LISTENING state
+  useEffect(() => {
+    if (voiceState === "LISTENING" || voiceState === "FOLLOW_UP_LISTENING") {
+      unlockAudio();
+      startListening();
+    }
+  }, [voiceState, activeLang, unlockAudio, startListening]);
+
+  // Initial setup on view mount
   useEffect(() => {
     unlockAudio();
-    startListening();
+    setVoiceState("LISTENING");
     return () => {
       stopListening();
       stopSpeaking();
     };
   }, []);
 
-  const handleMicClick = () => {
+  // Mic Orb click handler (Supports Interruption!)
+  const handleOrbClick = () => {
     unlockAudio();
-    if (status === "listening") {
+
+    if (voiceState === "SPEAKING") {
+      // INTERRUPT SPEAKING immediately and start listening for follow-up!
+      console.info("[VOICE_INTERRUPT] User interrupted AI speech -> starting STT listening");
+      stopSpeaking();
+      setUserTranscript("");
+      setAiResponse(null);
+      setErrorMsg(null);
+      setVoiceState("FOLLOW_UP_LISTENING");
+    } else if (voiceState === "LISTENING" || voiceState === "FOLLOW_UP_LISTENING") {
       stopListening();
+      setVoiceState("IDLE");
     } else {
+      // IDLE or ERROR -> start listening
       setUserTranscript("");
       setAiResponse(null);
       setErrorMsg(null);
       stopSpeaking();
-      startListening();
+      setVoiceState("LISTENING");
     }
   };
 
-  const handleStopClick = () => {
+  const handleStopSpeakingClick = () => {
     stopSpeaking();
-  };
-
-  const handleSpeakAgainClick = () => {
-    unlockAudio();
-    stopSpeaking();
-    setUserTranscript("");
-    setAiResponse(null);
-    setErrorMsg(null);
-    startListening();
+    setVoiceState("FOLLOW_UP_LISTENING");
   };
 
   const handleSampleClick = () => {
@@ -183,39 +234,46 @@ export const VoiceModeView: React.FC<Props> = ({
       ? "e.g. — My crop suffered damage, what steps should I take?"
       : "उदा. — माझ्या पिकाचे नुकसान झाले आहे, मला काय करावे?";
 
-  const titleText =
-    activeLang === "hi"
-      ? "हिंदी (बोलकर पूछें)"
-      : activeLang === "en"
-      ? "English (Voice Active)"
-      : "मराठी (बोलून विचारा)";
+  // Dynamic Status Badge Labels according to Voice State Machine
+  const stateBadgeMap: Record<VoiceState, Record<string, { label: string; tag: string }>> = {
+    IDLE: {
+      mr: { label: "तयार", tag: "मायक्रोफोनवर टॅप करा" },
+      hi: { label: "तैयार", tag: "माइक पर टैप करें" },
+      en: { label: "Ready", tag: "Tap mic to speak" },
+    },
+    LISTENING: {
+      mr: { label: "ऐकत आहे", tag: "तुमचा प्रश्न विचारा..." },
+      hi: { label: "सुन रहा हूँ", tag: "अपना प्रश्न पूछें..." },
+      en: { label: "Listening", tag: "Ask your question..." },
+    },
+    PROCESSING: {
+      mr: { label: "प्रोसेस करत आहे", tag: "भाषा आणि प्रश्न समजून घेत आहे..." },
+      hi: { label: "प्रोसेस कर रहा हूँ", tag: "भाषा और प्रश्न समझ रहा हूँ..." },
+      en: { label: "Processing", tag: "Understanding spoken input..." },
+    },
+    THINKING: {
+      mr: { label: "माहिती शोधत आहे", tag: "सहकारी दस्तऐवज तपासत आहे..." },
+      hi: { label: "जानकारी खोज रहा हूँ", tag: "सहकारी दस्तावेज जाँच रहा हूँ..." },
+      en: { label: "Thinking", tag: "Searching cooperative documents..." },
+    },
+    SPEAKING: {
+      mr: { label: "उत्तर सांगत आहे", tag: "थांबवण्यासाठी किंवा प्रश्न विचारण्यासाठी टॅप करा" },
+      hi: { label: "उत्तर बता रहा हूँ", tag: "रोकने या बोलने के लिए टैप करें" },
+      en: { label: "Speaking", tag: "Tap to interrupt & speak" },
+    },
+    FOLLOW_UP_LISTENING: {
+      mr: { label: "पुढचा प्रश्न विचारा", tag: "Continuous Assistant Active 🎙️" },
+      hi: { label: "अगला प्रश्न पूछें", tag: "Continuous Assistant Active 🎙️" },
+      en: { label: "Listening for follow-up", tag: "Continuous Assistant Active 🎙️" },
+    },
+    ERROR: {
+      mr: { label: "त्रुटी", tag: "पुन्हा प्रयत्न करण्यासाठी मायक्रोफोनवर टॅप करा" },
+      hi: { label: "त्रुटि", tag: "पुनः प्रयास करने के लिए माइक पर टैप करें" },
+      en: { label: "Error", tag: "Tap mic to try again" },
+    },
+  };
 
-  // Status Labels
-  let statusLabel =
-    activeLang === "hi" ? "सुन रहा हूँ..." : activeLang === "en" ? "Listening..." : "ऐकत आहे...";
-
-  if (isProcessing) {
-    statusLabel =
-      activeLang === "hi"
-        ? "समझ रहा हूँ..."
-        : activeLang === "en"
-        ? "Understanding query..."
-        : "समजून घेत आहे...";
-  } else if (isSpeaking) {
-    statusLabel =
-      activeLang === "hi"
-        ? "उत्तर बता रहा हूँ..."
-        : activeLang === "en"
-        ? "SahkaarSetu Speaking..."
-        : "उत्तर सांगत आहे...";
-  } else if (aiResponse) {
-    statusLabel =
-      activeLang === "hi"
-        ? "पुनः पूछ सकते हैं"
-        : activeLang === "en"
-        ? "Ready for next question"
-        : "पुन्हा विचारू शकता";
-  }
+  const currentBadge = stateBadgeMap[voiceState]?.[activeLang] || stateBadgeMap[voiceState]?.mr;
 
   // Dynamic Intent Label based on detected intent
   const currentIntent = aiResponse?.intent || "CASUAL_GREETING";
@@ -228,14 +286,22 @@ export const VoiceModeView: React.FC<Props> = ({
   const langDisplayName = LANG_DISPLAY_NAMES[activeLang] || activeLang;
 
   return (
-    <div className="voice-mode-overlay" role="dialog" aria-label="Voice Assistance">
+    <div className="voice-mode-overlay" role="dialog" aria-label="SahkaarSetu Voice Assistant">
       {/* Header */}
       <div className="voice-mode-header">
         <div className="voice-mode-brand">
           <SahkaarSetuLogo size={24} color="#FFFFFF" />
           <span className="voice-mode-name">SahkaarSetu Voice</span>
         </div>
-        <div className="voice-mode-lang">{titleText}</div>
+
+        {/* State Machine Status Badge */}
+        <div className="voice-state-pill">
+          <span className={`voice-state-dot voice-state-dot--${voiceState.toLowerCase()}`} />
+          <span className="voice-state-text">
+            {langDisplayName} • {currentBadge.label}
+          </span>
+        </div>
+
         <button
           type="button"
           className="voice-mode-close"
@@ -251,25 +317,24 @@ export const VoiceModeView: React.FC<Props> = ({
         {/* Animated Microphone Orb */}
         <div className="voice-orb-container">
           <div
-            className={`voice-orb ${
-              status === "listening"
-                ? "voice-orb--listening"
-                : isProcessing
-                ? "voice-orb--processing"
-                : isSpeaking
-                ? "voice-orb--speaking"
-                : ""
-            }`}
-            onClick={handleMicClick}
+            className={`voice-orb voice-orb--${voiceState.toLowerCase()}`}
+            onClick={handleOrbClick}
             aria-label="Toggle Microphone"
           >
-            <MicIcon size={36} color="#FFFFFF" />
+            {voiceState === "SPEAKING" ? (
+              <SpeakerIcon size={36} color="#FFFFFF" />
+            ) : (
+              <MicIcon size={36} color="#FFFFFF" />
+            )}
           </div>
-          {status === "listening" && <div className="voice-pulse-ring" />}
+          {(voiceState === "LISTENING" || voiceState === "FOLLOW_UP_LISTENING") && (
+            <div className="voice-pulse-ring" />
+          )}
+          {voiceState === "SPEAKING" && <div className="voice-wave-ring" />}
         </div>
 
-        {/* Dynamic Status Label */}
-        <div className="voice-status-text">{statusLabel}</div>
+        {/* Dynamic Status Subtitle */}
+        <div className="voice-status-text">{currentBadge.tag}</div>
 
         {/* User Recognized Transcript Card */}
         {userTranscript && (
@@ -288,7 +353,7 @@ export const VoiceModeView: React.FC<Props> = ({
         )}
 
         {/* Sample Prompt Chip (Shown before user speaks) */}
-        {!userTranscript && !isProcessing && (
+        {!userTranscript && (voiceState === "IDLE" || voiceState === "LISTENING") && (
           <button
             type="button"
             className="voice-sample-chip"
@@ -313,41 +378,38 @@ export const VoiceModeView: React.FC<Props> = ({
 
             {/* Playback & Voice Action Controls */}
             <div className="voice-controls-row">
-              {isSpeaking ? (
+              {voiceState === "SPEAKING" ? (
                 <button
                   type="button"
                   className="voice-control-btn voice-control-btn--active"
-                  onClick={handleStopClick}
+                  onClick={handleStopSpeakingClick}
                 >
                   <PauseIcon size={16} />
-                  <span>{activeLang === "hi" ? "रोकें" : activeLang === "en" ? "Stop" : "थांबवा"}</span>
+                  <span>{activeLang === "hi" ? "रोकें (बोलें)" : activeLang === "en" ? "Stop & Speak" : "थांबवा (बोलण्यासाठी)"}</span>
                 </button>
               ) : (
                 <button
                   type="button"
                   className="voice-control-btn"
-                  onClick={() =>
-                    aiResponse && speak(aiResponse.id, aiResponse.content, aiResponse.language || activeLang)
-                  }
+                  onClick={() => {
+                    setVoiceState("SPEAKING");
+                    speak(aiResponse.id, aiResponse.content, aiResponse.language || activeLang, () => {
+                      setVoiceState("FOLLOW_UP_LISTENING");
+                    });
+                  }}
                 >
                   <SpeakerIcon size={16} />
                   <span>
-                    {activeLang === "hi" ? "ऐकें" : activeLang === "en" ? "Listen" : "ऐका"}
+                    {activeLang === "hi" ? "फिर ऐकें" : activeLang === "en" ? "Listen Again" : "पुन्हा ऐका"}
                   </span>
                 </button>
               )}
 
-              {/* Continuous Voice Conversation: Speak Again */}
-              <button
-                type="button"
-                className="voice-control-btn voice-control-btn--primary"
-                onClick={handleSpeakAgainClick}
-              >
-                <MicIcon size={16} color="#FFFFFF" />
-                <span>
-                  {activeLang === "hi" ? "फिर बोलें" : activeLang === "en" ? "Speak Again" : "पुन्हा बोला"}
-                </span>
-              </button>
+              {/* Continuous Voice Assistant Indicator */}
+              <div className="voice-continuous-indicator">
+                <span className="voice-continuous-dot" />
+                <span>Continuous Voice Active</span>
+              </div>
             </div>
           </div>
         )}

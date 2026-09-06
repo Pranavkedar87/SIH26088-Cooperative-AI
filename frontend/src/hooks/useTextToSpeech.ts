@@ -17,17 +17,22 @@ const LANG_VOICE_PREFERENCES: Record<string, string[]> = {
 interface UseTextToSpeechReturn {
   activeId: string | null;
   isSpeaking: boolean;
-  speak: (id: string, text: string, language: LanguageCode) => void;
+  speak: (id: string, text: string, language: LanguageCode, onEnd?: () => void) => void;
   stop: () => void;
   unlockAudio: () => void;
   isSupported: boolean;
 }
 
-export function useTextToSpeech(): UseTextToSpeechReturn {
+export function useTextToSpeech(options?: { onEnd?: () => void }): UseTextToSpeechReturn {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const onEndRef = useRef<(() => void) | undefined>(options?.onEnd);
+
+  useEffect(() => {
+    onEndRef.current = options?.onEnd;
+  }, [options?.onEnd]);
 
   const isSupported = typeof window !== "undefined" && "speechSynthesis" in window;
 
@@ -80,9 +85,11 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
   }, []);
 
   const speak = useCallback(
-    (id: string, text: string, language: LanguageCode) => {
+    (id: string, text: string, language: LanguageCode, onEndCall?: () => void) => {
       if (!isSupported) {
         console.warn("[TTS] Speech Synthesis is not supported in this browser.");
+        if (onEndCall) onEndCall();
+        else if (onEndRef.current) onEndRef.current();
         return;
       }
 
@@ -95,15 +102,25 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
       // Cancel any ongoing speech
       stop();
 
-      if (!text || !text.trim()) return;
+      if (!text || !text.trim()) {
+        if (onEndCall) onEndCall();
+        else if (onEndRef.current) onEndRef.current();
+        return;
+      }
 
       // Clean text: strip markdown formatting or link tags before speaking
       const cleanText = text
         .replace(/https?:\/\/\S+/g, "")
         .replace(/[\*\_\`\#]/g, "")
+        .replace(/^\s*[-*+]\s+/gm, "")
+        .replace(/^\s*\d+\.\s+/gm, "")
         .trim();
 
-      if (!cleanText) return;
+      if (!cleanText) {
+        if (onEndCall) onEndCall();
+        else if (onEndRef.current) onEndRef.current();
+        return;
+      }
 
       const bestVoice = findBestVoice(language, voices);
       const preferredLangCode = LANG_VOICE_PREFERENCES[language]?.[0] || "en-IN";
@@ -127,10 +144,15 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
         };
 
         utterance.onend = () => {
-          console.info("[TTS] Audio playback completed.");
+          console.info("[TTS] Audio playback completed naturally.");
           setActiveId(null);
           setIsSpeaking(false);
           currentUtteranceRef.current = null;
+          if (onEndCall) {
+            onEndCall();
+          } else if (onEndRef.current) {
+            onEndRef.current();
+          }
         };
 
         utterance.onerror = (e) => {
@@ -148,6 +170,8 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
       } catch (err) {
         console.error("[TTS] Failed to execute TTS speak:", err);
         stop();
+        if (onEndCall) onEndCall();
+        else if (onEndRef.current) onEndRef.current();
       }
     },
     [isSupported, activeId, isSpeaking, voices, findBestVoice, stop]
