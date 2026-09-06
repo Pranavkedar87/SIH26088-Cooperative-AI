@@ -16,8 +16,14 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── AI ────────────────────────────────────────────────────────────────
+    # ── AI & Voice Providers ──────────────────────────────────────────────
     gemini_api_key: str = ""
+    groq_api_key: str = ""
+
+    # ── Bhashini API ──────────────────────────────────────────────────────
+    bhashini_user_id: str = ""
+    bhashini_api_key: str = ""
+    bhashini_pipeline_id: str = ""
 
     # ── Supabase ──────────────────────────────────────────────────────────
     supabase_url: str = ""
