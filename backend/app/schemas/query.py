@@ -94,6 +94,18 @@ class QueryResponse(BaseModel):
         default=None,
         description="Conversation UUID — use this to fetch chat history via GET /api/conversations/{id}/messages.",
     )
+    grounding_status: Optional[str] = Field(
+        default="VERIFIED",
+        description="Factual grounding status: VERIFIED | PARTIALLY_VERIFIED | UNVERIFIED | REFUSED_TO_GUESS",
+    )
+    authority_level: Optional[str] = Field(
+        default="OFFICIAL_GOVERNMENT",
+        description="Overall source authority: OFFICIAL_GOVERNMENT | TRUSTED_INSTITUTION | SECONDARY | NONE",
+    )
+    claims_validated: bool = Field(
+        default=True,
+        description="Whether all factual claims in the response passed automated source validation.",
+    )
 
 
 # ── Chat history item ─────────────────────────────────────────────────────────

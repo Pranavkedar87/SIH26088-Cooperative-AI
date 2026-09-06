@@ -22,6 +22,9 @@ GOVERNMENT_DOMAINS = [
     "cooperation.gov.in",
     "pib.gov.in",
     "pmfby.gov.in",
+    "mahadbt.maharashtra.gov.in",
+    "agri.maharashtra.gov.in",
+    "agri.gov.in",
     "nabard.org",
     "rbi.org.in",
     "myscheme.gov.in",
@@ -43,6 +46,18 @@ OFFICIAL_PORTALS: list[dict[str, str]] = [
         "title": "Pradhan Mantri Fasal Bima Yojana (PMFBY)",
         "url": "https://pmfby.gov.in",
         "snippet": "National Crop Insurance Portal providing insurance enrollment, claim status, crop damage reporting, and seasonal deadlines.",
+    },
+    {
+        "domain": "mahadbt.maharashtra.gov.in",
+        "title": "MahaDBT Farmer Schemes — Sub-Mission on Agricultural Mechanization (SMAM)",
+        "url": "https://mahadbt.maharashtra.gov.in",
+        "snippet": "Maharashtra Direct Benefit Transfer (MahaDBT) Portal for Sub-Mission on Agricultural Mechanization (SMAM) tractor subsidy applications, beneficiary eligibility, and required 7/12 land extract documents.",
+    },
+    {
+        "domain": "agri.gov.in",
+        "title": "Sub-Mission on Agricultural Mechanization (SMAM) — Ministry of Agriculture",
+        "url": "https://agri.gov.in",
+        "snippet": "Official guidelines for Sub-Mission on Agricultural Mechanization (SMAM) providing financial assistance pattern for tractors, power tillers, and agricultural machinery.",
     },
     {
         "domain": "nabard.org",
@@ -82,11 +97,39 @@ def search_web_knowledge(query: str, max_results: int = 4) -> List[Dict[str, Any
 
     # 1. Match Official Portal Registry First (Highest Priority)
     for portal in OFFICIAL_PORTALS:
-        if any(w in query_lower for w in ["cooperation", "ministry", "minister", "pmfby", "deadline", "nabard", "pacs", "loan", "bima", "insurance"]):
+        dom = portal["domain"]
+        if dom == "pmfby.gov.in" and any(w in query_lower for w in ["pmfby", "bima", "insurance", "विमा", "बीमा", "नुकसान"]):
             official_results.append({
                 "title": portal["title"],
                 "source_url": portal["url"],
-                "source_name": portal["domain"],
+                "source_name": dom,
+                "snippet": portal["snippet"],
+                "authority_level": "OFFICIAL_GOVERNMENT",
+                "is_trusted": True,
+            })
+        elif dom in {"mahadbt.maharashtra.gov.in", "agri.gov.in"} and any(w in query_lower for w in ["tractor", "machinery", "smam", "ट्रॅक्टर", "ट्रैक्टर", "अनुदान", "अवजारे", "सबसिडी", "योजना"]):
+            official_results.append({
+                "title": portal["title"],
+                "source_url": portal["url"],
+                "source_name": dom,
+                "snippet": portal["snippet"],
+                "authority_level": "OFFICIAL_GOVERNMENT",
+                "is_trusted": True,
+            })
+        elif dom == "cooperation.gov.in" and any(w in query_lower for w in ["cooperation", "ministry", "minister", "सहकार", "सहकारिता"]):
+            official_results.append({
+                "title": portal["title"],
+                "source_url": portal["url"],
+                "source_name": dom,
+                "snippet": portal["snippet"],
+                "authority_level": "OFFICIAL_GOVERNMENT",
+                "is_trusted": True,
+            })
+        elif dom == "nabard.org" and any(w in query_lower for w in ["nabard", "pacs", "loan", "कर्ज", "ऋण", "नाबार्ड"]):
+            official_results.append({
+                "title": portal["title"],
+                "source_url": portal["url"],
+                "source_name": dom,
                 "snippet": portal["snippet"],
                 "authority_level": "OFFICIAL_GOVERNMENT",
                 "is_trusted": True,

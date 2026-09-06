@@ -25,7 +25,11 @@ from rag.session_state import (
     detect_pending_slot_from_answer,
     SessionState,
 )
-from rag.validator import sanitize_source_citations, validate_and_sanitize_claims
+from rag.validator import (
+    sanitize_source_citations,
+    validate_and_sanitize_claims,
+    evaluate_grounding_status,
+)
 from rag.web_search import search_web_knowledge
 
 logger = logging.getLogger(__name__)
@@ -317,6 +321,11 @@ class RAGPipeline:
             grounding_context=combined_context,
         )
 
+        g_status, overall_auth_level, claims_validated = evaluate_grounding_status(
+            sources_list=sources_list,
+            claims_valid=claims_valid,
+        )
+
         display_answer = sanitized_answer.strip()
         spoken_answer = clean_speech_text(sanitized_answer)
 
@@ -330,7 +339,7 @@ class RAGPipeline:
 
         rag_executed = bool(rag_chunks)
         web_executed = bool(web_results)
-        test_passed = True
+        test_passed = (g_status in {"VERIFIED", "PARTIALLY_VERIFIED"})
 
         if router_mode == RouterMode.CURRENT_INFORMATION and not (web_executed or rag_executed):
             test_passed = False
@@ -357,6 +366,9 @@ class RAGPipeline:
             f"WEB_SEARCH_USED={web_executed}\n"
             f"TRUSTED_SOURCES={web_source_urls}\n"
             f"SEARCH_QUERY='{effective_search_query}'\n"
+            f"GROUNDING_STATUS={g_status}\n"
+            f"SOURCE_AUTHORITY={overall_auth_level}\n"
+            f"CLAIMS_VALIDATED={claims_validated}\n"
             f"RESPONSE_MODE={resp_mode}\n"
             f"LLM_ACTUALLY_CALLED=True\n"
             f"LLM=GROQ ({used_model})\n"
@@ -377,6 +389,9 @@ class RAGPipeline:
             sources=sources_list,
             next_action="Follow up or ask another cooperative query",
             session_id=session_id,
+            grounding_status=g_status,
+            authority_level=overall_auth_level,
+            claims_validated=claims_validated,
         )
 
         return response_obj, sources_list

@@ -221,5 +221,55 @@ def validate_and_sanitize_claims(
                     ans = ans.replace(f"{perc} subsidy", "subsidy as per official guidelines")
                     ans = ans.replace(f"{perc}", "as per guidelines")
 
+    # -------------------------------------------------------------------------
+    # Rule 4: Correct SMAM Terminology
+    # Replaces invalid acronym expansions like "स्मॉल मॅकेनायझेशन" with official "कृषी यांत्रिकीकरण उप-अभियान (SMAM)".
+    # -------------------------------------------------------------------------
+    if "स्मॉल मॅकेनायझेशन" in ans or "small mechanisation" in ans.lower() or "small mechanization" in ans.lower():
+        corrected_claims.append("Corrected SMAM acronym expansion to official title 'Sub-Mission on Agricultural Mechanization (SMAM)'.")
+        if language == "mr":
+            ans = ans.replace("स्मॉल मॅकेनायझेशन", "कृषी यांत्रिकीकरण उप-अभियान")
+            ans = ans.replace("स्मॉल मॅकेनायझेशन (SMAM)", "कृषी यांत्रिकीकरण उप-अभियान (SMAM)")
+        else:
+            ans = re.sub(r"small\s+mechanisation|small\s+mechanization", "Sub-Mission on Agricultural Mechanization", ans, flags=re.IGNORECASE)
+
     is_valid = len(corrected_claims) == 0
     return ans, is_valid, corrected_claims
+
+
+def evaluate_grounding_status(sources_list: List[Dict[str, Any]], claims_valid: bool = True) -> Tuple[str, str, bool]:
+    """
+    Evaluate grounding_status, overall authority_level, and claims_validated status.
+
+    grounding_status:
+      - VERIFIED: At least 1 Tier 1 OFFICIAL_GOVERNMENT source retrieved AND claims valid.
+      - PARTIALLY_VERIFIED: Tier 2 INSTITUTIONAL sources retrieved.
+      - UNVERIFIED: No official/institutional sources retrieved.
+      - REFUSED_TO_GUESS: System explicitly refrained from inventing ungrounded factual numbers.
+
+    authority_level:
+      - OFFICIAL_GOVERNMENT
+      - TRUSTED_INSTITUTION
+      - SECONDARY
+      - NONE
+
+    Returns (grounding_status, authority_level, claims_validated).
+    """
+    if not sources_list:
+        return "UNVERIFIED", "NONE", claims_valid
+
+    has_official = any(s.get("authority_level") == "OFFICIAL_GOVERNMENT" for s in sources_list)
+    has_inst = any(s.get("authority_level") == "INSTITUTIONAL" for s in sources_list)
+
+    if has_official:
+        auth_level = "OFFICIAL_GOVERNMENT"
+        g_status = "VERIFIED" if claims_valid else "PARTIALLY_VERIFIED"
+    elif has_inst:
+        auth_level = "TRUSTED_INSTITUTION"
+        g_status = "PARTIALLY_VERIFIED"
+    else:
+        auth_level = "SECONDARY"
+        g_status = "UNVERIFIED"
+
+    return g_status, auth_level, claims_valid
+
