@@ -112,57 +112,7 @@ class RAGPipeline:
         router_mode = routing_decision.mode
         router_latency_ms = (time.perf_counter() - router_start) * 1000.0
 
-        # Fast-Path for GREETINGS & CASUAL INTENTS
-        if router_mode in {RouterMode.GREETING, RouterMode.CONVERSATIONAL}:
-            mapped_intent = "CASUAL_GREETING" if intent == "GREETING" else intent
-            lang_dict = DIRECT_RESPONSES.get(mapped_intent, DIRECT_RESPONSES["CASUAL_GREETING"])
-            greeting_text = lang_dict.get(detected_language) or lang_dict.get("en") or lang_dict["mr"]
-            spoken_greeting = clean_speech_text(greeting_text)
 
-            total_latency_ms = (time.perf_counter() - request_start) * 1000.0
-
-            logger.info(
-                f"\n[FULL TELEMETRY]\n"
-                f"SESSION_ID={session_id}\n"
-                f"TURN_NUMBER={session.turn_number}\n"
-                f"QUERY='{message}'\n"
-                f"DETECTED_LANGUAGE={detected_language}\n"
-                f"RESPONSE_LANGUAGE={response_language}\n"
-                f"INTENT={intent}\n"
-                f"TOPIC={current_topic}\n"
-                f"USER_GOAL={current_goal}\n"
-                f"PENDING_SLOT_BEFORE={pending_slot_before}\n"
-                f"EXTRACTED_SLOT={extracted_slot}\n"
-                f"PENDING_SLOT_AFTER={session.pending_slot}\n"
-                f"CONTEXT_USED={context_used}\n"
-                f"CONTEXT_FIELDS={session.collected_slots}\n"
-                f"ROUTER={router_mode.value}\n"
-                f"RAG_USED=False\n"
-                f"WEB_SEARCH_USED=False\n"
-                f"SEARCH_QUERY=''\n"
-                f"SOURCES=[]\n"
-                f"RESPONSE_MODE={resp_mode}\n"
-                f"LLM_ACTUALLY_CALLED=False\n"
-                f"LLM=None\n"
-                f"SPOKEN_LANGUAGE={spoken_greeting[:50]}...\n"
-                f"TTS_LANGUAGE={tts_language}\n"
-                f"FOLLOW_UP_LISTENING=True\n"
-                f"TOTAL_LATENCY_MS={total_latency_ms:.2f}ms\n"
-                f"RESULT=PASSED"
-            )
-
-            resp_obj = QueryResponse(
-                answer=greeting_text,
-                display_answer=greeting_text,
-                spoken_answer=spoken_greeting,
-                language=response_language,
-                intent=intent,
-                source="SahkaarSetu Direct Assistance",
-                sources=[],
-                next_action="Ask about PACS, Crop Insurance, or Agricultural Loans",
-                session_id=session_id,
-            )
-            return resp_obj, []
 
         # Stage 4: Knowledge Retrieval (RAG)
         rag_start = time.perf_counter()
