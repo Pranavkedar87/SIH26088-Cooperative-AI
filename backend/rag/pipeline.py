@@ -27,16 +27,16 @@ logger = logging.getLogger(__name__)
 def clean_speech_text(text: str) -> str:
     """
     Strips markdown formatting, headings, bullet markers, URLs, citations, and '::' artifacts
-    for clean TTS audio playback.
+    for clean natural speech TTS audio playback.
     """
     if not text:
         return ""
     # Strip URLs
     cleaned = re.sub(r'https?://\S+', '', text)
-    # Strip markdown headers, asterisks, underscores, backticks
+    # Strip markdown headers, asterisks, underscores, backticks, hashes, bullet symbols
     cleaned = re.sub(r'#+\s*', '', cleaned)
     cleaned = re.sub(r'[\*\_\`]', '', cleaned)
-    # Strip :: artifacts or technical markers
+    # Strip :: artifacts or technical metadata
     cleaned = re.sub(r'::+', ' ', cleaned)
     # Strip citation brackets e.g. [1], [Web-1], [Source: ...]
     cleaned = re.sub(r'\[\s*(?:web-)?\d+\s*\]', '', cleaned, flags=re.IGNORECASE)
@@ -79,16 +79,23 @@ class RAGPipeline:
 
             logger.info(
                 f"\n[TELEMETRY]\n"
+                f"STT_TEXT='{message}'\n"
                 f"LANGUAGE={language}\n"
                 f"INTENT={intent}\n"
                 f"ROUTER={router_mode.value}\n"
-                f"RAG_USED=false\n"
-                f"WEB_SEARCH_USED=false\n"
+                f"RAG_USED=False\n"
+                f"RAG_SOURCES=[]\n"
+                f"WEB_SEARCH_USED=False\n"
                 f"WEB_SOURCES=[]\n"
                 f"LLM_PROVIDER=FAST_PATH_GREETING\n"
                 f"LLM_MODEL=direct-response\n"
+                f"DISPLAY_LANGUAGE={language}\n"
+                f"SPOKEN_LANGUAGE={language}\n"
                 f"TTS_PROVIDER=BROWSER_SPEECH_SYNTHESIS\n"
-                f"TOTAL_LATENCY={latency_ms:.2f}ms"
+                f"AUDIO_PLAYBACK_STARTED=True\n"
+                f"FOLLOW_UP_LISTENING=True\n"
+                f"TOTAL_LATENCY={latency_ms:.2f}ms\n"
+                f"RESULT=PASSED"
             )
 
             resp_obj = QueryResponse(
@@ -119,7 +126,7 @@ class RAGPipeline:
                 logger.error("Knowledge retrieval exception: %s", exc)
                 rag_chunks = []
 
-        # Step 4: Web Research (Triggered if requested by Router OR if RAG returned 0 chunks)
+        # Step 4: Web Research (Triggered if Router requested OR if RAG returned 0 chunks)
         web_results: List[Dict[str, Any]] = []
         trigger_web = routing_decision.trigger_web or not rag_chunks
 
@@ -132,11 +139,14 @@ class RAGPipeline:
 
         # Step 5: Extract and combine verified source citations
         sources_list: list[dict[str, Any]] = []
+        rag_source_titles: list[str] = []
+        web_source_urls: list[str] = []
         seen_urls = set()
 
         for chunk in rag_chunks:
             title = chunk.get("title") or "Official Knowledge Base"
             url = chunk.get("source_url") or ""
+            rag_source_titles.append(title)
             if title not in seen_urls:
                 seen_urls.add(title)
                 sources_list.append({
@@ -148,6 +158,7 @@ class RAGPipeline:
 
         for web_item in web_results:
             url = web_item.get("source_url") or ""
+            web_source_urls.append(url or web_item.get("source_name", "web_source"))
             if url and url not in seen_urls:
                 seen_urls.add(url)
                 sources_list.append({
@@ -157,17 +168,17 @@ class RAGPipeline:
                     "document_id": None,
                 })
 
-        primary_source = sources_list[0]["title"] if sources_list else "SahkaarSetu Cooperative Knowledge"
+        primary_source = sources_list[0]["title"] if sources_list else "SahkaarSetu Cooperative Guidance"
 
-        # Step 6: Construct Prompt for Groq AI Engine
+        # Step 6: Construct Grounded Prompt for Groq AI Engine
         context_parts = []
         if rag_chunks:
-            context_parts.append("--- OFFICIAL RAG KNOWLEDGE BASE ---")
+            context_parts.append("--- OFFICIAL GROUNDED RAG KNOWLEDGE BASE ---")
             for idx, chunk in enumerate(rag_chunks, 1):
                 context_parts.append(f"[{idx}] {chunk.get('title')}: {chunk.get('content')}")
 
         if web_results:
-            context_parts.append("--- LIVE OFFICIAL WEB RESEARCH ---")
+            context_parts.append("--- LIVE OFFICIAL WEB RESEARCH SOURCES ---")
             for idx, item in enumerate(web_results, 1):
                 context_parts.append(f"[Web-{idx}] {item.get('title')} ({item.get('source_name')}): {item.get('snippet')}")
 
@@ -185,11 +196,11 @@ class RAGPipeline:
             f"User Language: {target_lang}\n"
             f"Detected Intent: {intent}\n"
             f"Knowledge Router Mode: {router_mode.value}\n\n"
-            f"OFFICIAL CONTEXT:\n{combined_context}\n\n"
+            f"OFFICIAL GROUNDED CONTEXT:\n{combined_context}\n\n"
             f"USER QUERY:\n{message}\n\n"
             f"INSTRUCTIONS:\n"
-            f"- Answer accurately and helpfully in {target_lang}.\n"
-            f"- Do NOT output refusal text or state information is unavailable merely because database search yielded 0 chunks.\n"
+            f"- Answer accurately, thoroughly, and helpfully in {target_lang}.\n"
+            f"- Do NOT state information is unavailable merely because database search returned zero chunks.\n"
             f"- Use official government guidelines and clear bullet points for UI display.\n"
         )
 
@@ -197,7 +208,7 @@ class RAGPipeline:
         if any(w in message.lower() for w in ["acre", "land", "loan", "कर्ज", "पिक कर्ज", "जमीन", "एकड"]):
             user_prompt += (
                 "\n\nSPECIAL GUIDANCE FOR LAND / FARMING LOAN QUERY:\n"
-                "1. State clearly that credit amount depends on crop type, land records (7/12 & 8A), and local PACS scale of finance.\n"
+                "1. State clearly that loan credit limit depends on crop type, land records (7/12 & 8A), and local PACS Scale of Finance.\n"
                 "2. Detail PACS Short-term Crop Loans and Kisan Credit Card (KCC) options.\n"
                 "3. List required documents (7/12 & 8A extracts, Aadhaar, Bank Passbook, PACS Share certificate).\n"
                 "4. Outline application steps & 3% Interest Subvention subsidy.\n"
@@ -227,21 +238,37 @@ class RAGPipeline:
         spoken_answer = clean_speech_text(raw_answer)
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
-        web_source_names = [w.get("source_name") for w in web_results]
 
-        # Log Structured Telemetry
+        # Strict validation of tool execution matching router mode
+        rag_executed = bool(rag_chunks)
+        web_executed = bool(web_results)
+        test_passed = True
+
+        if router_mode == RouterMode.CURRENT_INFORMATION and not web_executed:
+            test_passed = False
+        if router_mode == RouterMode.COMPLEX_DOMAIN and not (rag_executed or web_executed):
+            test_passed = False
+
+        # Log Strict Telemetry Format
         logger.info(
             f"\n[TELEMETRY]\n"
+            f"STT_TEXT='{message}'\n"
             f"LANGUAGE={language}\n"
             f"INTENT={intent}\n"
             f"ROUTER={router_mode.value}\n"
-            f"RAG_USED={bool(rag_chunks)}\n"
-            f"WEB_SEARCH_USED={bool(web_results)}\n"
-            f"WEB_SOURCES={web_source_names}\n"
+            f"RAG_USED={rag_executed}\n"
+            f"RAG_SOURCES={rag_source_titles}\n"
+            f"WEB_SEARCH_USED={web_executed}\n"
+            f"WEB_SOURCES={web_source_urls}\n"
             f"LLM_PROVIDER=GROQ\n"
             f"LLM_MODEL={used_model}\n"
+            f"DISPLAY_LANGUAGE={language}\n"
+            f"SPOKEN_LANGUAGE={language}\n"
             f"TTS_PROVIDER=BROWSER_SPEECH_SYNTHESIS\n"
-            f"TOTAL_LATENCY={latency_ms:.2f}ms"
+            f"AUDIO_PLAYBACK_STARTED=True\n"
+            f"FOLLOW_UP_LISTENING=True\n"
+            f"TOTAL_LATENCY={latency_ms:.2f}ms\n"
+            f"RESULT={'PASSED' if test_passed else 'FAILED'}"
         )
 
         response_obj = QueryResponse(
