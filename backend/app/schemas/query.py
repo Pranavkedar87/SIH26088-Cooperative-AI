@@ -49,6 +49,8 @@ class SourceItem(BaseModel):
     source_name: Optional[str] = Field(default=None, description="Publishing organization or authority.")
     source_url: Optional[str] = Field(default=None, description="Verified official source URL if available.")
     document_id: Optional[str] = Field(default=None, description="Document UUID.")
+    authority_level: Optional[str] = Field(default="OFFICIAL_GOVERNMENT", description="Authority tier: OFFICIAL_GOVERNMENT | INSTITUTIONAL | GENERAL")
+    retrieved_at: Optional[str] = Field(default=None, description="ISO timestamp of retrieval.")
 
 
 class QueryResponse(BaseModel):

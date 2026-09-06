@@ -25,6 +25,7 @@ from rag.session_state import (
     detect_pending_slot_from_answer,
     SessionState,
 )
+from rag.validator import sanitize_source_citations, validate_and_sanitize_claims
 from rag.web_search import search_web_knowledge
 
 logger = logging.getLogger(__name__)
@@ -225,6 +226,8 @@ class RAGPipeline:
                     "authority_level": web_item.get("authority_level", "GENERAL"),
                 })
 
+        # Filter out non-authoritative sources (e.g. Wikipedia) and enrich with authority levels and timestamps
+        sources_list = sanitize_source_citations(sources_list, is_legal_or_gov_query=True)
         primary_source = sources_list[0]["title"] if sources_list else "SahkaarSetu Cooperative Guidance"
 
         # Stage 7: Construct Grounded Prompt for Groq AI Engine
@@ -306,8 +309,16 @@ class RAGPipeline:
             else:
                 raw_answer = NO_KNOWLEDGE_FALLBACK.get(detected_language, NO_KNOWLEDGE_FALLBACK["en"])
 
-        display_answer = raw_answer.strip()
-        spoken_answer = clean_speech_text(raw_answer)
+        # Stage 8.5: Factual Claim Grounding & Source Validation Stage
+        sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(
+            raw_answer=raw_answer,
+            language=detected_language,
+            intent=intent,
+            grounding_context=combined_context,
+        )
+
+        display_answer = sanitized_answer.strip()
+        spoken_answer = clean_speech_text(sanitized_answer)
 
         # Stage 9: Update Session State Post-Turn
         session.pending_slot = detect_pending_slot_from_answer(display_answer)
