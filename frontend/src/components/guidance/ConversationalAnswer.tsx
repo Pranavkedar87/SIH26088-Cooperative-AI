@@ -1,14 +1,16 @@
 import React from "react";
-import type { LanguageCode } from "../../types";
+import type { LanguageCode, SourceItem } from "../../types";
 import { getContextualActions, parseGuidance } from "../../utils/guidanceParser";
 import AnswerSummary from "./AnswerSummary";
 import NextStepCard from "./NextStepCard";
+import { ShieldCheckIcon, ExternalLinkIcon } from "../Icons";
 
 interface Props {
   content: string;
   language?: LanguageCode;
   answerFocus?: string;
   onExecuteAction?: (query: string) => void;
+  sources?: SourceItem[];
 }
 
 function renderFormattedText(text: string): React.ReactNode[] {
@@ -54,6 +56,7 @@ export const ConversationalAnswer: React.FC<Props> = ({
   language = "mr",
   answerFocus,
   onExecuteAction,
+  sources = [],
 }) => {
   if (!content || !content.trim()) return null;
 
@@ -64,6 +67,7 @@ export const ConversationalAnswer: React.FC<Props> = ({
   const cleanContent = content
     .replace(/^### Official Guidance\s*/i, "")
     .replace(/^COOPERATIVE GUIDANCE\s*/i, "")
+    .replace(/^What Should I Do Now:?\s*/i, "")
     .trim();
 
   const blocks = cleanContent.split(/\n\n+/);
@@ -131,6 +135,39 @@ export const ConversationalAnswer: React.FC<Props> = ({
           );
         })}
       </div>
+
+      {/* Compact Official Sources List */}
+      {sources && sources.length > 0 && (
+        <div className="conversational-sources-block">
+          <div className="conversational-sources-title">
+            <ShieldCheckIcon size={13} color="#126B62" />
+            <span>
+              {language === "hi"
+                ? "अधिकृत स्रोत एवं संदर्भ:"
+                : language === "en"
+                ? "Official Sources & References:"
+                : "अधिकृत स्रोत व संदर्भ:"}
+            </span>
+          </div>
+          <div className="conversational-sources-chips">
+            {sources.map((src, i) => (
+              <span key={i} className="conversational-source-chip">
+                {src.title}
+                {src.source_url && (
+                  <a
+                    href={src.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="conversational-source-link"
+                  >
+                    <ExternalLinkIcon size={11} color="#126B62" />
+                  </a>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Suggested Follow-up Action Chips */}
       <NextStepCard
