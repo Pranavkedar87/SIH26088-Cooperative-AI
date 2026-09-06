@@ -56,6 +56,14 @@ class QueryResponse(BaseModel):
         ...,
         description="The AI-generated answer.",
     )
+    display_answer: Optional[str] = Field(
+        default=None,
+        description="Rich formatted markdown display answer for UI rendering.",
+    )
+    spoken_answer: Optional[str] = Field(
+        default=None,
+        description="Clean, natural speech plain text answer strictly optimized for TTS audio playback.",
+    )
     language: LanguageCode = Field(
         ...,
         description="Language of the response.",

@@ -150,25 +150,7 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
 
 
 
-def _classify_intent(message: str) -> IntentCode:
-    """
-    Lightweight rule-based intent classification.
-    Prioritizes specific domain intents (loans, PACS, PMFBY, laws) over casual greetings
-    when the query contains substantive domain questions.
-    """
-    msg_lower = message.lower().strip()
-
-    # Check domain rules first (rules index 4 onwards in _INTENT_RULES)
-    for keywords, intent in _INTENT_RULES[4:]:
-        if any(kw in msg_lower for kw in keywords):
-            return intent
-
-    # Check casual intents (rules index 0 to 3)
-    for keywords, intent in _INTENT_RULES[:4]:
-        if any(kw in msg_lower for kw in keywords):
-            return intent
-
-    return "GENERAL_COOPERATIVE"
+from rag.intent import classify_intent as _classify_intent
 
 
 # ── Gemini provider ───────────────────────────────────────────────────────────
