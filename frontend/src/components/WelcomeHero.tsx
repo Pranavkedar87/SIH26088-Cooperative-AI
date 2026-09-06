@@ -86,8 +86,8 @@ const WelcomeHero: React.FC<Props> = ({ language, onSelect }) => {
       </div>
 
       <div className="hero-text-block">
-        <h2 className="hero-heading">{HERO_HEADING[language]}</h2>
-        <p className="hero-sub">{HERO_SUB[language]}</p>
+        <h2 className="hero-heading">{HERO_HEADING[language] ?? HERO_HEADING.en}</h2>
+        <p className="hero-sub">{HERO_SUB[language] ?? HERO_SUB.en}</p>
       </div>
 
       <div className="hero-suggestions" role="list" aria-label="Common questions">

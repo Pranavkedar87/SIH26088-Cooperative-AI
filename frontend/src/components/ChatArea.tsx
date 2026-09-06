@@ -109,7 +109,7 @@ const ChatArea: React.FC<Props> = ({
               <span className="typing-dot" />
             </div>
             <span className="loading-message-text" key={loadingMsgIdx}>
-              {LOADING_MESSAGES[language][loadingMsgIdx]}
+              {(LOADING_MESSAGES[language] ?? LOADING_MESSAGES.en)[loadingMsgIdx]}
             </span>
           </div>
         </div>

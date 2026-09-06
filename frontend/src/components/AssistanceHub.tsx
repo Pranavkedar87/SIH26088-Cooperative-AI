@@ -131,7 +131,7 @@ const AssistanceHub: React.FC<Props> = ({
   onOpenVoiceMode,
   onSelectGuided,
 }) => {
-  const t = HERO_TEXT[language];
+  const t = HERO_TEXT[language] ?? HERO_TEXT.en;
   const [typedInput, setTypedInput] = useState("");
 
   const handleTextSubmit = (e: React.FormEvent) => {
