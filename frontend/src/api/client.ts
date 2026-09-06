@@ -279,3 +279,63 @@ export async function sendQuery(request: QueryRequest): Promise<QueryResponse> {
   console.info("Using SahkaarSetu standalone knowledge fallback for query resilience.");
   return generateFallbackResponse(request);
 }
+
+// ── Server-Side STT Audio Transcription ──────────────────────────────────────
+
+export interface TranscribeResponseData {
+  transcript: string;
+  language: string;
+  confidence: number;
+  provider: string;
+  latency_ms?: number;
+}
+
+export async function transcribeAudio(
+  audioBlob: Blob,
+  language: string,
+  sessionId?: string
+): Promise<TranscribeResponseData> {
+  const formData = new FormData();
+  let filename = "speech.webm";
+  if (audioBlob.type.includes("mp4") || audioBlob.type.includes("aac")) {
+    filename = "speech.mp4";
+  } else if (audioBlob.type.includes("wav")) {
+    filename = "speech.wav";
+  } else if (audioBlob.type.includes("ogg")) {
+    filename = "speech.ogg";
+  }
+
+  formData.append("audio", audioBlob, filename);
+  formData.append("language", language);
+  if (sessionId) {
+    formData.append("session_id", sessionId);
+  }
+
+  const startTime = performance.now();
+  console.info(`[STT] STT_REQUEST_STARTED provider=groq_whisper lang=${language} size=${audioBlob.size} bytes mime=${audioBlob.type}`);
+
+  try {
+    const res = await fetch(`${BASE_URL}/api/voice/transcribe`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const elapsed = Math.round(performance.now() - startTime);
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ detail: "STT transcription failed" }));
+      console.warn(`[STT] STT_RESPONSE_FAILED status=${res.status} detail=${errData.detail}`);
+      throw new Error(errData.detail || `STT error ${res.status}`);
+    }
+
+    const data: TranscribeResponseData = await res.json();
+    console.info(
+      `[STT] STT_RESPONSE_RECEIVED latency=${elapsed}ms provider=${data.provider} transcript="${data.transcript}"`
+    );
+    return data;
+  } catch (err) {
+    console.error("[STT] Audio transcription request failed:", err);
+    throw err;
+  }
+}
+

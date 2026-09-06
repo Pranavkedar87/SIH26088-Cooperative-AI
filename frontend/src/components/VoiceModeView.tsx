@@ -164,10 +164,21 @@ export const VoiceModeView: React.FC<Props> = ({
     }
   };
 
-  const { startListening, stopListening } = useSpeechRecognition({
+  const { status: sttStatus, errorMessage: sttError, startListening, stopListening } = useSpeechRecognition({
     language: activeLang,
     onTranscript: handleSpeechCaptured,
+    sessionId: sessionId,
   });
+
+  // Sync STT hook status & error messages into VoiceModeView state
+  useEffect(() => {
+    if (sttStatus === "processing") {
+      setVoiceState("PROCESSING");
+    } else if (sttStatus === "error" && sttError) {
+      setVoiceState("ERROR");
+      setErrorMsg(sttError);
+    }
+  }, [sttStatus, sttError]);
 
   // Automatically start listening when entering FOLLOW_UP_LISTENING or LISTENING state
   useEffect(() => {

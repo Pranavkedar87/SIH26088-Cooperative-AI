@@ -17,9 +17,10 @@ logger = logging.getLogger(__name__)
 STATE_MAP: dict[str, str] = {
     "maharashtra": "Maharashtra",
     "महाराष्ट्र": "Maharashtra",
-    "महाराष्ट्र": "Maharashtra",
+    "महाराष्ट्रा": "Maharashtra",
+    "महाराष्ट्रातून": "Maharashtra",
+    "महाराष्ट्रातील": "Maharashtra",
     "mh": "Maharashtra",
-    "hindi": "Hindi",
     "madhya pradesh": "Madhya Pradesh",
     "मध्य प्रदेश": "Madhya Pradesh",
     "मप्र": "Madhya Pradesh",
@@ -74,26 +75,26 @@ def get_or_create_session(session_id: str) -> SessionState:
 
 def extract_slot_from_message(message: str, pending_slot: Optional[str]) -> tuple[Optional[str], Optional[str]]:
     """
-    Extract slot value from user message based on pending requirement.
+    Extract slot value from user message based on pending requirement or explicit state mentions.
     Returns (slot_name, slot_value).
     """
-    if not message or not pending_slot:
+    if not message:
         return None, None
 
     msg_lower = message.lower().strip()
 
-    if pending_slot == "STATE":
+    # Extract State if pending or explicitly mentioned in user message
+    if pending_slot == "STATE" or not pending_slot:
         for kw, canonical_state in STATE_MAP.items():
             if kw in msg_lower:
                 return "state", canonical_state
-        # Generic state pattern match e.g. "I am from Maharashtra"
         match = re.search(r'(?:from|in|state|माहाराष्ट्र|महाराष्ट्रातून|से)\s+([a-zA-Z\u0900-\u097F]+)', message, re.IGNORECASE)
         if match:
             cand = match.group(1).lower()
             if cand in STATE_MAP:
                 return "state", STATE_MAP[cand]
 
-    elif pending_slot == "CROP":
+    if pending_slot == "CROP":
         crops = ["soybean", "wheat", "cotton", "rice", "sugarcane", "सोयाबीन", "गहू", "कापूस", "तांदूळ", "ऊस"]
         for c in crops:
             if c in msg_lower:
