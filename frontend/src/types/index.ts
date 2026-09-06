@@ -140,6 +140,7 @@ export interface ChatMessage {
   language: LanguageCode;
   sources?: SourceItem[];
   intent?: string;
+  answer_focus?: string;
 }
 
 // ── API Contracts ─────────────────────────────────────────────────────────────
@@ -157,6 +158,7 @@ export interface QueryResponse {
   spoken_answer?: string;
   language: LanguageCode;
   intent: string;
+  answer_focus?: string;
   source: string | null;
   sources?: SourceItem[];
   next_action: string | null;

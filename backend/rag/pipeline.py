@@ -565,6 +565,7 @@ class RAGPipeline:
             spoken_answer=spoken_answer,
             language=response_language,
             intent=intent,
+            answer_focus=answer_focus,
             source=primary_source,
             sources=sources_list,
             next_action="Follow up or ask another cooperative query",

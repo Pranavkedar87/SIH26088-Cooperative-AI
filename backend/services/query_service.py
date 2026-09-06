@@ -118,8 +118,11 @@ async def process_user_query(
     # 4. Return complete structured response immediately
     return QueryResponse(
         answer=rag_response.answer,
+        display_answer=rag_response.display_answer,
+        spoken_answer=rag_response.spoken_answer,
         language=language,  # type: ignore[arg-type]
         intent=rag_response.intent,
+        answer_focus=getattr(rag_response, "answer_focus", "OVERVIEW"),
         source=rag_response.source,
         sources=source_items,
         next_action=rag_response.next_action,

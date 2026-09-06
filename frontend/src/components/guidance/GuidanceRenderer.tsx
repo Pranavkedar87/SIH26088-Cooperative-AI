@@ -12,6 +12,7 @@ interface Props {
   rawContent: string;
   userQuestion?: string;
   language?: string;
+  answerFocus?: string;
   onExecuteAction?: (query: string) => void;
   sources?: Array<{ title: string; authority?: string; url?: string }>;
 }
@@ -20,11 +21,17 @@ export const GuidanceRenderer: React.FC<Props> = ({
   rawContent,
   userQuestion,
   language = "mr",
+  answerFocus,
   onExecuteAction,
   sources: _sources,
 }) => {
-  const guidance: StructuredGuidance = parseGuidance(rawContent, language);
-  
+  const guidance: StructuredGuidance = parseGuidance(rawContent, language, answerFocus);
+
+  const focus = (guidance.answerFocus || answerFocus || "OVERVIEW").toUpperCase();
+
+  const isProcedure = focus === "PROCEDURE" || focus === "STEP_BY_STEP";
+  const isDocuments = focus === "DOCUMENTS";
+
   const isProcedureOrDetailRequested = React.useMemo(() => {
     if (!userQuestion) return false;
     const q = userQuestion.toLowerCase();
@@ -34,18 +41,27 @@ export const GuidanceRenderer: React.FC<Props> = ({
       q.includes("detailed") ||
       q.includes("प्रक्रिया") ||
       q.includes("टप्पा") ||
-      q.includes("सविस्तर") ||
-      q.includes("दस्तावेज")
+      q.includes("सविस्तर")
     );
   }, [userQuestion]);
 
   const [showExtraDetails, setShowExtraDetails] = useState<boolean>(isProcedureOrDetailRequested);
 
-  const hasFacts = guidance.keyFacts.length > 0;
-  const hasSteps = guidance.steps.length > 0;
-  const hasChecklist = guidance.checklist.length > 0;
-  const hasWarnings = guidance.warnings.length > 0;
-  const hasExtraParagraphs = guidance.cleanParagraphs.length > 0;
+  // Focus-Driven Section Visibility Rules:
+  // 1. StepTimeline renders ONLY for PROCEDURE focus
+  const renderSteps = isProcedure && guidance.steps.length > 0;
+
+  // 2. Checklist renders for DOCUMENTS or PROCEDURE focus
+  const renderChecklist = (isDocuments || isProcedure) && guidance.checklist.length > 0;
+
+  // 3. KeyFacts renders when present
+  const renderFacts = guidance.keyFacts.length > 0;
+
+  // 4. Warnings render when present
+  const renderWarnings = guidance.warnings.length > 0;
+
+  // 5. Paragraphs render when present
+  const renderParagraphs = guidance.cleanParagraphs.length > 0;
 
   const expandBtnLabel =
     language === "hi"
@@ -64,26 +80,26 @@ export const GuidanceRenderer: React.FC<Props> = ({
       />
 
       {/* 2. Warning Callouts */}
-      {hasWarnings && <WarningCard warnings={guidance.warnings} language={language} />}
+      {renderWarnings && <WarningCard warnings={guidance.warnings} language={language} />}
 
-      {/* 3. Compact Key Facts Grid (Short metrics only) */}
-      {hasFacts && <KeyFactCard facts={guidance.keyFacts} language={language} />}
+      {/* 3. Compact Key Facts / Contact Grid */}
+      {renderFacts && <KeyFactCard facts={guidance.keyFacts} language={language} />}
 
-      {/* 4. Step-by-Step Procedure Timeline */}
-      {hasSteps && <StepTimeline steps={guidance.steps} language={language} />}
+      {/* 4. Step-by-Step Procedure Timeline (Rendered ONLY when focus = PROCEDURE) */}
+      {renderSteps && <StepTimeline steps={guidance.steps} language={language} />}
 
-      {/* 5. Requirements Checklist */}
-      {hasChecklist && <Checklist items={guidance.checklist} language={language} />}
+      {/* 5. Requirements Checklist (Rendered for DOCUMENTS or PROCEDURE focus) */}
+      {renderChecklist && <Checklist items={guidance.checklist} language={language} />}
 
-      {/* 6. Core Action Card: "पुढे काय करावे?" */}
+      {/* 6. Core Action Card: "पुढे काय करावे?" (Non-redundant follow-up buttons) */}
       <NextStepCard
         actions={guidance.nextActions}
         onExecuteAction={onExecuteAction}
         language={language}
       />
 
-      {/* 7. Optional Expandable Detailed Information (NOT a mode switch toggle) */}
-      {hasExtraParagraphs && (
+      {/* 7. Optional Expandable Detailed Information */}
+      {renderParagraphs && (
         <div className="guidance-expandable-section">
           <button
             type="button"

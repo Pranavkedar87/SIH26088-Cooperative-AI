@@ -100,6 +100,7 @@ const ChatMessage: React.FC<Props> = ({
             rawContent={message.content}
             userQuestion={userQuestion}
             language={message.language}
+            answerFocus={message.answer_focus}
             onExecuteAction={onFollowUp}
             sources={message.sources}
           />

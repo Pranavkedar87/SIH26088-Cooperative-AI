@@ -42,6 +42,7 @@ export interface NextAction {
 export interface StructuredGuidance {
   domain: ResponseDomain;
   domainLabel: string;
+  answerFocus: string;
   summary: string;
   keyFacts: KeyFact[];
   steps: GuidanceStep[];
@@ -177,85 +178,98 @@ function detectDomain(text: string): { domain: ResponseDomain; label: string } {
 }
 
 /**
- * Dynamic fallback Next Actions mapping
+ * Dynamic fallback Next Actions mapping based on answer_focus
  */
-function getContextualActions(_domain: ResponseDomain, lang: string): NextAction[] {
+function getContextualActions(_domain: ResponseDomain, lang: string, answerFocus?: string): NextAction[] {
+  const focus = (answerFocus || "OVERVIEW").toUpperCase();
+
   if (lang === "hi") {
+    if (focus === "CONTACT") {
+      return [
+        { label: "चरण-दर-चरण प्रक्रिया", type: "ASK_AI", query: "इस संबंध में आधिकारिक चरण-दर-चरण प्रक्रिया क्या है?", preserveContext: true },
+        { label: "आवश्यक दस्तावेज", type: "ASK_AI", query: "इसके लिए कौन से दस्तावेज और प्रमाण आवश्यक हैं?", preserveContext: true },
+      ];
+    }
+    if (focus === "PROCEDURE") {
+      return [
+        { label: "आवश्यक दस्तावेज", type: "ASK_AI", query: "इसके लिए कौन से दस्तावेज और प्रमाण आवश्यक हैं?", preserveContext: true },
+        { label: "संपर्क एवं हेल्पलाइन", type: "ASK_AI", query: "संबंधित अधिकारी और आधिकारिक हेल्पलाइन नंबर क्या हैं?", preserveContext: true },
+      ];
+    }
+    if (focus === "DOCUMENTS") {
+      return [
+        { label: "विस्तृत प्रक्रिया समझें", type: "ASK_AI", query: "इस संबंध में आधिकारिक चरण-दर-चरण प्रक्रिया क्या है?", preserveContext: true },
+        { label: "संपर्क एवं हेल्पलाइन", type: "ASK_AI", query: "संबंधित अधिकारी और आधिकारिक हेल्पलाइन नंबर क्या हैं?", preserveContext: true },
+      ];
+    }
     return [
-      {
-        label: "विस्तृत प्रक्रिया समझें",
-        type: "ASK_AI",
-        query: "इस संबंध में आधिकारिक चरण-दर-चरण प्रक्रिया क्या है?",
-        preserveContext: true,
-      },
-      {
-        label: "आवश्यक दस्तावेज",
-        type: "ASK_AI",
-        query: "इसके लिए कौन से दस्तावेज और प्रमाण आवश्यक हैं?",
-        preserveContext: true,
-      },
-      {
-        label: "संपर्क एवं हेल्पलाइन",
-        type: "ASK_AI",
-        query: "संबंधित अधिकारी और आधिकारिक हेल्पलाइन नंबर क्या हैं?",
-        preserveContext: true,
-      },
+      { label: "विस्तृत प्रक्रिया समझें", type: "ASK_AI", query: "इस संबंध में आधिकारिक चरण-दर-चरण प्रक्रिया क्या है?", preserveContext: true },
+      { label: "आवश्यक दस्तावेज", type: "ASK_AI", query: "इसके लिए कौन से दस्तावेज और प्रमाण आवश्यक हैं?", preserveContext: true },
+      { label: "संपर्क एवं हेल्पलाइन", type: "ASK_AI", query: "संबंधित अधिकारी और आधिकारिक हेल्पलाइन नंबर क्या हैं?", preserveContext: true },
     ];
   }
 
   if (lang === "mr") {
+    if (focus === "CONTACT") {
+      return [
+        { label: "सविस्तर टप्पे जाणून घ्या", type: "ASK_AI", query: "या प्रकरणात अधिकृत टप्पा-निहाय प्रक्रिया काय आहे?", preserveContext: true },
+        { label: "आवश्यक कागदपत्रे", type: "ASK_AI", query: "यासाठी कोणती कागदपत्रे व पुरावे आवश्यक आहेत?", preserveContext: true },
+      ];
+    }
+    if (focus === "PROCEDURE") {
+      return [
+        { label: "आवश्यक कागदपत्रे", type: "ASK_AI", query: "यासाठी कोणती कागदपत्रे व पुरावे आवश्यक आहेत?", preserveContext: true },
+        { label: "संपर्क व हेल्पलाईन", type: "ASK_AI", query: "संबंधित कृषी अधिकारी व अधिकृत हेल्पलाईन संपर्क काय आहे?", preserveContext: true },
+      ];
+    }
+    if (focus === "DOCUMENTS") {
+      return [
+        { label: "सविस्तर टप्पे जाणून घ्या", type: "ASK_AI", query: "या प्रकरणात अधिकृत टप्पा-निहाय प्रक्रिया काय आहे?", preserveContext: true },
+        { label: "संपर्क व हेल्पलाईन", type: "ASK_AI", query: "संबंधित कृषी अधिकारी व अधिकृत हेल्पलाईन संपर्क काय आहे?", preserveContext: true },
+      ];
+    }
     return [
-      {
-        label: "सविस्तर टप्पे जाणून घ्या",
-        type: "ASK_AI",
-        query: "या प्रकरणात अधिकृत टप्पा-निहाय प्रक्रिया काय आहे?",
-        preserveContext: true,
-      },
-      {
-        label: "आवश्यक कागदपत्रे",
-        type: "ASK_AI",
-        query: "यासाठी कोणती कागदपत्रे व पुरावे आवश्यक आहेत?",
-        preserveContext: true,
-      },
-      {
-        label: "संपर्क व हेल्पलाईन",
-        type: "ASK_AI",
-        query: "संबंधित कृषी अधिकारी व अधिकृत हेल्पलाईन संपर्क काय आहे?",
-        preserveContext: true,
-      },
+      { label: "सविस्तर टप्पे जाणून घ्या", type: "ASK_AI", query: "या प्रकरणात अधिकृत टप्पा-निहाय प्रक्रिया काय आहे?", preserveContext: true },
+      { label: "आवश्यक कागदपत्रे", type: "ASK_AI", query: "यासाठी कोणती कागदपत्रे व पुरावे आवश्यक आहेत?", preserveContext: true },
+      { label: "संपर्क व हेल्पलाईन", type: "ASK_AI", query: "संबंधित कृषी अधिकारी व अधिकृत हेल्पलाईन संपर्क काय आहे?", preserveContext: true },
     ];
   }
 
+  // English
+  if (focus === "CONTACT") {
+    return [
+      { label: "Detailed Procedure Steps", type: "ASK_AI", query: "What is the official step-by-step procedure for this?", preserveContext: true },
+      { label: "Required Documents & Proofs", type: "ASK_AI", query: "What specific documents and land records are required?", preserveContext: true },
+    ];
+  }
+  if (focus === "PROCEDURE") {
+    return [
+      { label: "Required Documents & Proofs", type: "ASK_AI", query: "What specific documents and land records are required?", preserveContext: true },
+      { label: "Helpline & Contact Details", type: "ASK_AI", query: "What are the official helpline numbers and contact authorities?", preserveContext: true },
+    ];
+  }
+  if (focus === "DOCUMENTS") {
+    return [
+      { label: "Detailed Procedure Steps", type: "ASK_AI", query: "What is the official step-by-step procedure for this?", preserveContext: true },
+      { label: "Helpline & Contact Details", type: "ASK_AI", query: "What are the official helpline numbers and contact authorities?", preserveContext: true },
+    ];
+  }
   return [
-    {
-      label: "Detailed Procedure Steps",
-      type: "ASK_AI",
-      query: "What is the official step-by-step procedure for this?",
-      preserveContext: true,
-    },
-    {
-      label: "Required Documents & Proofs",
-      type: "ASK_AI",
-      query: "What specific documents and land records are required?",
-      preserveContext: true,
-    },
-    {
-      label: "Helpline & Contact Details",
-      type: "ASK_AI",
-      query: "What are the official helpline numbers and contact authorities?",
-      preserveContext: true,
-    },
+    { label: "Detailed Procedure Steps", type: "ASK_AI", query: "What is the official step-by-step procedure for this?", preserveContext: true },
+    { label: "Required Documents & Proofs", type: "ASK_AI", query: "What specific documents and land records are required?", preserveContext: true },
+    { label: "Helpline & Contact Details", type: "ASK_AI", query: "What are the official helpline numbers and contact authorities?", preserveContext: true },
   ];
 }
 
 /**
  * Main function to parse raw AI answer text into StructuredGuidance
  */
-export function parseGuidance(rawText: string, lang: string = "mr"): StructuredGuidance {
+export function parseGuidance(rawText: string, lang: string = "mr", explicitFocus?: string): StructuredGuidance {
   if (!rawText || !rawText.trim()) {
     return {
       domain: "INFORMATION",
       domainLabel: "Information",
+      answerFocus: explicitFocus || "OVERVIEW",
       summary: "",
       keyFacts: [],
       steps: [],
@@ -265,6 +279,21 @@ export function parseGuidance(rawText: string, lang: string = "mr"): StructuredG
       nextActions: [],
       cleanParagraphs: [],
     };
+  }
+
+  let answerFocus = (explicitFocus || "").toUpperCase();
+  if (!answerFocus || answerFocus === "OVERVIEW" || answerFocus === "GENERAL") {
+    if (/helpline|contact|संपर्क|हेल्पलाईन|हेल्पलाइन/i.test(rawText)) {
+      answerFocus = "CONTACT";
+    } else if (/official step-by-step procedure|अधिकृत टप्पा-निहाय प्रक्रिया|आधिकारिक चरण-दर-चरण प्रक्रिया/i.test(rawText)) {
+      answerFocus = "PROCEDURE";
+    } else if (/required documents & proofs|आवश्यक कागदपत्रे व पुरावे|आवश्यक दस्तावेज और प्रमाण/i.test(rawText)) {
+      answerFocus = "DOCUMENTS";
+    } else if (/eligibility & guidelines|पात्रता निकष व नियम|पात्रता मापदंड और नियम/i.test(rawText)) {
+      answerFocus = "ELIGIBILITY";
+    } else {
+      answerFocus = explicitFocus || "OVERVIEW";
+    }
   }
 
   const { domain, label: domainLabel } = detectDomain(rawText);
@@ -326,12 +355,9 @@ export function parseGuidance(rawText: string, lang: string = "mr"): StructuredG
     ) {
       const factLabel = cleanMarkdown(factMatch[1]);
       const factVal = cleanMarkdown(factMatch[2]);
-      
-      // CRITICAL BOUNDARY RULE:
-      // CARDS = SHORT FACTS ONLY (val length <= 75 chars)
-      // Long text belongs in descriptive paragraphs!
+
       if (factLabel && factVal) {
-        if (factVal.length <= 75 && factLabel.length <= 35) {
+        if (factVal.length <= 85 && factLabel.length <= 40) {
           keyFacts.push({
             label: factLabel,
             value: factVal,
@@ -339,22 +365,23 @@ export function parseGuidance(rawText: string, lang: string = "mr"): StructuredG
               factVal.includes("%") ||
               /\d+/.test(factVal) ||
               factVal.toLowerCase().includes("72") ||
-              factVal.toLowerCase().includes("तास"),
+              factVal.toLowerCase().includes("तास") ||
+              factVal.toLowerCase().includes("helpline") ||
+              factVal.toLowerCase().includes("1800"),
           });
           continue;
         } else {
-          // Route long fact into clean descriptive paragraphs
           cleanParagraphs.push(`${factLabel}: ${factVal}`);
           continue;
         }
       }
     }
 
-    // 2. Extract Step Timeline Items
+    // 2. Extract Step Timeline Items ONLY IF answerFocus is PROCEDURE or STEP_BY_STEP
     const stepMatch = rawLine.match(
       /^(?:#{1,6}\s*)?(?:(\d+)\.|\bstep\s*(\d+):?|\bटप्पा\s*(\d+):?|\bचरण\s*(\d+):?)\s*(.+)$/i
     );
-    if (stepMatch) {
+    if (stepMatch && (answerFocus === "PROCEDURE" || answerFocus === "STEP_BY_STEP")) {
       const extractedNum = parseInt(
         stepMatch[1] || stepMatch[2] || stepMatch[3] || stepMatch[4] || "0",
         10
@@ -407,7 +434,22 @@ export function parseGuidance(rawText: string, lang: string = "mr"): StructuredG
       continue;
     }
 
-    // 6. Regular clean paragraph text
+    // 6. If line is numbered (e.g. 1. Contact Info) but answerFocus is NOT PROCEDURE, treat as keyFact or paragraph
+    if (stepMatch && answerFocus !== "PROCEDURE" && answerFocus !== "STEP_BY_STEP") {
+      const rest = stepMatch[5].trim();
+      const colonIdx = rest.indexOf(":");
+      if (colonIdx > 0 && colonIdx < 40) {
+        keyFacts.push({
+          label: cleanMarkdown(rest.substring(0, colonIdx)),
+          value: cleanMarkdown(rest.substring(colonIdx + 1)),
+        });
+      } else {
+        cleanParagraphs.push(cleanMarkdown(rest));
+      }
+      continue;
+    }
+
+    // 7. Regular clean paragraph text
     const cleanedPara = cleanMarkdown(rawLine);
     if (cleanedPara.length > 5) {
       cleanParagraphs.push(cleanedPara);
@@ -439,14 +481,15 @@ export function parseGuidance(rawText: string, lang: string = "mr"): StructuredG
       preserveContext: true,
     }));
   } else {
-    nextActions = getContextualActions(domain, lang);
+    nextActions = getContextualActions(domain, lang, answerFocus);
   }
 
   return {
     domain,
     domainLabel,
+    answerFocus,
     summary,
-    keyFacts: keyFacts.slice(0, 4), // max 4 compact fact cards
+    keyFacts: keyFacts.slice(0, 6),
     steps,
     checklist,
     warnings: uniqueWarnings,

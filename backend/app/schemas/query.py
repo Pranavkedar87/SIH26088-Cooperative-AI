@@ -74,6 +74,10 @@ class QueryResponse(BaseModel):
         ...,
         description="Detected intent of the user's query.",
     )
+    answer_focus: Optional[str] = Field(
+        default="OVERVIEW",
+        description="Semantic answer focus: OVERVIEW | PROCEDURE | DOCUMENTS | CONTACT | ELIGIBILITY | DEADLINE | NEXT_STEP | COMPLAINT | GENERAL",
+    )
     source: Optional[str] = Field(
         default=None,
         description="Primary source document or reference.",

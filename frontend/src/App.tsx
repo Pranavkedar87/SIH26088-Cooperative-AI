@@ -143,6 +143,7 @@ const App: React.FC = () => {
           language: response.language,
           sources: response.sources,
           intent: response.intent,
+          answer_focus: response.answer_focus,
         });
       } catch (err) {
         console.error("sendQuery error:", err);
