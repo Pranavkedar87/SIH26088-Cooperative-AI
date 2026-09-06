@@ -153,6 +153,8 @@ export interface QueryRequest {
 
 export interface QueryResponse {
   answer: string;
+  display_answer?: string;
+  spoken_answer?: string;
   language: LanguageCode;
   intent: string;
   source: string | null;

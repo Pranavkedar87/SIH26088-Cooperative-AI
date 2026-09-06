@@ -31,10 +31,81 @@ export async function checkHealth(): Promise<{ status: string }> {
 
 function generateFallbackResponse(request: QueryRequest): QueryResponse {
   const msg = request.message.toLowerCase();
-  const lang = request.language || "mr";
-  const isVoice = request.response_mode === "voice";
+  const lang = request.language || "en";
 
-  // PMFBY Crop Insurance Query
+  // 1. General Knowledge & Prime Minister Query
+  if (msg.includes("prime minister") || msg.includes("narendra modi") || msg.includes("pm of india") || msg.includes("minister")) {
+    const ans =
+      lang === "hi"
+        ? "भारत के वर्तमान प्रधानमंत्री नरेंद्र मोदी हैं। क्या आप उनकी किसी कृषि या सरकारी योजना के बारे में जानना चाहते हैं?"
+        : lang === "mr"
+        ? "भारताचे सध्याचे पंतप्रधान नरेंद्र मोदी आहेत. तुम्हाला त्यांच्या एखाद्या शासकीय योजनेबद्दल माहिती हवी आहे का?"
+        : "The Prime Minister of India is Narendra Modi. Would you like to know more about government schemes or agricultural initiatives?";
+    return {
+      answer: ans,
+      display_answer: ans,
+      spoken_answer: ans,
+      language: lang,
+      intent: "GENERAL_KNOWLEDGE",
+      source: "Official Indian Government Information",
+      sources: [
+        {
+          title: "Prime Minister's Office (PMO India)",
+          source_name: "pmoffice.gov.in",
+          source_url: "https://www.pmindia.gov.in",
+        },
+      ],
+      next_action: null,
+    };
+  }
+
+  // 2. Greetings & Conversational Inputs
+  if (msg.includes("hello") || msg.includes("namaskar") || msg.includes("namaste") || msg.includes("hi") || msg.includes("hey")) {
+    const ans =
+      lang === "hi"
+        ? "नमस्ते! मैं सहकारसेतू वॉइस असिस्टेंट हूँ। आप मुझसे फसल बीमा, PACS ऋण, सहकारी नियम या सरकारी योजनाओं के बारे में पूछ सकते हैं।"
+        : lang === "mr"
+        ? "नमस्कार! मी सहकारसेतू व्हॉइस असिस्टंट आहे. पीक विमा, PACS कर्ज, सहकारी कायदे किंवा शासकीय योजनांबद्दल तुम्ही मला विचारू शकता."
+        : "Hello! I am SahkaarSetu Voice Assistant. How can I help you with crop insurance, PACS loans, cooperative rules, or government schemes today?";
+    return {
+      answer: ans,
+      display_answer: ans,
+      spoken_answer: ans,
+      language: lang,
+      intent: "CASUAL_GREETING",
+      source: "SahkaarSetu Voice Assistant",
+      sources: [],
+      next_action: null,
+    };
+  }
+
+  // 3. Agricultural Loans & Land Queries
+  if (msg.includes("loan") || msg.includes("land") || msg.includes("acre") || msg.includes("कर्ज") || msg.includes("ऋण") || msg.includes("जमीन") || msg.includes("एकर")) {
+    const ans =
+      lang === "hi"
+        ? "हाँ, आप अपनी भूमि और फसल के आधार पर किसान क्रेडिट कार्ड (KCC) या PACS फसल ऋण के लिए आवेदन कर सकते हैं। अधिक जानकारी के लिए 7/12 रिकॉर्ड के साथ स्थानीय PACS सचिव से संपर्क करें।"
+        : lang === "mr"
+        ? "होय, तुमच्या जमिनीच्या ७/१२ उताऱ्यानुसार तुम्ही किसान क्रेडिट कार्ड (KCC) किंवा PACS पीक कर्जासाठी अर्ज करू शकता. अधिक माहितीसाठी स्थानिक PACS सचिवांशी संपर्क साधा."
+        : "Yes, you can explore agricultural credit options such as a crop loan or Kisan Credit Card (KCC). Eligibility depends on your crop, land records, and local PACS rules.";
+    return {
+      answer: ans,
+      display_answer: ans,
+      spoken_answer: ans,
+      language: lang,
+      intent: "AGRICULTURAL_SUPPORT",
+      source: "NABARD & PACS Credit Guidelines",
+      sources: [
+        {
+          title: "Kisan Credit Card (KCC) Scheme Guidelines",
+          source_name: "Ministry of Agriculture",
+          source_url: "https://agri.gov.in",
+        },
+      ],
+      next_action: null,
+    };
+  }
+
+  // 4. PMFBY Crop Insurance Query
   if (
     msg.includes("pmfby") ||
     msg.includes("crop") ||
@@ -44,131 +115,29 @@ function generateFallbackResponse(request: QueryRequest): QueryResponse {
     msg.includes("विमा") ||
     msg.includes("बीमा") ||
     msg.includes("नुकसान") ||
-    msg.includes("खरीप") ||
-    msg.includes("रब्बी") ||
-    msg.includes("72") ||
     msg.includes("सोयाबीन") ||
     msg.includes("soyabean") ||
     msg.includes("soybean") ||
     msg.includes("खराब") ||
-    msg.includes("ख़राब") ||
-    msg.includes("क्षति") ||
-    msg.includes("बर्बाद")
+    msg.includes("ख़राब")
   ) {
-    if (isVoice) {
-      const voiceAns =
-        lang === "hi"
-          ? "आपकी फसल का नुकसान हुआ है, तो 72 घंटे के भीतर PMFBY ऐप या कृषि अधिकारी को सूचित करें। आधार कार्ड और 7/12 पासबुक तैयार रखें।"
-          : lang === "en"
-          ? "If your crop suffered damage, report it within 72 hours via the PMFBY app or to your local agriculture officer. Keep land documents ready."
-          : "तुमच्या पिकाचे नुकसान झाले असल्यास, ७२ तासांच्या आत PMFBY ॲप किंवा कृषी अधिकाऱ्याकडे तक्रार नोंदवा. ७/१२ उतारा व आधार कार्ड सोबत ठेवा.";
-      return {
-        answer: voiceAns,
-        language: lang,
-        intent: "PMFBY",
-        source: "PMFBY Guidelines",
-        sources: [],
-        next_action: null,
-      };
-    }
-    if (lang === "hi") {
-      return {
-        answer: `### 1. फसल क्षति दावा एवं 72 घंटे की समय-सीमा
-
-**PMFBY फसल बीमा दावा प्रक्रिया:** बाढ़, अत्यधिक बारिश या प्राकृतिक आपदा से फसल क्षति होने पर 72 घंटे के भीतर बीमा कंपनी, बैंक या कृषि अधिकारी को सूचित करना अनिवार्य है।
-
-**मुख्य विवरण एवं दरें:**
-- **दावा सूचना अवधि:** 72 घंटे (आपदा के बाद)
-- **खरीफ प्रीमियम दर:** 2.0% (किसानों का अंशदान)
-- **रबी प्रीमियम दर:** 1.5%
-- **हेल्पलाइन नंबर:** 14447 / Crop Insurance App
-
-### 2. आधिकारिक क्षति पूर्ति प्रक्रिया
-
-1. **सूचना देना:** 72 घंटे के भीतर PMFBY App, CSC केंद्र या बैंक में क्षति दर्ज कराएं।
-2. **आवश्यक दस्तावेज:** 7/12 खसरा खतौनी, बैंक पासबुक, आधार कार्ड एवं क्षति के चित्र।
-3. **स्थल निरीक्षण:** कृषि अधिकारी एवं बीमा प्रतिनिधि 5 दिनों के भीतर प्रत्यक्ष सर्वेक्षण करेंगे।
-
-### 3. महत्वपूर्ण सूचना
-
-72 घंटे के बाद दी गई सूचना खारिज की जा सकती है, इसलिए समय पर सूचना दर्ज करें।`,
-        language: "hi",
-        intent: "PMFBY_CLAIM",
-        source: "Ministry of Agriculture & PMFBY Guidelines",
-        sources: [
-          {
-            title: "PMFBY Operational Guidelines",
-            source_name: "Ministry of Agriculture & Farmers Welfare",
-            source_url: "https://pmfby.gov.in",
-          },
-        ],
-        next_action: null,
-      };
-    }
-
-    if (lang === "en") {
-      return {
-        answer: `### 1. Crop Loss Intimation & 72-Hour Claim Window
-
-**PMFBY Claim Reporting:** In case of crop loss due to heavy rain, inundation, or localized calamity, it is mandatory to inform the insurance company within 72 hours.
-
-**Key Facts & Rates:**
-- **Intimation Deadline:** 72 hours (post-calamity)
-- **Kharif Premium Rate:** 2.0% (farmer contribution)
-- **Rabi Premium Rate:** 1.5%
-- **Toll-Free Helpline:** 14447 / Crop Insurance App
-
-### 2. Official Step-by-Step Claim Procedure
-
-1. **Submit Intimation:** Intimate loss within 72 hours via PMFBY App, CSC Center, or Bank.
-2. **Required Documents:** 7/12 land extract, Aadhaar card, Bank passbook & loss photos.
-3. **Field Assessment:** Agriculture Officer & insurance representative survey field within 5 days.
-
-### 3. Important Notice
-
-Delayed intimations beyond 72 hours are liable for rejection. Notify immediately.`,
-        language: "en",
-        intent: "PMFBY_CLAIM",
-        source: "Ministry of Agriculture & PMFBY Guidelines",
-        sources: [
-          {
-            title: "PMFBY Operational Guidelines",
-            source_name: "Ministry of Agriculture & Farmers Welfare",
-            source_url: "https://pmfby.gov.in",
-          },
-        ],
-        next_action: null,
-      };
-    }
-
-    // Default Marathi
+    const ans =
+      lang === "hi"
+        ? "यदि आपकी फसल प्राकृतिक आपदा से प्रभावित हुई है, तो 72 घंटे के भीतर PMFBY ऐप या कृषि अधिकारी को सूचित करें। अपना 7/12 खसरा रिकॉर्ड और बैंक पासबुक तैयार रखें।"
+        : lang === "mr"
+        ? "अतिवृष्टी किंवा आपत्तीमुळे पिकाचे नुकसान झाल्यास ७२ तासांच्या आत PMFBY ॲप किंवा कृषी अधिकाऱ्याकडे तक्रार नोंदवणे बंधनकारक आहे. ७/१२ उतारा व आधार कार्ड सोबत ठेवा."
+        : "If your crop suffered damage, report it within 72 hours via the PMFBY app or to your local agriculture officer. Keep your 7/12 land extract and bank passbook ready.";
     return {
-      answer: `### 1. विमा संरक्षण आणि ७२ तास तक्रार मुदत
-
-**PMFBY पीक नुकसान भरपाई प्रक्रिया:** अतिवृष्टी, पूर किंवा स्थानिक आपत्तीमुळे पिकाचे नुकसान झाल्यास ७२ तासांच्या आत विमा कंपनी किंवा कृषी विभागाला कळवणे बंधनकारक आहे.
-
-**महत्त्वाचे तपशील व दर:**
-- **तक्रार मुदत:** ७२ तास (आपत्तीनंतर)
-- **खरीप हप्ता:** २.०% (शेतकऱ्यांचा वाटा)
-- **रब्बी हप्ता:** १.५%
-- **हेल्पलाईन नंबर:** 14447 / PMFBY Crop Insurance App
-
-### 2. नुकसान भरपाई मिळवण्यासाठी अधिकृत प्रक्रिया
-
-1. **सूचना देणे:** ७२ तासांच्या आत PMFBY ॲप, CSC केंद्र, बँक किंवा कृषी अधिकाऱ्याला कळवणे.
-2. **अर्ज व पुरावे:** 7/12 उतारा, बँक पासबुक, आधार कार्ड आणि नुकसानाचे फोटो जमा करणे.
-3. **पंचनामा:** कृषी अधिकारी व विमा प्रतिनिधी ५ दिवसांत प्रत्यक्ष पाहणी करतील.
-
-### 3. महत्त्वाच्या सूचना
-
-७२ तासांनंतर नोंदवलेल्या तक्रारी फेटाळल्या जाऊ शकतात, म्हणून तात्काळ सूचना नोंदवा.`,
-      language: "mr",
-      intent: "PMFBY_CLAIM",
-      source: "कृषी विभाग व PMFBY मार्गदर्शक सूचना",
+      answer: ans,
+      display_answer: ans,
+      spoken_answer: ans,
+      language: lang,
+      intent: "PMFBY",
+      source: "PMFBY Guidelines",
       sources: [
         {
-          title: "PMFBY मार्गदर्शक तत्त्वे",
-          source_name: "कृषी व शेतकरी कल्याण मंत्रालय",
+          title: "PMFBY Operational Guidelines",
+          source_name: "Ministry of Agriculture",
           source_url: "https://pmfby.gov.in",
         },
       ],
@@ -176,78 +145,22 @@ Delayed intimations beyond 72 hours are liable for rejection. Notify immediately
     };
   }
 
-  // PACS Query
-  if (msg.includes("pacs") || msg.includes("पॅक्स") || msg.includes("सोसायटी")) {
-    if (isVoice) {
-      const voiceAns =
-        lang === "hi"
-          ? "पैक्स संस्थाएं किसानों को अल्पकालिक ऋण, खाद और बीज उपलब्ध कराती हैं। आप 7/12 और आधार कार्ड के साथ सदस्य बन सकते हैं।"
-          : lang === "en"
-          ? "PACS credit societies provide short-term crop loans, fertilizers, and seeds to farmers. You can join with land documents and Aadhaar."
-          : "पॅक्स संस्था शेतकऱ्यांना अल्पमुदत पीक कर्ज, खते आणि बियाणे पुरवतात. ७/१२ उतारा आणि आधार कार्ड देऊन तुम्ही सभासद होऊ शकता.";
-      return {
-        answer: voiceAns,
-        language: lang,
-        intent: "PACS_SERVICE",
-        source: "PACS Guidelines",
-        sources: [],
-        next_action: null,
-      };
-    }
-    return {
-      answer: `### 1. प्राथमिक कृषी पतसंस्था (PACS) सेवा
+  // 5. Default General Assistance Fallback
+  const defaultAns =
+    lang === "hi"
+      ? "मैं सहकारसेतू एआई असिस्टेंट हूँ। मैं आपकी सहकारी कानूनों, फसल बीमा, PACS सेवाओं और कृषि सहायता में मार्गदर्शन कर सकती हूँ। आप मुझसे क्या पूछना चाहते हैं?"
+      : lang === "mr"
+      ? "मी सहकारसेतू AI असिस्टंट आहे. सहकारी कायदे, पीक विमा, PACS सेवा आणि कृषी सहाय्याबद्दल मी तुम्हाला मदत करू शकते. तुम्हाला काय विचारायचे आहे?"
+      : "I am SahkaarSetu AI Assistant. I can assist you with cooperative governance, PACS services, PMFBY crop insurance, and agricultural credit guidance.";
 
-**PACS सोसायटीची भूमिका:** प्राथमिक कृषी पतसंस्था (PACS) ग्रामीण स्तरावर शेतकऱ्यांना अल्पमुदत पीक कर्ज, खते, बियाणे आणि शेती निविष्ठा पुरवण्याचे महत्त्वाचे काम करतात.
-
-**महत्त्वाचे तपशील:**
-- **मुख्य उद्देश:** शेतकऱ्यांना वेळेवर व सवलतीचे कर्ज देणे
-- **व्याज सवलत:** वेळेवर परतफेडीवर ३% व्याज परतावा
-- **सदस्यत्व पात्रता:** क्षेत्रातील शेतकरी / 7/12धारक
-
-### 2. PACS सेवा व लाभ प्रक्रिया
-
-1. **सभासद अर्ज:** 7/12 उतारा व आधार कार्डसह PACS सचिवांकडे अर्ज सादर करणे.
-2. **शेअर भांडवल:** 100/- रुपये भागभांडवल जमा करून अधिकृत सभासदत्व मिळवणे.
-3. **पीक कर्ज वाटप:** खरीप व रब्बी हंगामासाठी KCC योजनेअंतर्गत कर्ज मंजूर करणे.`,
-      language: lang,
-      intent: "PACS_SERVICES",
-      source: "महाराष्ट्र राज्य सहकार विभाग व NABARD guidelines",
-      sources: [
-        {
-          title: "PACS Modernization & By-laws",
-          source_name: "Ministry of Cooperation",
-          source_url: "https://cooperation.gov.in",
-        },
-      ],
-      next_action: null,
-    };
-  }
-
-  // Default Information Fallback
   return {
-    answer: `### 1. अधिकृत सहकार मार्गदर्शन
-
-**सहकार सेतू अधिकृत माहिती:** महाराष्ट्र सहकारी संस्था कायदा १९६० व केंद्र सरकारच्या सहकार मंत्रालयानुसार सर्व सहकारी संस्थांच्या कारभारात पारदर्शकता व सभासद हित जपणे बंधनकारक आहे.
-
-**महत्त्वाचे तपशील:**
-- **वार्षिक सभा (AGM):** ३० सप्टेंबरपूर्वी आयोजित करणे आवश्यक
-- **लेखापरीक्षण (Audit):** वर्षातून एकदा अधिकृत ऑपरेटरद्वारे अनिवार्य
-- **दाद मागण्याचा अधिकार:** DDR उपनिबंधक किंवा सहकार न्यायालय
-
-### 2. पुढील कारवाई
-
-1. **संबंधित कागदपत्रे जमा करा:** अर्ज, पावती व पुरावे तयार ठेवा.
-2. **अधिकृत अर्ज सादर करा:** निबंधक / DDR कार्यालयात लिखित तक्रार नोंदवा.`,
+    answer: defaultAns,
+    display_answer: defaultAns,
+    spoken_answer: defaultAns,
     language: lang,
     intent: "COOPERATIVE_GENERAL",
-    source: "महाराष्ट्र सहकारी संस्था कायदा १९६० व सहकार नियम",
-    sources: [
-      {
-        title: "MCS Act 1960 Guide",
-        source_name: "Cooperative Department Maharashtra",
-        source_url: "https://cooperation.maharashtra.gov.in",
-      },
-    ],
+    source: "SahkaarSetu Guidance",
+    sources: [],
     next_action: null,
   };
 }

@@ -49,8 +49,7 @@ _INTENT_RULES: list[tuple[list[str], IntentCode]] = [
         "FINANCIAL_LITERACY",
     ),
     (
-        ["tractor", "machinery", "equipment", "ट्रॅक्टर", "ट्रैक्टर", "scheme", "योजना", "yojana", "subsidy", "अनुदान", "benefit",
-         "ministry", "government scheme", "sarkar", "सरकार", "ministry of cooperation", "सहकार मंत्रालय", "सहकारिता मंत्रालय"],
+        ["tractor", "machinery", "equipment", "ट्रॅक्टर", "ट्रैक्टर", "smam", "अवजारे", "उपकरण", "tractor subsidy", "ट्रॅक्टर अनुदान", "ट्रैक्टर सब्सिडी"],
         "MINISTRY_SCHEME",
     ),
     (
