@@ -7,10 +7,40 @@ Architecture:
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 import time
 from typing import Any, Optional, Dict, List
+
+
+def extract_json_payload(text: str) -> Optional[dict[str, Any]]:
+    """Extracts and parses structured JSON object from LLM response text."""
+    if not text:
+        return None
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+        cleaned = cleaned.strip()
+
+    try:
+        data = json.loads(cleaned)
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+
+    match = re.search(r"\{[\s\S]*\}", text)
+    if match:
+        try:
+            data = json.loads(match.group(0))
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+
+    return None
 
 from app.config import get_settings
 from app.providers.groq_provider import query_groq_llm, GROQ_MODELS
@@ -247,7 +277,7 @@ class RAGPipeline:
         prompt_build_latency_ms = (time.perf_counter() - prompt_start) * 1000.0
 
         # Stage 8: Call LLM API Engine (Primary: Groq llama-3.3-70b / llama-3.1-8b, Secondary: Gemini)
-        max_tokens = 250 if resp_mode == "voice" else 450
+        max_tokens = 350 if resp_mode == "voice" else 850
         raw_answer, used_model, llm_stats = query_groq_llm(
             system_instruction=system_instruction,
             user_prompt=user_prompt,
@@ -272,21 +302,98 @@ class RAGPipeline:
             else:
                 raw_answer = get_intent_fallback(intent, detected_language)
 
-        # Stage 8.5: Factual Claim Grounding & Source Validation Stage
-        sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(
-            raw_answer=raw_answer,
-            language=detected_language,
-            intent=intent,
-            grounding_context=combined_context,
-        )
+        # Stage 8.5: Structured JSON Ingestion & Grounding Stage
+        json_payload = extract_json_payload(raw_answer)
+
+        if json_payload and isinstance(json_payload, dict) and ("summary" in json_payload or "title" in json_payload):
+            title = json_payload.get("title") or ""
+            summary = json_payload.get("summary") or ""
+            key_facts = json_payload.get("key_facts") or []
+            actions = json_payload.get("what_should_i_do_now") or []
+            details = json_payload.get("detailed_information") or ""
+            next_guidance = json_payload.get("next_guidance") or ""
+            llm_spoken = json_payload.get("spoken_answer") or ""
+
+            md_blocks = []
+            if title:
+                md_blocks.append(f"### {title}")
+            if summary:
+                md_blocks.append(summary)
+
+            if key_facts and isinstance(key_facts, list):
+                facts_header = "Key Information:"
+                if detected_language == "mr":
+                    facts_header = "महत्त्वाची माहिती:"
+                elif detected_language == "hi":
+                    facts_header = "महत्वपूर्ण जानकारी:"
+                facts_lines = [f"**{facts_header}**"]
+                for f in key_facts:
+                    if isinstance(f, dict) and f.get("label") and f.get("value"):
+                        facts_lines.append(f"- **{f['label']}**: {f['value']}")
+                    elif isinstance(f, str) and f.strip():
+                        facts_lines.append(f"- {f.strip()}")
+                if len(facts_lines) > 1:
+                    md_blocks.append("\n".join(facts_lines))
+
+            if actions and isinstance(actions, list):
+                action_header = "What Should I Do Now:"
+                if detected_language == "mr":
+                    action_header = "तुम्ही काय करू शकता:"
+                elif detected_language == "hi":
+                    action_header = "आप क्या करें:"
+                act_lines = [f"**{action_header}**"]
+                for idx, act in enumerate(actions, 1):
+                    act_str = str(act).strip()
+                    if not re.match(r'^\d+\.', act_str):
+                        act_lines.append(f"{idx}. {act_str}")
+                    else:
+                        act_lines.append(act_str)
+                md_blocks.append("\n".join(act_lines))
+
+            if details:
+                det_header = "Detailed Information:"
+                if detected_language == "mr":
+                    det_header = "सविस्तर माहिती:"
+                elif detected_language == "hi":
+                    det_header = "विस्तृत जानकारी:"
+                md_blocks.append(f"**{det_header}**\n{details}")
+
+            if next_guidance:
+                guid_header = "Next Guidance:"
+                if detected_language == "mr":
+                    guid_header = "पुढील मार्गदर्शन:"
+                elif detected_language == "hi":
+                    guid_header = "आगे का मार्गदर्शन:"
+                md_blocks.append(f"**{guid_header}**\n{next_guidance}")
+
+            parsed_display = "\n\n".join(md_blocks).strip()
+
+            sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(
+                raw_answer=parsed_display,
+                language=detected_language,
+                intent=intent,
+                grounding_context=combined_context,
+            )
+
+            display_answer = sanitized_answer.strip()
+            if llm_spoken and len(llm_spoken.strip()) > 5:
+                spoken_answer = clean_speech_text(llm_spoken)
+            else:
+                spoken_answer = clean_speech_text(summary or display_answer)
+        else:
+            sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(
+                raw_answer=raw_answer,
+                language=detected_language,
+                intent=intent,
+                grounding_context=combined_context,
+            )
+            display_answer = sanitized_answer.strip()
+            spoken_answer = clean_speech_text(sanitized_answer)
 
         g_status, overall_auth_level, claims_validated = evaluate_grounding_status(
             sources_list=sources_list,
             claims_valid=claims_valid,
         )
-
-        display_answer = sanitized_answer.strip()
-        spoken_answer = clean_speech_text(sanitized_answer)
 
         # Stage 9: Update Session State Post-Turn
         session.pending_slot = detect_pending_slot_from_answer(display_answer)
