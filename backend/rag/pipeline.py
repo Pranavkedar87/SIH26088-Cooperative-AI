@@ -2,7 +2,7 @@
 Unified RAG + Web Research + Knowledge Router Pipeline powered by Groq AI Engine.
 
 Architecture:
-  User Query -> Intent Classification -> Knowledge Router -> RAG Search / Web Research -> Groq Engine -> Display & Spoken Answers -> Telemetry
+  User Query -> Intent Classification -> Knowledge Router -> RAG Search / Web Research -> Groq Engine -> Display & Spoken Answers -> Stage-by-Stage Latency Telemetry
 """
 from __future__ import annotations
 
@@ -54,19 +54,19 @@ class RAGPipeline:
 
     async def process_query(self, request: QueryRequest) -> tuple[QueryResponse, list[dict[str, Any]]]:
         """
-        Process user query through Unified Intelligence Engine.
+        Process user query through Unified Intelligence Engine with stage-by-stage latency telemetry.
         """
-        start_time = time.perf_counter()
+        total_start = time.perf_counter()
         message = request.message.strip()
         language = request.language
         resp_mode = getattr(request, "response_mode", "text") or "text"
 
-        # Step 1: Intent Classification
+        # Stage 1: Intent Classification & Pre-Retrieval Knowledge Router
+        router_start = time.perf_counter()
         intent = classify_intent(message)
-
-        # Step 2: Pre-Retrieval Knowledge Router
         routing_decision = route_query(message, intent)
         router_mode = routing_decision.mode
+        router_latency_ms = (time.perf_counter() - router_start) * 1000.0
 
         # Fast-Path for GREETINGS & CASUAL INTENTS
         if router_mode in {RouterMode.GREETING, RouterMode.CONVERSATIONAL}:
@@ -75,26 +75,32 @@ class RAGPipeline:
             greeting_text = lang_dict.get(language) or lang_dict.get("mr") or lang_dict["en"]
             spoken_greeting = clean_speech_text(greeting_text)
 
-            latency_ms = (time.perf_counter() - start_time) * 1000.0
+            total_latency_ms = (time.perf_counter() - total_start) * 1000.0
 
             logger.info(
-                f"\n[TELEMETRY]\n"
+                f"\n[TELEMETRY & STAGE LATENCY]\n"
                 f"STT_TEXT='{message}'\n"
                 f"LANGUAGE={language}\n"
                 f"INTENT={intent}\n"
                 f"ROUTER={router_mode.value}\n"
+                f"ROUTER_LATENCY_MS={router_latency_ms:.2f}ms\n"
                 f"RAG_USED=False\n"
                 f"RAG_SOURCES=[]\n"
+                f"RAG_LATENCY_MS=0.00ms\n"
                 f"WEB_SEARCH_USED=False\n"
                 f"WEB_SOURCES=[]\n"
-                f"LLM_PROVIDER=FAST_PATH_GREETING\n"
-                f"LLM_MODEL=direct-response\n"
+                f"WEB_SEARCH_LATENCY_MS=0.00ms\n"
+                f"LLM_ACTUALLY_CALLED=False\n"
+                f"LLM_PROVIDER=None\n"
+                f"LLM_MODEL=None\n"
+                f"RESPONSE_HANDLER=LOCAL_GREETING_HANDLER\n"
+                f"LLM_LATENCY_MS=0.00ms\n"
                 f"DISPLAY_LANGUAGE={language}\n"
                 f"SPOKEN_LANGUAGE={language}\n"
                 f"TTS_PROVIDER=BROWSER_SPEECH_SYNTHESIS\n"
                 f"AUDIO_PLAYBACK_STARTED=True\n"
                 f"FOLLOW_UP_LISTENING=True\n"
-                f"TOTAL_LATENCY={latency_ms:.2f}ms\n"
+                f"TOTAL_LATENCY_MS={total_latency_ms:.2f}ms\n"
                 f"RESULT=PASSED"
             )
 
@@ -111,7 +117,8 @@ class RAGPipeline:
             )
             return resp_obj, []
 
-        # Step 3: Knowledge Retrieval (RAG)
+        # Stage 2: Knowledge Retrieval (RAG)
+        rag_start = time.perf_counter()
         rag_chunks: list[RetrievedChunk] = []
         if routing_decision.trigger_rag:
             try:
@@ -125,8 +132,10 @@ class RAGPipeline:
             except Exception as exc:
                 logger.error("Knowledge retrieval exception: %s", exc)
                 rag_chunks = []
+        rag_latency_ms = (time.perf_counter() - rag_start) * 1000.0
 
-        # Step 4: Web Research (Triggered if Router requested OR if RAG returned 0 chunks)
+        # Stage 3: Web Research (Triggered if Router requested OR if RAG returned 0 chunks)
+        web_start = time.perf_counter()
         web_results: List[Dict[str, Any]] = []
         trigger_web = routing_decision.trigger_web or not rag_chunks
 
@@ -136,8 +145,9 @@ class RAGPipeline:
             except Exception as exc:
                 logger.warning(f"Web search execution exception: {exc}")
                 web_results = []
+        web_search_latency_ms = (time.perf_counter() - web_start) * 1000.0
 
-        # Step 5: Extract and combine verified source citations
+        # Stage 4: Extract and combine verified source citations with Authority Levels
         sources_list: list[dict[str, Any]] = []
         rag_source_titles: list[str] = []
         web_source_urls: list[str] = []
@@ -166,11 +176,12 @@ class RAGPipeline:
                     "source_name": web_item.get("source_name") or "Government Web Portal",
                     "source_url": url,
                     "document_id": None,
+                    "authority_level": web_item.get("authority_level", "GENERAL"),
                 })
 
         primary_source = sources_list[0]["title"] if sources_list else "SahkaarSetu Cooperative Guidance"
 
-        # Step 6: Construct Grounded Prompt for Groq AI Engine
+        # Stage 5: Construct Grounded Prompt for Groq AI Engine
         context_parts = []
         if rag_chunks:
             context_parts.append("--- OFFICIAL GROUNDED RAG KNOWLEDGE BASE ---")
@@ -178,9 +189,10 @@ class RAGPipeline:
                 context_parts.append(f"[{idx}] {chunk.get('title')}: {chunk.get('content')}")
 
         if web_results:
-            context_parts.append("--- LIVE OFFICIAL WEB RESEARCH SOURCES ---")
+            context_parts.append("--- LIVE AUTHORITATIVE WEB RESEARCH SOURCES ---")
             for idx, item in enumerate(web_results, 1):
-                context_parts.append(f"[Web-{idx}] {item.get('title')} ({item.get('source_name')}): {item.get('snippet')}")
+                auth_tag = f"[{item.get('authority_level', 'GENERAL')}]"
+                context_parts.append(f"[Web-{idx}]{auth_tag} {item.get('title')} ({item.get('source_name')}): {item.get('snippet')}")
 
         if not context_parts:
             context_parts.append("GROUNDING CONTEXT: Use general official Indian cooperative laws, PACS by-laws, PMFBY guidelines, and Ministry of Cooperation governance knowledge.")
@@ -201,11 +213,12 @@ class RAGPipeline:
             f"INSTRUCTIONS:\n"
             f"- Answer accurately, thoroughly, and helpfully in {target_lang}.\n"
             f"- Do NOT state information is unavailable merely because database search returned zero chunks.\n"
-            f"- Use official government guidelines and clear bullet points for UI display.\n"
+            f"- Prioritize official government sources over generic web text.\n"
+            f"- Use clear section headings and bullet points for UI display.\n"
         )
 
         # Deep Guidance for Agricultural / Land Loan Queries
-        if any(w in message.lower() for w in ["acre", "land", "loan", "कर्ज", "पिक कर्ज", "जमीन", "एकड"]):
+        if any(w in message.lower() for w in ["acre", "land", "loan", "कर्ज", "ऋण", "पिक कर्ज", "जमीन", "एकड", "एकड़"]):
             user_prompt += (
                 "\n\nSPECIAL GUIDANCE FOR LAND / FARMING LOAN QUERY:\n"
                 "1. State clearly that loan credit limit depends on crop type, land records (7/12 & 8A), and local PACS Scale of Finance.\n"
@@ -222,7 +235,8 @@ class RAGPipeline:
                 f"Do NOT include markdown syntax, asterisks, bullet markers, headings, or URLs."
             )
 
-        # Step 7: Call Groq LLM API Engine
+        # Stage 6: Call Groq LLM API Engine
+        llm_start = time.perf_counter()
         max_tokens = 350 if resp_mode == "voice" else 1000
         raw_answer, used_model = query_groq_llm(
             system_instruction=system_instruction,
@@ -230,6 +244,7 @@ class RAGPipeline:
             max_tokens=max_tokens,
             temperature=0.2,
         )
+        llm_latency_ms = (time.perf_counter() - llm_start) * 1000.0
 
         if not raw_answer:
             raw_answer = "माझ्याकडे याबद्दल अधिकृत माहिती उपलब्ध आहे. कृपया तुमच्या स्थानिक PACS किंवा सहकार निबंधक कार्यालयाशी संपर्क साधा."
@@ -237,7 +252,7 @@ class RAGPipeline:
         display_answer = raw_answer.strip()
         spoken_answer = clean_speech_text(raw_answer)
 
-        latency_ms = (time.perf_counter() - start_time) * 1000.0
+        total_latency_ms = (time.perf_counter() - total_start) * 1000.0
 
         # Strict validation of tool execution matching router mode
         rag_executed = bool(rag_chunks)
@@ -249,25 +264,30 @@ class RAGPipeline:
         if router_mode == RouterMode.COMPLEX_DOMAIN and not (rag_executed or web_executed):
             test_passed = False
 
-        # Log Strict Telemetry Format
+        # Log Strict Telemetry & Stage Latency
         logger.info(
-            f"\n[TELEMETRY]\n"
+            f"\n[TELEMETRY & STAGE LATENCY]\n"
             f"STT_TEXT='{message}'\n"
             f"LANGUAGE={language}\n"
             f"INTENT={intent}\n"
             f"ROUTER={router_mode.value}\n"
+            f"ROUTER_LATENCY_MS={router_latency_ms:.2f}ms\n"
             f"RAG_USED={rag_executed}\n"
             f"RAG_SOURCES={rag_source_titles}\n"
+            f"RAG_LATENCY_MS={rag_latency_ms:.2f}ms\n"
             f"WEB_SEARCH_USED={web_executed}\n"
             f"WEB_SOURCES={web_source_urls}\n"
+            f"WEB_SEARCH_LATENCY_MS={web_search_latency_ms:.2f}ms\n"
+            f"LLM_ACTUALLY_CALLED=True\n"
             f"LLM_PROVIDER=GROQ\n"
             f"LLM_MODEL={used_model}\n"
+            f"LLM_LATENCY_MS={llm_latency_ms:.2f}ms\n"
             f"DISPLAY_LANGUAGE={language}\n"
             f"SPOKEN_LANGUAGE={language}\n"
             f"TTS_PROVIDER=BROWSER_SPEECH_SYNTHESIS\n"
             f"AUDIO_PLAYBACK_STARTED=True\n"
             f"FOLLOW_UP_LISTENING=True\n"
-            f"TOTAL_LATENCY={latency_ms:.2f}ms\n"
+            f"TOTAL_LATENCY_MS={total_latency_ms:.2f}ms\n"
             f"RESULT={'PASSED' if test_passed else 'FAILED'}"
         )
 
