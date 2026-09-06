@@ -54,6 +54,19 @@ function getBestSupportedMimeType(): string {
   return "";
 }
 
+const BROWSER_LANG_MAP: Record<string, string[]> = {
+  mr: ["mr-IN", "mr"],
+  hi: ["hi-IN", "hi"],
+  en: ["en-IN", "en-US", "en"],
+  ta: ["ta-IN", "ta"],
+  te: ["te-IN", "te"],
+  kn: ["kn-IN", "kn"],
+  gu: ["gu-IN", "gu"],
+  bn: ["bn-IN", "bn"],
+  pa: ["pa-IN", "pa"],
+  ml: ["ml-IN", "ml"],
+};
+
 export function useSpeechRecognition({
   language,
   onTranscript,
@@ -64,9 +77,10 @@ export function useSpeechRecognition({
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const recognitionRef = useRef<any>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const webSpeechTranscriptRef = useRef<string>("");
   const maxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isStoppingRef = useRef<boolean>(false);
 
   const onTranscriptRef = useRef(onTranscript);
@@ -74,11 +88,20 @@ export function useSpeechRecognition({
     onTranscriptRef.current = onTranscript;
   }, [onTranscript]);
 
-  const isSupported = typeof window !== "undefined" && Boolean(
-    (typeof navigator !== "undefined" && navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function" && typeof MediaRecorder !== "undefined") ||
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition
-  );
+  const SpeechRecognitionClass =
+    typeof window !== "undefined"
+      ? window.SpeechRecognition || window.webkitSpeechRecognition
+      : null;
+
+  const isSupported =
+    typeof window !== "undefined" &&
+    Boolean(
+      (typeof navigator !== "undefined" &&
+        navigator.mediaDevices &&
+        typeof navigator.mediaDevices.getUserMedia === "function" &&
+        typeof MediaRecorder !== "undefined") ||
+        SpeechRecognitionClass
+    );
 
   const clearError = useCallback(() => {
     setErrorMessage(null);
@@ -90,9 +113,17 @@ export function useSpeechRecognition({
       clearTimeout(maxTimerRef.current);
       maxTimerRef.current = null;
     }
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onstart = null;
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.abort();
+      } catch (e) {
+        // Ignore abort errors
+      }
+      recognitionRef.current = null;
     }
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -100,11 +131,19 @@ export function useSpeechRecognition({
     }
     mediaRecorderRef.current = null;
     audioChunksRef.current = [];
+    webSpeechTranscriptRef.current = "";
     isStoppingRef.current = false;
   }, []);
 
   const stopListening = useCallback(() => {
     console.info("[VOICE] RECORDING_STOPPED requested");
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Ignore
+      }
+    }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
         isStoppingRef.current = true;
@@ -123,14 +162,25 @@ export function useSpeechRecognition({
       setStatus("processing");
       console.info("[VOICE] RECORDING_STOPPED complete");
 
+      // Check if Web Speech API captured a non-empty transcript first
+      const webSpeechText = webSpeechTranscriptRef.current ? webSpeechTranscriptRef.current.trim() : "";
+      if (webSpeechText.length > 0) {
+        console.info("[STT] Using WebSpeechAPI transcript:", webSpeechText);
+        onTranscriptRef.current(webSpeechText);
+        setStatus("idle");
+        cleanupAudioResources();
+        return;
+      }
+
+      // Otherwise, process raw audio via Groq Whisper STT endpoint
       const audioBlob = new Blob(chunks, { type: mimeType || "audio/webm" });
       console.info("[VOICE] AUDIO_BLOB_CREATED");
       console.info("[VOICE] AUDIO_SIZE:", audioBlob.size);
       console.info("[VOICE] AUDIO_MIME_TYPE:", audioBlob.type);
 
-      // Check for empty or tiny recording (< 1.5 KB audio data)
-      if (audioBlob.size < 1500) {
-        console.warn("[VOICE] Recording too short or empty:", audioBlob.size, "bytes");
+      // Check for empty audio blob (< 100 bytes)
+      if (audioBlob.size < 100) {
+        console.warn("[VOICE] Recording empty:", audioBlob.size, "bytes");
         setStatus("error");
         setErrorMessage(NO_SPEECH_ERRORS[language] || NO_SPEECH_ERRORS["en"]);
         cleanupAudioResources();
@@ -175,6 +225,42 @@ export function useSpeechRecognition({
       return;
     }
 
+    // 1. Try Browser Web Speech API if supported
+    if (SpeechRecognitionClass) {
+      try {
+        const recognition = new SpeechRecognitionClass();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        const targetLangs = BROWSER_LANG_MAP[language] || [language];
+        recognition.lang = targetLangs[0];
+
+        recognition.onresult = (event: any) => {
+          let text = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+              text += event.results[i][0].transcript;
+            } else {
+              text += event.results[i][0].transcript;
+            }
+          }
+          if (text.trim()) {
+            webSpeechTranscriptRef.current = text.trim();
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.warn("[STT] Web Speech API notice:", event.error);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+        console.info("[STT] Browser Web Speech API started with lang=" + recognition.lang);
+      } catch (e) {
+        console.warn("[STT] Web Speech API initialization notice:", e);
+      }
+    }
+
+    // 2. Start MediaRecorder as fallback / primary audio recorder
     try {
       console.info("[VOICE] Requesting microphone permission...");
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -206,8 +292,10 @@ export function useSpeechRecognition({
 
       mediaRecorder.onerror = (event: any) => {
         console.error("MediaRecorder error:", event);
-        setStatus("error");
-        setErrorMessage(NO_SPEECH_ERRORS[language] || NO_SPEECH_ERRORS["en"]);
+        if (!webSpeechTranscriptRef.current) {
+          setStatus("error");
+          setErrorMessage(NO_SPEECH_ERRORS[language] || NO_SPEECH_ERRORS["en"]);
+        }
         cleanupAudioResources();
       };
 
@@ -230,17 +318,20 @@ export function useSpeechRecognition({
 
     } catch (err: any) {
       console.error("Microphone access error:", err);
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        console.info("[VOICE] MIC_PERMISSION denied");
-        setStatus("error");
-        setErrorMessage(PERMISSION_ERRORS[language] || PERMISSION_ERRORS["en"]);
-      } else {
-        setStatus("error");
-        setErrorMessage(NO_SPEECH_ERRORS[language] || NO_SPEECH_ERRORS["en"]);
+      // If Web Speech API is running, we don't treat mic failure as complete error immediately
+      if (!webSpeechTranscriptRef.current) {
+        if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+          console.info("[VOICE] MIC_PERMISSION denied");
+          setStatus("error");
+          setErrorMessage(PERMISSION_ERRORS[language] || PERMISSION_ERRORS["en"]);
+        } else {
+          setStatus("error");
+          setErrorMessage(NO_SPEECH_ERRORS[language] || NO_SPEECH_ERRORS["en"]);
+        }
       }
       cleanupAudioResources();
     }
-  }, [isSupported, language, processAudioRecording, cleanupAudioResources]);
+  }, [isSupported, SpeechRecognitionClass, language, processAudioRecording, cleanupAudioResources]);
 
   // Clean up on unmount or language change
   useEffect(() => {
