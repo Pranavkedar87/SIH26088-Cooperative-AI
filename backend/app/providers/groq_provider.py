@@ -116,8 +116,9 @@ class GroqProvider(AIProvider):
 def query_groq_llm(
     system_instruction: str,
     user_prompt: str,
-    max_tokens: int = 800,
+    max_tokens: int = 850,
     temperature: float = 0.2,
+    response_format: Optional[Dict[str, Any]] = None,
 ) -> Tuple[Optional[str], str, Dict[str, Any]]:
     """
     Synchronous / Thread-safe helper to query Groq LLM API with high-speed model fallback chain.
@@ -149,7 +150,7 @@ def query_groq_llm(
     stats["llm_actually_called"] = True
 
     for idx, model_name in enumerate(GROQ_MODELS):
-        payload = {
+        payload: Dict[str, Any] = {
             "model": model_name,
             "messages": [
                 {"role": "system", "content": system_instruction},
@@ -158,6 +159,8 @@ def query_groq_llm(
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
+        if response_format:
+            payload["response_format"] = response_format
         req = urllib.request.Request(
             GROQ_COMPLETIONS_URL,
             data=json.dumps(payload).encode("utf-8"),

@@ -91,8 +91,52 @@ def clean_speech_text(text: str) -> str:
     return cleaned
 
 
+def generate_structured_answer(
+    system_instruction: str,
+    user_prompt: str,
+    max_tokens: int = 850,
+) -> tuple[Optional[dict[str, Any]], str, dict[str, Any]]:
+    """
+    Provider-agnostic generator that attempts to produce a canonical structured JSON answer.
+    Fallback Chain:
+      1. Gemini Primary (gemini-2.5-flash) with response_mime_type="application/json"
+      2. Groq Primary (llama-3.3-70b-versatile) with response_format={"type": "json_object"}
+      3. Groq Fallback (llama-3.1-8b-instant) with response_format={"type": "json_object"}
+    """
+    # 1. Gemini Primary
+    raw_answer, used_model, gemini_stats = query_gemini_llm(
+        system_instruction=system_instruction,
+        user_prompt=user_prompt,
+        max_tokens=max_tokens,
+        temperature=0.2,
+        response_mime_type="application/json",
+    )
+    if raw_answer:
+        payload = extract_json_payload(raw_answer)
+        if payload and isinstance(payload, dict) and ("display_answer" in payload or "summary" in payload or "title" in payload):
+            logger.info(f"[PROVIDER-AGNOSTIC LLM] Structured output generated via Gemini ({used_model})")
+            return payload, f"GEMINI ({used_model})", gemini_stats
+
+    # 2 & 3. Groq Fallback Chain
+    logger.info("[PROVIDER-AGNOSTIC LLM] Gemini primary unavailable or returned non-JSON. Trying Groq fallback chain...")
+    raw_answer, used_model, groq_stats = query_groq_llm(
+        system_instruction=system_instruction,
+        user_prompt=user_prompt,
+        max_tokens=max_tokens,
+        temperature=0.2,
+        response_format={"type": "json_object"},
+    )
+    if raw_answer:
+        payload = extract_json_payload(raw_answer)
+        if payload and isinstance(payload, dict) and ("display_answer" in payload or "summary" in payload or "title" in payload):
+            logger.info(f"[PROVIDER-AGNOSTIC LLM] Structured output generated via Groq ({used_model})")
+            return payload, f"GROQ ({used_model})", groq_stats
+
+    return None, "none", {}
+
+
 class RAGPipeline:
-    """Orchestrates end-to-end grounded query answering using Groq AI Engine with Multi-Turn Conversational State."""
+    """Orchestrates end-to-end grounded query answering using Gemini Primary with Groq Fallback Engine."""
 
     async def process_query(self, request: QueryRequest) -> tuple[QueryResponse, list[dict[str, Any]]]:
         """
@@ -276,64 +320,30 @@ class RAGPipeline:
 
         prompt_build_latency_ms = (time.perf_counter() - prompt_start) * 1000.0
 
-        # Stage 8: Call LLM API Engine (Primary: Groq llama-3.3-70b / llama-3.1-8b, Secondary: Gemini)
+        # Stage 8: Call Provider-Agnostic LLM Engine (Gemini Primary -> Groq Fallback)
         max_tokens = 350 if resp_mode == "voice" else 850
-        raw_answer, used_model, llm_stats = query_groq_llm(
+        json_payload, used_model, llm_stats = generate_structured_answer(
             system_instruction=system_instruction,
             user_prompt=user_prompt,
             max_tokens=max_tokens,
-            temperature=0.2,
         )
 
-        if not raw_answer:
-            logger.info("Groq LLM returned None. Falling back to GeminiProvider LLM synthesis...")
-            raw_answer, used_model, gemini_stats = query_gemini_llm(
-                system_instruction=system_instruction,
-                user_prompt=user_prompt,
-                max_tokens=max_tokens,
-                temperature=0.2,
-            )
+        # Stage 8.5: Canonical Response Ingestion & Grounding Validation Stage
+        if json_payload and isinstance(json_payload, dict):
+            disp_obj = json_payload.get("display_answer") if isinstance(json_payload.get("display_answer"), dict) else json_payload
 
-        if not raw_answer:
-            logger.warning("All LLM providers (Groq & Gemini) failed. Using controlled source snippet fallback.")
-            if web_results:
-                top_snippets = [f"• {w.get('title')}: {w.get('snippet')}" for w in web_results[:2]]
-                raw_answer = "\n\n".join(top_snippets)
-            else:
-                raw_answer = get_intent_fallback(intent, detected_language)
-
-        # Stage 8.5: Structured JSON Ingestion & Grounding Stage
-        json_payload = extract_json_payload(raw_answer)
-
-        if json_payload and isinstance(json_payload, dict) and ("summary" in json_payload or "title" in json_payload):
-            title = json_payload.get("title") or ""
-            summary = json_payload.get("summary") or ""
-            key_facts = json_payload.get("key_facts") or []
-            actions = json_payload.get("what_should_i_do_now") or []
-            details = json_payload.get("detailed_information") or ""
-            next_guidance = json_payload.get("next_guidance") or ""
-            llm_spoken = json_payload.get("spoken_answer") or ""
+            title = disp_obj.get("title") or ""
+            summary = disp_obj.get("summary") or ""
+            actions = disp_obj.get("what_should_i_do_now") or []
+            details = disp_obj.get("detailed_information") or ""
+            next_guidance = disp_obj.get("next_guidance") or ""
+            llm_spoken = json_payload.get("spoken_answer") or disp_obj.get("spoken_answer") or ""
 
             md_blocks = []
             if title:
                 md_blocks.append(f"### {title}")
             if summary:
                 md_blocks.append(summary)
-
-            if key_facts and isinstance(key_facts, list):
-                facts_header = "Key Information:"
-                if detected_language == "mr":
-                    facts_header = "महत्त्वाची माहिती:"
-                elif detected_language == "hi":
-                    facts_header = "महत्वपूर्ण जानकारी:"
-                facts_lines = [f"**{facts_header}**"]
-                for f in key_facts:
-                    if isinstance(f, dict) and f.get("label") and f.get("value"):
-                        facts_lines.append(f"- **{f['label']}**: {f['value']}")
-                    elif isinstance(f, str) and f.strip():
-                        facts_lines.append(f"- {f.strip()}")
-                if len(facts_lines) > 1:
-                    md_blocks.append("\n".join(facts_lines))
 
             if actions and isinstance(actions, list):
                 action_header = "What Should I Do Now:"
@@ -343,12 +353,18 @@ class RAGPipeline:
                     action_header = "आप क्या करें:"
                 act_lines = [f"**{action_header}**"]
                 for idx, act in enumerate(actions, 1):
-                    act_str = str(act).strip()
-                    if not re.match(r'^\d+\.', act_str):
-                        act_lines.append(f"{idx}. {act_str}")
-                    else:
-                        act_lines.append(act_str)
-                md_blocks.append("\n".join(act_lines))
+                    if isinstance(act, dict):
+                        act_title = act.get("title", f"Step {idx}")
+                        act_content = act.get("content", "")
+                        act_lines.append(f"{idx}. {act_title}: {act_content}")
+                    elif isinstance(act, str) and act.strip():
+                        act_str = act.strip()
+                        if not re.match(r'^\d+\.', act_str):
+                            act_lines.append(f"{idx}. {act_str}")
+                        else:
+                            act_lines.append(act_str)
+                if len(act_lines) > 1:
+                    md_blocks.append("\n".join(act_lines))
 
             if details:
                 det_header = "Detailed Information:"
@@ -381,8 +397,15 @@ class RAGPipeline:
             else:
                 spoken_answer = clean_speech_text(summary or display_answer)
         else:
+            logger.warning("All LLM providers (Gemini & Groq) failed or returned invalid JSON. Using controlled source snippet fallback.")
+            if web_results:
+                top_snippets = [f"• {w.get('title')}: {w.get('snippet')}" for w in web_results[:2]]
+                raw_fallback = "\n\n".join(top_snippets)
+            else:
+                raw_fallback = get_intent_fallback(intent, detected_language)
+
             sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(
-                raw_answer=raw_answer,
+                raw_answer=raw_fallback,
                 language=detected_language,
                 intent=intent,
                 grounding_context=combined_context,

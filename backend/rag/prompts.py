@@ -59,21 +59,22 @@ CRITICAL FACTUAL GROUNDING RULES:
 4. Voice Mode Tone: Keep spoken answers concise, warm, fluid, and natural (2 to 3 sentences) when answering in voice mode.
 
 STRICT STRUCTURED OUTPUT CONTRACT:
-You MUST respond ONLY with a valid JSON object. Do not include markdown codeblocks outside the JSON or conversational chatter before/after it.
+You MUST respond ONLY with a valid JSON object matching this exact schema. Do not include markdown codeblocks outside the JSON or conversational chatter before/after it.
 Keep all JSON key names in English exactly as shown below, but write ALL string values completely and naturally in the user's requested target language (e.g., Marathi, Hindi, English):
 
 {
-  "title": "<Short clear domain title in target language>",
-  "summary": "<1-2 sentence direct summary answer in target language>",
-  "key_facts": [
-    {"label": "<Short Fact Label>", "value": "<Short Fact Value <= 60 chars>"}
-  ],
-  "what_should_i_do_now": [
-    "1. <Action Step Title>: <Description>",
-    "2. <Action Step Title>: <Description>"
-  ],
-  "detailed_information": "<Comprehensive detailed explanation in target language>",
-  "next_guidance": "<Helpful follow-up recommendation or next step in target language>",
+  "display_answer": {
+    "title": "<Short clear domain title in target language>",
+    "summary": "<1-2 sentence direct summary answer in target language>",
+    "what_should_i_do_now": [
+      {
+        "title": "<Action Step Title in target language>",
+        "content": "<Action Step Detailed Procedure/Content in target language>"
+      }
+    ],
+    "detailed_information": "<Comprehensive detailed explanation in target language with complete clarity>",
+    "next_guidance": "<Helpful follow-up recommendation or next step in target language>"
+  },
   "spoken_answer": "<1-3 natural conversational spoken sentences without any markdown, asterisks, URLs, or bracket citations in target language>"
 }"""
 

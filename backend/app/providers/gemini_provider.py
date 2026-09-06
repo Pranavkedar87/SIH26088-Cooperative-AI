@@ -288,8 +288,9 @@ class GeminiProvider(AIProvider):
 def query_gemini_llm(
     system_instruction: str,
     user_prompt: str,
-    max_tokens: int = 800,
+    max_tokens: int = 850,
     temperature: float = 0.2,
+    response_mime_type: Optional[str] = "application/json",
 ) -> tuple[Optional[str], str, dict[str, Any]]:
     """
     Helper to query Gemini API as LLM provider.
@@ -309,14 +310,18 @@ def query_gemini_llm(
         models = ["gemini-2.5-flash", "gemini-1.5-flash"]
         for model_name in models:
             try:
+                config_kwargs: dict[str, Any] = {
+                    "system_instruction": system_instruction,
+                    "temperature": temperature,
+                    "max_output_tokens": max_tokens,
+                }
+                if response_mime_type:
+                    config_kwargs["response_mime_type"] = response_mime_type
+
                 response = client.models.generate_content(
                     model=model_name,
                     contents=user_prompt,
-                    config=genai_types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        temperature=temperature,
-                        max_output_tokens=max_tokens,
-                    ),
+                    config=genai_types.GenerateContentConfig(**config_kwargs),
                 )
                 if response and response.text and response.text.strip():
                     dur = (time.perf_counter() - start_time) * 1000.0
