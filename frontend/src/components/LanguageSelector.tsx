@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import type { LanguageCode } from "../types";
 import { LANGUAGES } from "../types";
-import { GlobeIcon, CheckIcon } from "./Icons";
+import { GoogleTranslateIcon, CheckIcon } from "./Icons";
 
 interface Props {
   selected: LanguageCode;
@@ -51,7 +51,7 @@ export const LanguageModal: React.FC<Props> = ({
         {/* Dropdown Header */}
         <div className="lang-dropdown-header">
           <span className="lang-dropdown-title">भाषा चुनें</span>
-          <GlobeIcon size={18} color="#0F6B68" />
+          <GoogleTranslateIcon size={18} color="#0F6B68" />
         </div>
 
         {/* Vertical Scrollable List */}

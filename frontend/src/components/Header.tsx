@@ -6,7 +6,7 @@ import {
   SahkaarSetuLogo,
   MapPinIcon,
   BellIcon,
-  GlobeIcon,
+  GoogleTranslateIcon,
 } from "./Icons";
 
 interface Props {
@@ -21,7 +21,6 @@ interface Props {
 }
 
 export const Header: React.FC<Props> = ({
-  language,
   locationData,
   unreadNotificationCount,
   hideNotificationBell = false,
@@ -97,9 +96,9 @@ export const Header: React.FC<Props> = ({
             className="header-icon-btn language-trigger-btn"
             onClick={onOpenLanguage}
             aria-label="Change Language"
+            title="Change Language"
           >
-            <GlobeIcon size={20} color="#0F6B68" />
-            <span className="language-badge-text">{language.toUpperCase()}</span>
+            <GoogleTranslateIcon size={20} color="#0F6B68" />
           </button>
         </div>
       </div>
