@@ -9,6 +9,7 @@ import {
   WalletCardsIcon,
   ClipboardCheckIcon,
   HomeIcon,
+  ArrowRightIcon,
 } from "./Icons";
 
 interface DomainCard {
@@ -151,6 +152,9 @@ const DomainCards: React.FC<Props> = ({ language, onSelect }) => {
             <div className="service-card__content">
               <span className="service-card__title">{getTitle(card)}</span>
               <span className="service-card__desc">{getDesc(card)}</span>
+            </div>
+            <div className="service-card__arrow">
+              <ArrowRightIcon size={14} color="#68757D" />
             </div>
           </button>
         );

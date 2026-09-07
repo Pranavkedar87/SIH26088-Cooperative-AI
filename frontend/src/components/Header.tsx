@@ -52,16 +52,10 @@ export const Header: React.FC<Props> = ({
           </button>
 
           <div className="header-brand-box" onClick={onOpenMenu} role="button" tabIndex={0}>
-            <SahkaarSetuLogo size={42} />
+            <SahkaarSetuLogo size={36} />
             <div className="header-brand-titles">
               <h1 className="header-brand-name">SahkaarSetu</h1>
-              <span className="header-brand-tagline">
-                {language === "hi"
-                  ? "सहकारी साथी"
-                  : language === "mr"
-                  ? "सहकारी साथी"
-                  : "Cooperative AI"}
-              </span>
+              <span className="header-brand-tagline">Cooperative AI</span>
             </div>
           </div>
         </div>

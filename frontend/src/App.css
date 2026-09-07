@@ -151,32 +151,38 @@
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
   z-index: 30;
-  box-shadow: 0 -2px 8px rgba(23, 54, 58, 0.03);
+  box-shadow: 0 -1px 4px rgba(18, 59, 93, 0.04);
 }
 
 .nav-container {
-  display: flex;
-  justify-content: space-around;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   align-items: center;
-  padding: 6px 4px;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 4px 6px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
-  padding: 6px 14px;
+  padding: 5px 2px;
   background: transparent;
   border: none;
   color: var(--color-text-muted);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   border-radius: var(--radius-btn);
   transition: color 0.15s, background 0.15s;
-  min-height: 44px;
-  min-width: 64px;
+  min-height: 48px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .nav-item:hover {
@@ -194,11 +200,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
 .nav-item__label {
-  font-size: 11.5px;
-  line-height: 1.2;
+  font-size: 11px;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 /* ── Main Viewport Canvas ───────────────────────────────────────────────── */
@@ -421,23 +430,32 @@
 }
 
 .hub-services__title {
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--color-primary-dark);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-primary);
   margin: 0;
 }
 
-.hub-services-grid {
+.hub-services__sub {
+  font-size: 13.5px;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.hub-services-grid,
+.domain-cards-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
+  width: 100%;
 }
 
-.hub-service-card {
+.hub-service-card,
+.service-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 14px;
+  padding: 12px 14px;
   border-radius: var(--radius-card);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -445,15 +463,18 @@
   text-align: left;
   transition: border-color 0.15s, box-shadow 0.15s;
   box-shadow: var(--shadow-sm);
-  min-height: 84px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.hub-service-card:hover {
+.hub-service-card:hover,
+.service-card:hover {
   border-color: var(--color-primary);
-  box-shadow: 0 3px 10px rgba(23, 107, 91, 0.08);
+  box-shadow: 0 2px 8px rgba(18, 59, 93, 0.08);
 }
 
-.hub-service-card__icon {
+.hub-service-card__icon,
+.service-card__icon-box {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -464,30 +485,37 @@
   flex-shrink: 0;
 }
 
-.hub-service-card__body {
+.hub-service-card__body,
+.service-card__content {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   flex: 1;
   min-width: 0;
 }
 
-.hub-service-card__title {
-  font-size: 14px;
+.hub-service-card__title,
+.service-card__title {
+  font-size: 15px;
   font-weight: 700;
-  color: var(--color-primary-dark);
+  color: var(--color-primary);
   line-height: 1.25;
 }
 
-.hub-service-card__desc {
-  font-size: 11.5px;
+.hub-service-card__desc,
+.service-card__desc {
+  font-size: 12px;
   color: var(--color-text-muted);
   line-height: 1.35;
 }
 
-.hub-service-card__arrow {
-  margin-top: 2px;
+.hub-service-card__arrow,
+.service-card__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  margin-left: 4px;
 }
 
 /* ── Guided Assistance Wizard ──────────────────────────────────────────── */
@@ -3000,12 +3028,14 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 10px 24px;
-  background: #FFFFFF;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 8px 16px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
   z-index: 30;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(18, 59, 93, 0.05);
+  min-height: 54px;
+  box-sizing: border-box;
 }
 
 .header-container {
@@ -3014,40 +3044,47 @@
   justify-content: space-between;
   width: 100%;
   max-width: 1200px;
+  gap: 8px;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .header-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  padding: 8px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px;
   background: transparent;
   border: none;
-  border-radius: 8px;
-  color: #123B5D;
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
   cursor: pointer;
   position: relative;
   transition: background 0.15s ease;
+  flex-shrink: 0;
 }
 
 .header-icon-btn:hover {
-  background: rgba(18, 107, 98, 0.08);
+  background: var(--color-primary-light);
 }
 
 .header-brand-box {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   cursor: pointer;
   user-select: none;
+  min-width: 0;
 }
 
 .sahkaar-brand-logo {
@@ -3061,72 +3098,81 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-width: 0;
 }
 
 .header-brand-name {
-  font-size: 20px;
+  font-size: 15.5px;
   font-weight: 800;
-  letter-spacing: -0.3px;
-  color: #123B5D;
+  letter-spacing: -0.2px;
+  color: var(--color-primary);
   margin: 0;
-  line-height: 1.15;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .header-brand-tagline {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  color: #68757D;
+  color: var(--color-text-muted);
   margin-top: 1px;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .header-location-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 6px 12px;
-  background: rgba(18, 107, 98, 0.06);
-  border: 1px solid rgba(18, 107, 98, 0.15);
-  border-radius: 20px;
-  color: #123B5D;
-  font-size: 12.5px;
+  gap: 5px;
+  min-height: 34px;
+  padding: 4px 10px;
+  background: var(--color-secondary-light);
+  border: 1px solid rgba(15, 107, 104, 0.2);
+  border-radius: 18px;
+  color: var(--color-primary);
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
-  max-width: 170px;
+  max-width: 140px;
+  flex-shrink: 0;
 }
 
 .header-location-pill:hover {
-  background: rgba(18, 107, 98, 0.12);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
 }
 
 .header-location-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 11.5px;
 }
 
 .header-notification-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  background: #EF4444;
+  top: 4px;
+  right: 4px;
+  background: var(--color-accent);
   color: #ffffff;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
-  min-width: 16px;
-  height: 16px;
-  border-radius: 8px;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  padding: 0 3px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .language-trigger-btn {
@@ -3572,13 +3618,178 @@
   to { transform: translateX(0); }
 }
 
-@media (max-width: 540px) {
-  .header-brand-titles { display: none; }
-  .header-location-pill { max-width: 100px; font-size: 11px; padding: 3px 8px; min-height: 34px; }
-  .header-icon-btn { min-width: 34px; min-height: 34px; padding: 4px; }
-  .header-left { gap: 4px; }
-  .header-right { gap: 4px; }
-  .language-grid { grid-template-columns: repeat(2, 1fr); }
+/* ── Mobile Layout, Typography, Header & Card Alignments ─────────────────── */
+@media (max-width: 600px) {
+  /* 1. Header Alignment & Visibility (Product name ALWAYS visible) */
+  .sahkaar-header {
+    padding: 6px 12px;
+    min-height: 52px;
+  }
+
+  .header-container {
+    gap: 6px;
+  }
+
+  .header-left {
+    gap: 6px;
+  }
+
+  .header-brand-box {
+    gap: 6px;
+  }
+
+  .sahkaar-brand-logo {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .header-brand-titles {
+    display: flex !important; /* Ensure NEVER hidden on mobile */
+  }
+
+  .header-brand-name {
+    font-size: 13.5px;
+    line-height: 1.1;
+  }
+
+  .header-brand-tagline {
+    font-size: 9.5px;
+    line-height: 1;
+  }
+
+  .header-right {
+    gap: 4px;
+  }
+
+  .header-location-pill {
+    max-width: 82px;
+    min-height: 30px;
+    padding: 2px 6px;
+    font-size: 10.5px;
+    gap: 3px;
+  }
+
+  .header-icon-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 4px;
+  }
+
+  /* 2. One-Column Service & Domain Cards */
+  .hub-services-grid,
+  .domain-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  .hub-service-card,
+  .service-card {
+    padding: 12px 14px;
+    min-height: auto;
+  }
+
+  .hub-service-card__icon,
+  .service-card__icon-box {
+    width: 36px;
+    height: 36px;
+  }
+
+  .hub-service-card__title,
+  .service-card__title {
+    font-size: 15px;
+  }
+
+  .hub-service-card__desc,
+  .service-card__desc {
+    font-size: 12.5px;
+  }
+
+  /* 3. Mobile Content Width & Side Padding (16px) */
+  .assistance-hub {
+    padding: 14px 16px 90px;
+    gap: 16px;
+  }
+
+  .services-directory {
+    padding: 14px 16px 90px;
+  }
+
+  .hub-hero {
+    padding: 18px 16px;
+  }
+
+  .hub-hero__headline {
+    font-size: 24px;
+    line-height: 1.25;
+  }
+
+  .hub-hero__sub {
+    font-size: 13.5px;
+  }
+
+  .hub-services__title {
+    font-size: 20px;
+  }
+
+  .hero-voice-cta {
+    padding: 12px 16px;
+  }
+
+  .cta-main-label {
+    font-size: 15.5px;
+  }
+
+  .language-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Extra small devices (<= 360px, down to 320px) */
+@media (max-width: 360px) {
+  .sahkaar-header {
+    padding: 4px 8px;
+  }
+
+  .header-left {
+    gap: 4px;
+  }
+
+  .header-brand-box {
+    gap: 4px;
+  }
+
+  .sahkaar-brand-logo {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  .header-brand-name {
+    font-size: 12.5px;
+  }
+
+  .header-brand-tagline {
+    font-size: 8.5px;
+  }
+
+  .header-location-pill {
+    max-width: 65px;
+    font-size: 9.5px;
+    padding: 2px 4px;
+  }
+
+  .header-icon-btn {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    padding: 2px;
+  }
+
+  .assistance-hub {
+    padding: 12px 12px 90px;
+  }
 }
 
 /* ── Conversational Answer Styling (ChatGPT-Style Response UX) ────────────── */
