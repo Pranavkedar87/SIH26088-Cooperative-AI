@@ -3,6 +3,7 @@ import type { AppTab, LanguageCode } from "../types";
 import {
   SahkaarSetuLogo,
   HomeIcon,
+  BellIcon,
   MessageSquareIcon,
   GridIcon,
   ClipboardCheckIcon,
@@ -26,6 +27,7 @@ const NAV_ITEMS: Array<{
   mr: string;
 }> = [
   { id: "home", icon: HomeIcon, en: "Home Hub", hi: "गृह केंद्र", mr: "मुख्य केंद्र" },
+  { id: "notifications", icon: BellIcon, en: "Notifications & Alerts", hi: "सूचनाएं एवं अलर्ट", mr: "सूचना आणि अलर्ट" },
   { id: "ask", icon: MessageSquareIcon, en: "Ask AI Assistant", hi: "प्रश्न पूछें", mr: "प्रश्न विचारा" },
   { id: "services", icon: GridIcon, en: "Services Directory", hi: "सेवा निर्देशिका", mr: "सेवा निर्देशिका" },
   { id: "grievance", icon: ClipboardCheckIcon, en: "Grievance Portal", hi: "शिकायत पोर्टल", mr: "तक्रार निवारण" },
@@ -46,7 +48,7 @@ export const SideDrawer: React.FC<Props> = ({
       <aside className="drawer-panel" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-header">
           <div className="drawer-brand-row">
-            <SahkaarSetuLogo size={28} color="#126B62" />
+            <SahkaarSetuLogo size={44} />
             <div className="drawer-brand-text">
               <h2 className="drawer-brand-name">SahkaarSetu</h2>
               <span className="drawer-brand-tagline">
@@ -79,7 +81,7 @@ export const SideDrawer: React.FC<Props> = ({
                   onClose();
                 }}
               >
-                <IconComp size={20} color={isActive ? "#126B62" : "#4A5568"} />
+                <IconComp size={20} color={isActive ? "#123B5D" : "#68757D"} />
                 <span className="drawer-nav-label">{label}</span>
               </button>
             );

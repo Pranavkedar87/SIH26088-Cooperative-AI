@@ -1,4 +1,5 @@
 import React from "react";
+import logoImg from "../assets/logo.png";
 
 export interface IconProps extends React.SVGProps<SVGSVGElement> {
   size?: number;
@@ -6,36 +7,34 @@ export interface IconProps extends React.SVGProps<SVGSVGElement> {
   strokeWidth?: number;
 }
 
+export interface LogoProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  size?: number;
+}
+
 // ── SVG Brand Mark / Logo Icon ────────────────────────────────────────────────
-export const SahkaarSetuLogo: React.FC<IconProps> = ({
-  size = 28,
-  color = "#176B5B",
-  strokeWidth = 2,
+export const SahkaarSetuLogo: React.FC<LogoProps> = ({
+  size = 32,
+  className = "",
+  style = {},
   ...props
 }) => (
-  <svg
+  <img
+    src={logoImg}
+    alt="SahkaarSetu Logo"
     width={size}
     height={size}
-    viewBox="0 0 32 32"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
+    className={`sahkaar-brand-logo ${className}`}
+    style={{
+      width: size,
+      height: size,
+      objectFit: "contain",
+      borderRadius: "50%",
+      display: "inline-block",
+      flexShrink: 0,
+      ...style,
+    }}
     {...props}
-  >
-    <rect width="32" height="32" rx="8" fill={color} />
-    <path
-      d="M8 22C11 18 14 18 16 20C18 22 21 22 24 18"
-      stroke="#D6A62A"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-    />
-    <path
-      d="M10 14C12 11 14.5 11 16 12.5C17.5 14 20 14 22 11"
-      stroke="#FFFFFF"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-    />
-    <circle cx="16" cy="9" r="2" fill="#F1C75B" />
-  </svg>
+  />
 );
 
 // ── Agriculture & PMFBY Crop Insurance ──────────────────────────────────────
@@ -351,6 +350,28 @@ export const SendIcon: React.FC<IconProps> = ({
   >
     <line x1="22" y1="2" x2="11" y2="13" />
     <polygon points="22 2 15 22 11 13 2 9 22 2" />
+  </svg>
+);
+
+export const ArrowLeftIcon: React.FC<IconProps> = ({
+  size = 16,
+  color = "currentColor",
+  strokeWidth = 2,
+  ...props
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <line x1="19" y1="12" x2="5" y2="12" />
+    <polyline points="12 19 5 12 12 5" />
   </svg>
 );
 

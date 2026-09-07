@@ -26,7 +26,7 @@ export const LocationModal: React.FC<Props> = ({
       <div className="modal-panel location-modal-panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-header-title">
-            <MapPinIcon size={20} color="#126B62" />
+            <MapPinIcon size={20} color="#0F6B68" />
             <h3>Your Location</h3>
           </div>
           <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">

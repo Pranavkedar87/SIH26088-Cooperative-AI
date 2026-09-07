@@ -5,7 +5,7 @@ import { useTextToSpeech } from "./hooks/useTextToSpeech";
 import { Header } from "./components/Header";
 import { SideDrawer } from "./components/SideDrawer";
 import { LocationModal } from "./components/LocationModal";
-import { NotificationCenterModal, type NotificationItem } from "./components/NotificationCenterModal";
+import { NotificationsView, type NotificationItem } from "./components/NotificationsView";
 import { LanguageModal } from "./components/LanguageSelector";
 import Navigation from "./components/Navigation";
 import AssistanceHub from "./components/AssistanceHub";
@@ -15,6 +15,8 @@ import GrievanceWorkflow from "./components/GrievanceWorkflow";
 import ChatArea from "./components/ChatArea";
 import ChatInput from "./components/ChatInput";
 import VoiceModeView from "./components/VoiceModeView";
+import SplashScreen from "./components/SplashScreen";
+import WelcomeLanguageScreen from "./components/WelcomeLanguageScreen";
 import { detectUserLocation, type UserLocationData } from "./services/locationService";
 import "./App.css";
 
@@ -23,7 +25,47 @@ function uid(): string {
   return `msg-${Date.now()}-${++_id}`;
 }
 
+const INITIAL_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: "notif-1",
+    title: "PMFBY Kharif 2026 Enrollment Deadline",
+    category: "Insurance",
+    message: "Last date to enroll your Kharif crops under Pradhan Mantri Fasal Bima Yojana is approaching. Ensure your land records and sowing certificates are updated at your local PACS or CSC.",
+    timestamp: "Today, 10:30 AM",
+    read: false,
+    query: "What is the PMFBY Kharif enrollment deadline and documents required?",
+  },
+  {
+    id: "notif-2",
+    title: "PACS Short-Term Crop Loan: 3% Interest Subvention Active",
+    category: "PACS",
+    message: "Kisan Credit Card (KCC) holders can avail short-term crop loans up to ₹3,00,000 at an effective subsidized interest rate of 4% per annum upon prompt repayment.",
+    timestamp: "Yesterday",
+    read: false,
+    query: "Explain Kisan Credit Card PACS 3% interest subvention scheme and eligibility",
+  },
+  {
+    id: "notif-3",
+    title: "Sub-Mission on Agricultural Mechanization (SMAM) Subsidies Open",
+    category: "Scheme",
+    message: "Financial assistance of 50% to 80% available for PACS and farmer groups to establish Custom Hiring Centers and procure farm machinery/drones.",
+    timestamp: "2 days ago",
+    read: false,
+    query: "How to apply for SMAM farm machinery and drone subsidy through cooperative?",
+  },
+  {
+    id: "notif-4",
+    title: "PACS Fertilizer & Certified Seed Stock Advisory",
+    category: "PACS",
+    message: "Primary Agriculture Cooperative Societies in your district have received fresh allocations of Nano Urea, DAP, and certified high-yield seeds.",
+    timestamp: "3 days ago",
+    read: true,
+    query: "How to check fertilizer and seed availability at local PACS?",
+  },
+];
+
 const App: React.FC = () => {
+  const [appPhase, setAppPhase] = useState<"splash" | "language_select" | "dashboard">("splash");
   const [activeTab, setActiveTab] = useState<AppTab>("home");
   const [language, setLanguage] = useState<LanguageCode>("en");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -41,7 +83,6 @@ const App: React.FC = () => {
   // Modals and Header UI States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
 
   // Location State
@@ -53,7 +94,7 @@ const App: React.FC = () => {
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
   // Notifications State (extensible architecture)
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
 
   // Automatically detect location on initial app load
   const handleDetectLocation = useCallback(async () => {
@@ -181,6 +222,24 @@ const App: React.FC = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
+  // Phase 1: Splash Screen
+  if (appPhase === "splash") {
+    return <SplashScreen onComplete={() => setAppPhase("language_select")} />;
+  }
+
+  // Phase 2: Welcome & Language Selection Screen (Farmer & Wife)
+  if (appPhase === "language_select") {
+    return (
+      <WelcomeLanguageScreen
+        initialLanguage={language}
+        onConfirm={(selectedLang) => {
+          setLanguage(selectedLang);
+          setAppPhase("dashboard");
+        }}
+      />
+    );
+  }
+
   return (
     <div className="platform-app">
       {/* Top Header Component */}
@@ -188,9 +247,14 @@ const App: React.FC = () => {
         language={language}
         locationData={locationData}
         unreadNotificationCount={notifications.filter((n) => !n.read).length}
+        hideNotificationBell={activeTab === "notifications"}
         onOpenMenu={() => setIsDrawerOpen(true)}
         onOpenLocation={() => setIsLocationModalOpen(true)}
-        onOpenNotifications={() => setIsNotificationModalOpen(true)}
+        onOpenNotifications={() => {
+          setActiveTab("notifications");
+          setActiveGuidedFlow(null);
+          setIsVoiceModeOpen(false);
+        }}
         onOpenLanguage={() => setIsLanguageModalOpen(true)}
       />
 
@@ -214,14 +278,6 @@ const App: React.FC = () => {
         locationData={locationData}
         onRefreshLocation={handleDetectLocation}
         isDetecting={isDetectingLocation}
-      />
-
-      {/* Notification Center Modal */}
-      <NotificationCenterModal
-        isOpen={isNotificationModalOpen}
-        onClose={() => setIsNotificationModalOpen(false)}
-        notifications={notifications}
-        onMarkAllRead={handleMarkAllNotificationsRead}
       />
 
       {/* 22 Scheduled Languages Selector Modal */}
@@ -258,6 +314,24 @@ const App: React.FC = () => {
             }}
             onOpenVoiceMode={() => setIsVoiceModeOpen(true)}
             onSelectGuided={handleStartGuided}
+          />
+        )}
+
+        {/* Tab: NOTIFICATIONS Full-Page Tab */}
+        {activeTab === "notifications" && (
+          <NotificationsView
+            language={language}
+            notifications={notifications}
+            onMarkAllRead={handleMarkAllNotificationsRead}
+            onNotificationClick={(item) => {
+              setNotifications((prev) =>
+                prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
+              );
+            }}
+            onAskAI={(query) => {
+              handleSendQuery(query);
+            }}
+            onBack={() => setActiveTab("home")}
           />
         )}
 

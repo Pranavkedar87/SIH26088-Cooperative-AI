@@ -150,7 +150,7 @@ export const ConversationalAnswer: React.FC<Props> = ({
       {sources && sources.length > 0 && (
         <div className="conversational-sources-block">
           <div className="conversational-sources-title">
-            <ShieldCheckIcon size={13} color="#126B62" />
+            <ShieldCheckIcon size={13} color="#0F6B68" />
             <span>
               {language === "hi"
                 ? "अधिकृत स्रोत एवं संदर्भ:"
@@ -170,7 +170,7 @@ export const ConversationalAnswer: React.FC<Props> = ({
                     rel="noopener noreferrer"
                     className="conversational-source-link"
                   >
-                    <ExternalLinkIcon size={11} color="#126B62" />
+                    <ExternalLinkIcon size={11} color="#0F6B68" />
                   </a>
                 )}
               </span>

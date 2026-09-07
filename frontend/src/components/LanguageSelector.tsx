@@ -51,7 +51,7 @@ export const LanguageModal: React.FC<Props> = ({
         {/* Dropdown Header */}
         <div className="lang-dropdown-header">
           <span className="lang-dropdown-title">भाषा चुनें</span>
-          <GlobeIcon size={18} color="#126B62" />
+          <GlobeIcon size={18} color="#0F6B68" />
         </div>
 
         {/* Vertical Scrollable List */}

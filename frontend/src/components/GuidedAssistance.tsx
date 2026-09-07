@@ -228,7 +228,7 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
           ← {language === "hi" ? "वापस" : language === "mr" ? "मागे" : "Back"}
         </button>
         <div className="wizard-title-group">
-          <IconComp size={22} color="#176B5B" />
+          <IconComp size={22} color="#0F6B68" />
           <h3 className="wizard-title">{title}</h3>
         </div>
       </div>

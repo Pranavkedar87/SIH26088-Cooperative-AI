@@ -26,7 +26,7 @@ export const StepTimeline: React.FC<Props> = ({ steps, language = "mr" }) => {
   return (
     <div className="guidance-timeline-block">
       <div className="guidance-section-label">
-        <ArrowRightIcon size={14} color="#176B5B" />
+        <ArrowRightIcon size={14} color="#0F6B68" />
         <span>{headerTitle}</span>
       </div>
       <div className="step-timeline">

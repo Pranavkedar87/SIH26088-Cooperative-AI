@@ -14,7 +14,7 @@ export const AnswerSummary: React.FC<Props> = ({ summary, domainLabel }) => {
     <div className="guidance-summary">
       <div className="guidance-summary__header">
         <div className="guidance-summary__tag">
-          <ShieldCheckIcon size={14} color="#176B5B" />
+          <ShieldCheckIcon size={14} color="#0F6B68" />
           <span>{domainLabel}</span>
         </div>
       </div>

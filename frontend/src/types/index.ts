@@ -57,7 +57,7 @@ export const LANGUAGES: Language[] = [
 
 // ── Application Navigation Tabs ───────────────────────────────────────────────
 
-export type AppTab = "home" | "ask" | "services" | "grievance" | "history";
+export type AppTab = "home" | "ask" | "services" | "grievance" | "history" | "notifications";
 
 // ── Quick topics ──────────────────────────────────────────────────────────────
 

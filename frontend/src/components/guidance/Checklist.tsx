@@ -19,14 +19,14 @@ export const Checklist: React.FC<Props> = ({ items, language = "mr" }) => {
   return (
     <div className="guidance-checklist-block">
       <div className="guidance-section-label">
-        <CheckCircleIcon size={14} color="#176B5B" />
+        <CheckCircleIcon size={14} color="#0F6B68" />
         <span>{headerTitle}</span>
       </div>
       <ul className="guidance-checklist">
         {items.map((item, idx) => (
           <li key={idx} className="guidance-checklist__item">
             <span className="checklist-icon">
-              <CheckCircleIcon size={14} color="#176B5B" />
+              <CheckCircleIcon size={14} color="#0F6B68" />
             </span>
             <span className="checklist-text">{item}</span>
           </li>

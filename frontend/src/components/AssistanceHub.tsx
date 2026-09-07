@@ -217,14 +217,14 @@ const AssistanceHub: React.FC<Props> = ({
                 onClick={() => onSelectGuided(card.id)}
               >
                 <div className="hub-service-card__icon">
-                  <IconComp size={20} color="#126B62" />
+                  <IconComp size={20} color="#0F6B68" />
                 </div>
                 <div className="hub-service-card__body">
                   <span className="hub-service-card__title">{title}</span>
                   <span className="hub-service-card__desc">{desc}</span>
                 </div>
                 <div className="hub-service-card__arrow">
-                  <ArrowRightIcon size={14} color="#667875" />
+                  <ArrowRightIcon size={14} color="#68757D" />
                 </div>
               </button>
             );
@@ -235,7 +235,7 @@ const AssistanceHub: React.FC<Props> = ({
       {/* Trust Element Footer Note */}
       <footer className="hub-trust-footer">
         <div className="trust-item">
-          <ShieldCheckIcon size={14} color="#126B62" />
+          <ShieldCheckIcon size={14} color="#0F6B68" />
           <span>Source-backed guidance</span>
         </div>
         <span className="trust-dot">•</span>

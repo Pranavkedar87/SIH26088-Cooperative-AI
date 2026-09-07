@@ -145,7 +145,7 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
               : "Click to speak"
           }
         >
-          <MicIcon size={18} color={status === "listening" ? "#B94A48" : "#126B62"} />
+          <MicIcon size={18} color={status === "listening" ? "#C53030" : "#0F6B68"} />
         </button>
 
         {/* Send Button */}

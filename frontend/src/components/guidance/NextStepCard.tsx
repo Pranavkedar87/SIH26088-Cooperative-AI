@@ -29,7 +29,7 @@ export const NextStepCard: React.FC<Props> = ({
   return (
     <div className="guidance-next-steps" role="region" aria-label={headerTitle}>
       <div className="guidance-next-steps__header">
-        <ArrowRightIcon size={14} color="#176B5B" />
+        <ArrowRightIcon size={14} color="#0F6B68" />
         <span className="guidance-next-steps__title">{headerTitle}</span>
       </div>
       <div className="guidance-next-steps__list" role="group">

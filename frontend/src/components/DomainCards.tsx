@@ -146,7 +146,7 @@ const DomainCards: React.FC<Props> = ({ language, onSelect }) => {
             aria-label={`Select ${card.titleEn}`}
           >
             <div className="service-card__icon-box">
-              <IconComponent size={20} color="#176B5B" />
+              <IconComponent size={20} color="#0F6B68" />
             </div>
             <div className="service-card__content">
               <span className="service-card__title">{getTitle(card)}</span>

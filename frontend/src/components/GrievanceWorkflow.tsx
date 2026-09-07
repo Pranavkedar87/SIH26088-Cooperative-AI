@@ -221,7 +221,7 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
             <pre className="summary-preview">{generatedSummary}</pre>
 
             <div className="disclaimer-callout">
-              <ShieldCheckIcon size={16} color="#B7791F" />
+              <ShieldCheckIcon size={16} color="#F28C28" />
               <span>
                 <strong>Notice:</strong> SahkaarSetu provides structured complaint guidance based on official Maharashtra Cooperative rules. SahkaarSetu does not file official legal claims directly with court/government authorities.
               </span>
@@ -233,7 +233,7 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
                 className="grievance-sec-btn"
                 onClick={() => handleCopySummary(generatedSummary)}
               >
-                <CopyIcon size={14} color="#17363A" />
+                <CopyIcon size={14} color="#24323A" />
                 <span>{copied ? "✓ Copied!" : "Copy Summary"}</span>
               </button>
               <button

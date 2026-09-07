@@ -45,7 +45,7 @@ const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
               role="tab"
             >
               <div className="nav-item__icon-wrapper">
-                <IconComp size={20} color={isActive ? "#176B5B" : "#66777A"} />
+                <IconComp size={20} color={isActive ? "#123B5D" : "#68757D"} />
               </div>
               <span className="nav-item__label">{label}</span>
             </button>

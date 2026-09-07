@@ -6,47 +6,49 @@
 }
 
 :root {
-  /* ── SAHKAARSETU Refined Palette ─────────────────────────────────────────── */
-  --color-primary:        #126B62;   /* Primary Deep Teal */
-  --color-primary-dark:   #0E524B;
-  --color-primary-light:  #E8F3EF;   /* Soft Mint */
+  /* ── SAHKAARSETU Navy-Led Government Theme ──────────────────────────── */
+  --color-primary:        #123B5D;   /* Primary Navy */
+  --color-primary-dark:   #0B2F44;   /* Deep Navy */
+  --color-primary-light:  #EBF2F7;   /* Soft Navy Tint */
 
-  --color-trust-blue:     #238477;   /* Secondary Cooperative Green */
-  --color-trust-light:    #EAF3F7;   /* Soft Blue */
+  --color-secondary:      #0F6B68;   /* Secondary Teal */
+  --color-secondary-light:#E6F3F2;   /* Soft Teal Tint */
+  --color-trust-blue:     #123B5D;   /* Navy */
+  --color-trust-light:    #EBF2F7;   /* Soft Navy Tint */
 
-  --color-accent:         #D4A72C;   /* Harvest Gold */
-  --color-accent-light:   #FFFDF5;
-  --color-accent-highlight:#F1C75B;  /* Warm Gold Highlight */
+  --color-accent:         #F28C28;   /* Saffron Accent */
+  --color-accent-light:   #FEF4E9;   /* Soft Saffron Tint */
+  --color-accent-highlight:#F28C28;  /* Saffron Highlight */
 
-  --color-bg:             #F7F5EE;   /* Warm Ivory Background */
-  --color-bg-alt:         #EFECE3;
-  --color-surface:        #FFFFFF;   /* Card White */
+  --color-bg:             #F7F6F2;   /* Background Warm Neutral */
+  --color-bg-alt:         #EFECE6;
+  --color-surface:        #FFFFFF;   /* Pure White */
 
-  --color-border:         #D6E0DC;   /* Light Border */
-  --color-border-light:   #E8EFEB;
+  --color-border:         #D9DEDF;   /* Border */
+  --color-border-light:   #E8ECEC;
 
-  --color-text:           #173C3A;   /* Dark Text */
-  --color-text-muted:     #667875;   /* Secondary Text */
-  --color-text-light:     #8F9FA4;
+  --color-text:           #24323A;   /* Text */
+  --color-text-muted:     #68757D;   /* Muted Text */
+  --color-text-light:     #8C979E;
 
   /* Feedback */
-  --color-success:        #238477;   /* Success / Verified */
-  --color-success-light:  #E8F3EF;
-  --color-warning:        #D4A72C;   /* Warning */
-  --color-warning-light:  #FFFDF5;
-  --color-error:          #B94A48;   /* Error */
-  --color-error-light:    #FDF0F0;
+  --color-success:        #0F6B68;   /* Success / Teal */
+  --color-success-light:  #E6F3F2;
+  --color-warning:        #F28C28;   /* Warning / Saffron */
+  --color-warning-light:  #FEF4E9;
+  --color-error:          #C53030;   /* Error */
+  --color-error-light:    #FEE2E2;
 
-  /* Radii per Design System */
-  --radius-card:   14px;   /* Cards: 14–16px */
-  --radius-btn:    10px;   /* Assistance input bar & buttons: 10px */
-  --radius-sm:     8px;
+  /* Clean Institutional Radii (No excessive rounded cards/pills) */
+  --radius-card:   10px;
+  --radius-btn:    8px;
+  --radius-sm:     6px;
   --radius-pill:   999px;
 
-  /* Minimal Crisp Shadows */
-  --shadow-sm:   0 1px 3px rgba(23, 60, 58, 0.05);
-  --shadow-md:   0 3px 10px rgba(23, 60, 58, 0.07);
-  --shadow-card: 0 2px 8px rgba(18, 107, 98, 0.04);
+  /* Subtle Crisp Institutional Shadows */
+  --shadow-sm:   0 1px 2px rgba(18, 59, 93, 0.05);
+  --shadow-md:   0 2px 6px rgba(18, 59, 93, 0.08);
+  --shadow-card: 0 1px 4px rgba(18, 59, 93, 0.06);
 
   /* Typography */
   --font-sans: 'Segoe UI', system-ui, -apple-system, 'Noto Sans Devanagari', sans-serif;

@@ -308,7 +308,7 @@ export const VoiceModeView: React.FC<Props> = ({
       {/* Header */}
       <div className="voice-mode-header">
         <div className="voice-mode-brand">
-          <SahkaarSetuLogo size={24} color="#FFFFFF" />
+          <SahkaarSetuLogo size={36} />
           <span className="voice-mode-name">SahkaarSetu Voice</span>
         </div>
 

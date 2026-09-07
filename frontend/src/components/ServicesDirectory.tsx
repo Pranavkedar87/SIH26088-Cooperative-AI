@@ -254,7 +254,7 @@ const ServicesDirectory: React.FC<Props> = ({ language, onAskAI }) => {
               className={`services-tab-btn ${isActive ? "services-tab-btn--active" : ""}`}
               onClick={() => setActiveTab(tab)}
             >
-              <IconTab size={16} color={isActive ? "#176B5B" : "#66777A"} />
+              <IconTab size={16} color={isActive ? "#123B5D" : "#68757D"} />
               <span>{label}</span>
             </button>
           );
@@ -264,7 +264,7 @@ const ServicesDirectory: React.FC<Props> = ({ language, onAskAI }) => {
       <div className="services-panel">
         <div className="services-panel__header">
           <div className="services-panel__icon">
-            <IconMain size={24} color="#176B5B" />
+            <IconMain size={24} color="#0F6B68" />
           </div>
           <div className="services-panel__titles">
             <h3 className="services-panel__title">{title}</h3>
