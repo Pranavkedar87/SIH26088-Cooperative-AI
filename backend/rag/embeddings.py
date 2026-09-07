@@ -52,26 +52,39 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         return GeminiEmbeddingProvider._client
 
     def embed_text(self, text: str) -> list[float]:
-        """Generate a single 768-dim embedding vector."""
+        """Generate a single 768-dim embedding vector via REST API with 2s timeout."""
         if not text or not text.strip():
             return [0.0] * EMBEDDING_DIMENSION
 
-        client = self._get_client()
+        import json as _json
+        import urllib.request as _urllib_req
+        import os
+
+        settings = get_settings()
+        api_key = (settings.gemini_api_key or os.getenv("GEMINI_API_KEY", "")).strip()
+        if not api_key:
+            return [0.0] * EMBEDDING_DIMENSION
+
         try:
-            res = client.models.embed_content(
-                model=DEFAULT_EMBEDDING_MODEL,
-                contents=text.strip(),
-                config=genai_types.EmbedContentConfig(
-                    output_dimensionality=EMBEDDING_DIMENSION
-                ),
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{DEFAULT_EMBEDDING_MODEL}:embedContent?key={api_key}"
+            body = {
+                "content": {"parts": [{"text": text.strip()[:500]}]},
+                "outputDimensionality": EMBEDDING_DIMENSION,
+            }
+            req = _urllib_req.Request(
+                url,
+                data=_json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
             )
-            if res.embeddings and res.embeddings[0].values:
-                return list(res.embeddings[0].values)
-            logger.warning("Empty embedding returned for text snippet.")
-            return [0.0] * EMBEDDING_DIMENSION
+            with _urllib_req.urlopen(req, timeout=2.0) as resp:
+                data = _json.loads(resp.read().decode("utf-8"))
+                values = data.get("embedding", {}).get("values", [])
+                if values:
+                    return list(values)
         except Exception as exc:
-            logger.error("Failed to generate Gemini embedding: %s", exc)
-            return [0.0] * EMBEDDING_DIMENSION
+            logger.debug("Fast embedding fallback: %s", exc)
+
+        return [0.0] * EMBEDDING_DIMENSION
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a batch of text snippets."""

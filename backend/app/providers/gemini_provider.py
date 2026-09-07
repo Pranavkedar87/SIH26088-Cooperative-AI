@@ -312,12 +312,12 @@ def query_gemini_llm(
 
         stats["llm_actually_called"] = True
 
-        # Models verified working via REST API (tested in order of speed/quality)
+        # Models verified working via REST API (fastest and most reliable first)
         models = [
-            "gemini-3.7-flash",
             "gemini-flash-lite-latest",
             "gemini-3.5-flash-lite",
-            "gemini-3.6-flash",
+            "gemini-3.1-flash-lite",
+            "gemini-3.7-flash",
             "gemini-3.8-flash",
         ]
 
@@ -343,7 +343,7 @@ def query_gemini_llm(
                     headers={"Content-Type": "application/json"},
                 )
 
-                with _urllib_req.urlopen(req, timeout=12) as resp:
+                with _urllib_req.urlopen(req, timeout=8) as resp:
                     data = _json.loads(resp.read().decode("utf-8"))
 
                 candidates = data.get("candidates", [])
