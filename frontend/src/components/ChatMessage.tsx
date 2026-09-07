@@ -32,8 +32,13 @@ const ChatMessage: React.FC<Props> = ({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
 
   const handleSpeakClick = useCallback(() => {
-    if (onSpeak) onSpeak(message.id, message.content, message.language);
-  }, [onSpeak, message.id, message.content, message.language]);
+    const textToSpeak =
+      message.spoken_answer ||
+      message.structured_answer?.spoken_answer ||
+      message.structured_answer?.direct_answer ||
+      message.content;
+    if (onSpeak) onSpeak(message.id, textToSpeak, message.language);
+  }, [onSpeak, message.id, message.content, message.spoken_answer, message.structured_answer, message.language]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard?.writeText(message.content).catch(() => {});
@@ -129,6 +134,7 @@ const ChatMessage: React.FC<Props> = ({
         ) : (
           <GuidanceRenderer
             rawContent={message.content}
+            structuredAnswer={message.structured_answer}
             userQuestion={userQuestion}
             language={message.language}
             answerFocus={message.answer_focus}

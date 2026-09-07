@@ -45,7 +45,15 @@ def extract_json_payload(text: str) -> Optional[dict[str, Any]]:
 from app.config import get_settings
 from app.providers.groq_provider import query_groq_llm, GROQ_MODELS
 from app.providers.gemini_provider import query_gemini_llm
-from app.schemas.query import IntentCode, QueryRequest, QueryResponse, SuggestedFollowup
+from app.schemas.query import (
+    IntentCode,
+    QueryRequest,
+    QueryResponse,
+    SuggestedFollowup,
+    StructuredAnswerPayload,
+    AnswerSection,
+    AnswerSectionItem,
+)
 from rag.intent import classify_intent, extract_topic_and_goal, extract_answer_focus
 from rag.prompts import RAG_SYSTEM_INSTRUCTION, DIRECT_RESPONSES, NO_KNOWLEDGE_FALLBACK, NO_KNOWLEDGE_FALLBACK_WITH_STATE, get_intent_fallback
 from rag.retriever import retrieve_relevant_knowledge, RetrievedChunk
@@ -113,11 +121,17 @@ def generate_structured_answer(
     )
     if raw_answer:
         payload = extract_json_payload(raw_answer)
-        if payload and isinstance(payload, dict) and ("display_answer" in payload or "summary" in payload or "title" in payload):
+        if payload and isinstance(payload, dict) and (
+            "direct_answer" in payload
+            or "sections" in payload
+            or "display_answer" in payload
+            or "summary" in payload
+            or "title" in payload
+        ):
             logger.info(f"[PRIMARY LLM] Structured output via Gemini ({used_model})")
             return payload, f"GEMINI ({used_model})", gemini_stats
 
-    # 2. Groq fallback: generate a plain text answer and wrap it in our schema
+    # 2. Groq fallback
     logger.warning("[PRIMARY LLM] Gemini failed — switching to Groq fallback")
     try:
         groq_answer, groq_model, groq_stats = query_groq_llm(
@@ -127,22 +141,22 @@ def generate_structured_answer(
             temperature=0.3,
         )
         if groq_answer:
-            # Try to parse as JSON first (Groq sometimes returns JSON)
             payload = extract_json_payload(groq_answer)
-            if payload and isinstance(payload, dict) and ("display_answer" in payload or "summary" in payload or "title" in payload):
+            if payload and isinstance(payload, dict) and (
+                "direct_answer" in payload
+                or "sections" in payload
+                or "display_answer" in payload
+                or "summary" in payload
+                or "title" in payload
+            ):
                 logger.info(f"[FALLBACK LLM] Structured JSON from Groq ({groq_model})")
                 return payload, f"GROQ ({groq_model})", groq_stats
 
-            # Wrap plain text response in our schema
+            # Wrap plain text response in structured schema
             wrapped = {
-                "display_answer": {
-                    "title": "SahkaarSetu AI",
-                    "summary": groq_answer.strip(),
-                    "what_should_i_do_now": [],
-                    "detailed_information": "",
-                    "next_guidance": "",
-                },
-                "spoken_answer": groq_answer.strip()[:300],
+                "direct_answer": groq_answer.strip(),
+                "sections": [],
+                "spoken_answer": groq_answer.strip()[:250],
             }
             logger.info(f"[FALLBACK LLM] Plain text wrapped from Groq ({groq_model})")
             return wrapped, f"GROQ ({groq_model})", groq_stats
@@ -657,79 +671,137 @@ class RAGPipeline:
         )
 
         # Stage 8.5: Canonical Response Ingestion & Grounding Validation Stage
+        structured_payload: Optional[StructuredAnswerPayload] = None
+
         if json_payload and isinstance(json_payload, dict):
             disp_obj = json_payload.get("display_answer") if isinstance(json_payload.get("display_answer"), dict) else json_payload
 
-            title = disp_obj.get("title") or ""
-            summary = disp_obj.get("summary") or ""
-            actions = disp_obj.get("what_should_i_do_now") or []
-            details = disp_obj.get("detailed_information") or ""
-            next_guidance = disp_obj.get("next_guidance") or ""
+            # 1. Extract Direct Answer
+            direct_answer = (
+                json_payload.get("direct_answer")
+                or disp_obj.get("direct_answer")
+                or disp_obj.get("summary")
+                or disp_obj.get("title")
+                or ""
+            ).strip()
+
+            # 2. Extract Sections
+            sections_raw = json_payload.get("sections") or disp_obj.get("sections")
+            parsed_sections: list[AnswerSection] = []
+
+            if sections_raw and isinstance(sections_raw, list):
+                for sec in sections_raw:
+                    if isinstance(sec, dict) and sec.get("type"):
+                        sec_type = str(sec["type"]).lower().strip()
+                        sec_title = str(sec.get("title") or "").strip()
+                        raw_items = sec.get("items") or []
+                        sec_items = []
+                        if isinstance(raw_items, list):
+                            for itm in raw_items:
+                                if isinstance(itm, dict):
+                                    sec_items.append(AnswerSectionItem(
+                                        title=itm.get("title"),
+                                        description=itm.get("description") or itm.get("content"),
+                                        name=itm.get("name"),
+                                        label=itm.get("label"),
+                                        value=itm.get("value"),
+                                        content=itm.get("content"),
+                                    ))
+                                elif isinstance(itm, str) and itm.strip():
+                                    sec_items.append(AnswerSectionItem(title=itm.strip()))
+                        parsed_sections.append(AnswerSection(
+                            type=sec_type,
+                            title=sec_title,
+                            items=sec_items,
+                            content=sec.get("content"),
+                        ))
+            else:
+                # Normalize legacy schema (what_should_i_do_now, detailed_information, next_guidance)
+                actions = disp_obj.get("what_should_i_do_now") or []
+                if actions and isinstance(actions, list):
+                    action_title = (
+                        "What You Should Do" if detected_language == "en"
+                        else "काय करावे?" if detected_language == "mr"
+                        else "क्या करें?"
+                    )
+                    items = []
+                    for idx, act in enumerate(actions, 1):
+                        if isinstance(act, dict):
+                            items.append(AnswerSectionItem(
+                                title=act.get("title", f"Step {idx}"),
+                                description=act.get("content", ""),
+                            ))
+                        elif isinstance(act, str) and act.strip():
+                            items.append(AnswerSectionItem(title=act.strip()))
+                    if items:
+                        parsed_sections.append(AnswerSection(
+                            type="steps",
+                            title=action_title,
+                            items=items,
+                        ))
+
+                if disp_obj.get("detailed_information"):
+                    parsed_sections.append(AnswerSection(
+                        type="details",
+                        title="Details" if detected_language == "en" else "तपशील" if detected_language == "mr" else "विवरण",
+                        content=str(disp_obj["detailed_information"]).strip(),
+                    ))
+
+                if disp_obj.get("next_guidance"):
+                    parsed_sections.append(AnswerSection(
+                        type="next_action",
+                        title="Next Step" if detected_language == "en" else "पुढील पाऊल" if detected_language == "mr" else "अगला कदम",
+                        content=str(disp_obj["next_guidance"]).strip(),
+                    ))
+
+            # 3. Spoken Answer
             llm_spoken = json_payload.get("spoken_answer") or disp_obj.get("spoken_answer") or ""
+            if llm_spoken and len(llm_spoken.strip()) > 5:
+                spoken_answer = clean_speech_text(llm_spoken)
+            else:
+                spoken_answer = clean_speech_text(direct_answer)
 
+            # 4. Build Clean Structured Markdown for display_answer fallback
             md_blocks = []
-            if title and not re.search(r"official guidance|cooperative guidance", title, re.I):
-                md_blocks.append(f"### {title}")
-            if summary:
-                md_blocks.append(summary)
+            if direct_answer:
+                md_blocks.append(direct_answer)
 
-            if actions and isinstance(actions, list):
-                if answer_focus == "PROCEDURE":
-                    action_header = "### Step-by-Step Procedure"
-                    if detected_language == "mr":
-                        action_header = "### टप्पा-निहाय प्रक्रिया"
-                    elif detected_language == "hi":
-                        action_header = "### चरण-दर-चरण प्रक्रिया"
-                elif answer_focus == "DOCUMENTS":
-                    action_header = "### Required Documents"
-                    if detected_language == "mr":
-                        action_header = "### आवश्यक कागदपत्रे"
-                    elif detected_language == "hi":
-                        action_header = "### आवश्यक दस्तावेज"
-                elif answer_focus == "CONTACT":
-                    action_header = "### Official Contact Details"
-                    if detected_language == "mr":
-                        action_header = "### अधिकृत संपर्क व हेल्पलाईन"
-                    elif detected_language == "hi":
-                        action_header = "### आधिकारिक संपर्क एवं हेल्पलाइन"
-                elif answer_focus == "ELIGIBILITY":
-                    action_header = "### Eligibility Criteria"
-                    if detected_language == "mr":
-                        action_header = "### पात्रता निकष"
-                    elif detected_language == "hi":
-                        action_header = "### पात्रता मापदंड"
-                else:
-                    action_header = "### Key Points"
-                    if detected_language == "mr":
-                        action_header = "### मुख्य मुद्दे"
-                    elif detected_language == "hi":
-                        action_header = "### मुख्य बातें"
-
-                act_lines = [action_header]
-                for idx, act in enumerate(actions, 1):
-                    if isinstance(act, dict):
-                        act_title = act.get("title", f"Step {idx}")
-                        act_content = act.get("content", "")
-                        if answer_focus == "PROCEDURE":
-                            act_lines.append(f"{idx}. **{act_title}:** {act_content}")
+            for sec in parsed_sections:
+                if sec.title:
+                    md_blocks.append(f"### {sec.title}")
+                if sec.type == "key_facts" and sec.items:
+                    fact_lines = []
+                    for itm in sec.items:
+                        if itm.label and itm.value:
+                            fact_lines.append(f"- **{itm.label}:** {itm.value}")
+                        elif itm.label or itm.value:
+                            fact_lines.append(f"- {itm.label or itm.value}")
+                    if fact_lines:
+                        md_blocks.append("\n".join(fact_lines))
+                elif sec.type == "steps" and sec.items:
+                    step_lines = []
+                    for idx, itm in enumerate(sec.items, 1):
+                        t = itm.title or f"Step {idx}"
+                        d = itm.description or ""
+                        if d:
+                            step_lines.append(f"{idx}. **{t}:** {d}")
                         else:
-                            act_lines.append(f"- **{act_title}:** {act_content}")
-                    elif isinstance(act, str) and act.strip():
-                        act_str = act.strip()
-                        if answer_focus == "PROCEDURE" and not re.match(r'^\d+\.', act_str):
-                            act_lines.append(f"{idx}. {act_str}")
-                        elif not re.match(r'^[-*•]', act_str):
-                            act_lines.append(f"- {act_str}")
-                        else:
-                            act_lines.append(act_str)
-                if len(act_lines) > 1:
-                    md_blocks.append("\n".join(act_lines))
-
-            if details:
-                md_blocks.append(details)
-
-            if next_guidance:
-                md_blocks.append(f"**Note:** {next_guidance}")
+                            step_lines.append(f"{idx}. {t}")
+                    if step_lines:
+                        md_blocks.append("\n".join(step_lines))
+                elif sec.type in {"documents", "where_to_go"} and sec.items:
+                    doc_lines = []
+                    for itm in sec.items:
+                        n = itm.name or itm.title or ""
+                        d = itm.description or itm.content or ""
+                        if n and d:
+                            doc_lines.append(f"- **{n}:** {d}")
+                        elif n:
+                            doc_lines.append(f"- {n}")
+                    if doc_lines:
+                        md_blocks.append("\n".join(doc_lines))
+                elif sec.content:
+                    md_blocks.append(sec.content)
 
             parsed_display = "\n\n".join(md_blocks).strip()
 
@@ -741,10 +813,13 @@ class RAGPipeline:
             )
 
             display_answer = sanitized_answer.strip()
-            if llm_spoken and len(llm_spoken.strip()) > 5:
-                spoken_answer = clean_speech_text(llm_spoken)
-            else:
-                spoken_answer = clean_speech_text(summary or display_answer)
+
+            structured_payload = StructuredAnswerPayload(
+                direct_answer=direct_answer,
+                sections=parsed_sections,
+                spoken_answer=spoken_answer,
+                suggested_followups=[],
+            )
         else:
             logger.warning("Gemini primary provider failed or returned invalid JSON. Using neutral error fallback.")
             raw_fallback = get_intent_fallback(intent, detected_language, answer_focus)
@@ -756,6 +831,13 @@ class RAGPipeline:
             sources_list = []
             primary_source = None
             claims_valid = False
+
+            structured_payload = StructuredAnswerPayload(
+                direct_answer=display_answer,
+                sections=[],
+                spoken_answer=spoken_answer,
+                suggested_followups=[],
+            )
 
         g_status, overall_auth_level, claims_validated = evaluate_grounding_status(
             sources_list=sources_list,
@@ -823,8 +905,17 @@ class RAGPipeline:
             llm_followups=raw_followups,
         )
 
+        followup_models = [
+            SuggestedFollowup(label=f["label"], query=f["query"])
+            for f in followup_dicts
+        ]
+
+        if structured_payload:
+            structured_payload.suggested_followups = followup_models
+
         response_obj = QueryResponse(
             answer=display_answer,
+            structured_answer=structured_payload,
             display_answer=display_answer,
             spoken_answer=spoken_answer,
             language=response_language,
@@ -832,10 +923,7 @@ class RAGPipeline:
             answer_focus=answer_focus,
             source=primary_source,
             sources=sources_list,
-            suggested_followups=[
-                SuggestedFollowup(label=f["label"], query=f["query"])
-                for f in followup_dicts
-            ],
+            suggested_followups=followup_models,
             next_action="Follow up or ask another cooperative query",
             session_id=session_id,
             grounding_status=g_status,

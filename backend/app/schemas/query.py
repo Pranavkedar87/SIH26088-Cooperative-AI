@@ -58,10 +58,46 @@ class SuggestedFollowup(BaseModel):
     query: str = Field(..., description="Complete contextual query sent to backend when clicked.")
 
 
+class AnswerSectionItem(BaseModel):
+    title: Optional[str] = Field(default=None, description="Item title, step name, or key point.")
+    description: Optional[str] = Field(default=None, description="Item description or procedure details.")
+    name: Optional[str] = Field(default=None, description="Document name, requirement, or office name.")
+    label: Optional[str] = Field(default=None, description="Fact label or stat tag (e.g. 72 HOURS).")
+    value: Optional[str] = Field(default=None, description="Fact value or statutory number.")
+    content: Optional[str] = Field(default=None, description="General content for single-content items.")
+
+
+class AnswerSection(BaseModel):
+    type: str = Field(
+        ...,
+        description="Section type: 'steps' | 'documents' | 'key_facts' | 'where_to_go' | 'details' | 'next_action'",
+    )
+    title: str = Field(..., description="Localized section title (e.g. 'What You Should Do', 'Documents You Need').")
+    items: Optional[list[AnswerSectionItem]] = Field(default_factory=list, description="Structured items for list/card sections.")
+    content: Optional[str] = Field(default=None, description="Text content for single-block sections.")
+
+
+class StructuredAnswerPayload(BaseModel):
+    direct_answer: str = Field(..., description="1-3 short, direct sentences answering the query immediately.")
+    sections: list[AnswerSection] = Field(
+        default_factory=list,
+        description="Dynamic list of relevant structured sections decided by AI.",
+    )
+    spoken_answer: Optional[str] = Field(default=None, description="Short conversational spoken answer for TTS.")
+    suggested_followups: list[SuggestedFollowup] = Field(
+        default_factory=list,
+        description="Contextual follow-up suggestions.",
+    )
+
+
 class QueryResponse(BaseModel):
     answer: str = Field(
         ...,
         description="The AI-generated answer.",
+    )
+    structured_answer: Optional[StructuredAnswerPayload] = Field(
+        default=None,
+        description="Dynamic structured modular answer payload for frontend card presentation.",
     )
     display_answer: Optional[str] = Field(
         default=None,

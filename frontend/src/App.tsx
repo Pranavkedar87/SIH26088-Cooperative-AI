@@ -185,6 +185,7 @@ const App: React.FC = () => {
           id: uid(),
           role: "assistant",
           content,
+          structured_answer: response.structured_answer,
           spoken_answer: response.spoken_answer,
           timestamp: new Date(),
           language: response.language,

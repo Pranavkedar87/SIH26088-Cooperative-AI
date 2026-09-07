@@ -135,12 +135,46 @@ export interface SuggestedFollowup {
   query: string;
 }
 
+export interface AnswerSectionItem {
+  title?: string;
+  description?: string;
+  name?: string;
+  label?: string;
+  value?: string;
+  content?: string;
+}
+
+export type SectionType =
+  | "steps"
+  | "documents"
+  | "key_facts"
+  | "where_to_go"
+  | "details"
+  | "next_action"
+  | "info"
+  | string;
+
+export interface AnswerSection {
+  type: SectionType;
+  title: string;
+  items?: AnswerSectionItem[];
+  content?: string;
+}
+
+export interface StructuredAnswerData {
+  direct_answer: string;
+  sections: AnswerSection[];
+  spoken_answer?: string;
+  suggested_followups?: SuggestedFollowup[];
+}
+
 export type MessageRole = "user" | "assistant";
 
 export interface ChatMessage {
   id: string;
   role: MessageRole;
   content: string;
+  structured_answer?: StructuredAnswerData;
   spoken_answer?: string;
   timestamp: Date;
   language: LanguageCode;
@@ -161,6 +195,7 @@ export interface QueryRequest {
 
 export interface QueryResponse {
   answer: string;
+  structured_answer?: StructuredAnswerData;
   display_answer?: string;
   spoken_answer?: string;
   language: LanguageCode;

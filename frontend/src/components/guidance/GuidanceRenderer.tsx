@@ -1,9 +1,11 @@
 import React from "react";
 import ConversationalAnswer from "./ConversationalAnswer";
-import type { LanguageCode, SourceItem, SuggestedFollowup } from "../../types";
+import StructuredResponseCard from "./StructuredResponseCard";
+import type { LanguageCode, SourceItem, SuggestedFollowup, StructuredAnswerData } from "../../types";
 
 interface Props {
   rawContent: string;
+  structuredAnswer?: StructuredAnswerData;
   userQuestion?: string;
   language?: string;
   answerFocus?: string;
@@ -14,12 +16,25 @@ interface Props {
 
 export const GuidanceRenderer: React.FC<Props> = ({
   rawContent,
+  structuredAnswer,
   language = "mr",
   answerFocus,
   onExecuteAction,
   sources = [],
   suggestedFollowups = [],
 }) => {
+  if (structuredAnswer && (structuredAnswer.direct_answer || (structuredAnswer.sections && structuredAnswer.sections.length > 0))) {
+    return (
+      <StructuredResponseCard
+        data={structuredAnswer}
+        language={language as LanguageCode}
+        onExecuteAction={onExecuteAction}
+        sources={sources}
+        suggestedFollowups={suggestedFollowups}
+      />
+    );
+  }
+
   return (
     <ConversationalAnswer
       content={rawContent}
