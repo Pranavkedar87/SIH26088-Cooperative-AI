@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import type { LanguageCode } from "../types";
+import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import {
   WheatIcon,
   LandmarkIcon,
@@ -10,6 +11,7 @@ import {
   ArrowRightIcon,
   SendIcon,
   ShieldCheckIcon,
+  MicIcon,
 } from "./Icons";
 
 interface Props {
@@ -26,7 +28,7 @@ const HERO_TEXT: Record<
   mr: {
     headline: "सहकारी सेवांसाठी तुमचा डिजिटल साथी",
     sub: "समजून घ्या • विचारा • पुढील पाऊल जाणून घ्या",
-    typeOr: "प्रश्न टाइप करा",
+    typeOr: "प्रश्न टाइप करा किंवा बोला",
     placeholder: "सहकारी सेवा, योजना किंवा कायद्याबद्दल विचारा...",
     helpHeader: "तुम्हाला कशाबद्दल मदत हवी आहे?",
     helpSub: "तुमची समस्या निवडा किंवा SahkaarSetu ला विचारा.",
@@ -34,7 +36,7 @@ const HERO_TEXT: Record<
   hi: {
     headline: "सहकारी सेवाओं के लिए आपका डिजिटल साथी",
     sub: "समझें • पूछें • अगला कदम जानें",
-    typeOr: "प्रश्न टाइप करें",
+    typeOr: "प्रश्न टाइप करें या बोलें",
     placeholder: "सहकारी सेवाओं, योजनाओं या कानून के बारे में पूछें...",
     helpHeader: "आपको किस विषय में सहायता चाहिए?",
     helpSub: "अपनी समस्या चुनें या SahkaarSetu से पूछें।",
@@ -42,7 +44,7 @@ const HERO_TEXT: Record<
   en: {
     headline: "Your Digital Companion for Cooperative Services",
     sub: "Understand • Ask • Know Next Steps",
-    typeOr: "Type your question",
+    typeOr: "Type your question or speak",
     placeholder: "Ask about cooperative services, schemes or laws...",
     helpHeader: "What do you need help with?",
     helpSub: "Select a topic or ask SahkaarSetu directly.",
@@ -129,10 +131,33 @@ const AssistanceHub: React.FC<Props> = ({
   const t = HERO_TEXT[language] ?? HERO_TEXT.en;
   const [typedInput, setTypedInput] = useState("");
 
+  const handleTranscript = useCallback((text: string) => {
+    setTypedInput((prev) => (prev ? `${prev} ${text}` : text));
+  }, []);
+
+  const { status, errorMessage, startListening, stopListening, clearError, isSupported } =
+    useSpeechRecognition({
+      language,
+      onTranscript: handleTranscript,
+    });
+
+  const handleMicClick = () => {
+    if (status === "listening") {
+      stopListening();
+    } else {
+      clearError();
+      startListening();
+    }
+  };
+
   const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (typedInput.trim()) {
-      onStartAsk(typedInput.trim());
+    const trimmed = typedInput.trim();
+    if (trimmed) {
+      if (status === "listening") {
+        stopListening();
+      }
+      onStartAsk(trimmed);
       setTypedInput("");
     }
   };
@@ -145,17 +170,67 @@ const AssistanceHub: React.FC<Props> = ({
           <h2 className="hub-hero__headline">{t.headline}</h2>
           <p className="hub-hero__sub">{t.sub}</p>
 
-          {/* TEXT QUESTION INPUT */}
+          {/* TEXT QUESTION INPUT WITH VOICE-TO-TEXT MIC BUTTON */}
           <div className="hero-secondary-input">
             <span className="secondary-label">{t.typeOr}</span>
+
+            {/* Listening Status Badge */}
+            {status === "listening" && (
+              <div className="hero-stt-status hero-stt-status--listening">
+                <MicIcon size={14} color="#C53030" />
+                <span>
+                  {language === "hi"
+                    ? "सुन रहा हूँ… अब बोलें (आवाज़ टेक्स्ट में बदल रही है)"
+                    : language === "mr"
+                    ? "ऐकत आहे… आता बोला (आवाज मजकुरात रूपांतरित होत आहे)"
+                    : "Listening… speak now (converting voice to text)"}
+                </span>
+              </div>
+            )}
+
             <form onSubmit={handleTextSubmit} className="secondary-search-bar">
               <input
                 type="text"
                 className="secondary-search-input"
                 value={typedInput}
-                onChange={(e) => setTypedInput(e.target.value)}
-                placeholder={t.placeholder}
+                onChange={(e) => {
+                  if (errorMessage) clearError();
+                  setTypedInput(e.target.value);
+                }}
+                placeholder={
+                  status === "listening"
+                    ? language === "hi"
+                      ? "आवाज़ पहचान रहा हूँ..."
+                      : language === "mr"
+                      ? "आवाज ओळखत आहे..."
+                      : "Converting voice to text..."
+                    : t.placeholder
+                }
               />
+
+              {/* Speech-to-Text Microphone Button */}
+              <button
+                type="button"
+                className={`secondary-mic-btn ${
+                  status === "listening" ? "secondary-mic-btn--active" : ""
+                }`}
+                onClick={handleMicClick}
+                title={
+                  !isSupported
+                    ? "Voice input not supported"
+                    : status === "listening"
+                    ? "Listening… Click to stop"
+                    : "Click to speak and convert voice to text"
+                }
+                aria-label="Convert voice to text"
+              >
+                <MicIcon
+                  size={18}
+                  color={status === "listening" ? "#C53030" : "#0F6B68"}
+                />
+              </button>
+
+              {/* Send Button */}
               <button
                 type="submit"
                 className="secondary-search-btn"
