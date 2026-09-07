@@ -157,7 +157,7 @@
 
 .nav-container {
   display: grid;
-  grid-template-columns: 1fr 1fr auto 1fr 1fr;
+  grid-template-columns: repeat(5, 1fr);
   align-items: center;
   max-width: 650px;
   margin: 0 auto;
@@ -211,24 +211,17 @@
   white-space: nowrap;
 }
 
-/* ── Center Floating Actions (Navy Mic + Right Shifted Floating Camera) ── */
-.nav-floating-center-dock {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 8px;
-  margin: 0 4px;
-  position: relative;
-}
-
-.nav-floating-action-group {
+/* ── Center Floating Voice Action (Navy Blue) ───────────────────────────── */
+.nav-center-voice-group {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
+  width: 100%;
+  position: relative;
 }
 
-/* Primary Highlighted Navy Mic Button */
 .nav-floating-mic-btn {
   display: flex;
   align-items: center;
@@ -241,67 +234,29 @@
   color: #FFFFFF;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(18, 59, 93, 0.35);
-  transform: translateY(-10px);
+  transform: translateY(-12px);
   transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   outline: none;
+  margin-bottom: -6px;
 }
 
 .nav-floating-mic-btn:hover {
   background: #0B2F44;
-  transform: translateY(-12px);
+  transform: translateY(-14px);
   box-shadow: 0 6px 18px rgba(18, 59, 93, 0.45);
 }
 
 .nav-floating-mic-btn:active {
-  transform: translateY(-8px);
-}
-
-/* Right-Shifted Floating Camera Button */
-.nav-floating-camera-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #FFFFFF;
-  border: 1.5px solid #0F6B68;
-  color: #0F6B68;
-  cursor: pointer;
-  box-shadow: 0 3px 10px rgba(18, 59, 93, 0.15);
-  transform: translateY(-6px);
-  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-  outline: none;
-}
-
-.nav-floating-camera-btn:hover,
-.nav-floating-camera-btn--active {
-  background: var(--color-secondary-light);
-  border-color: #123B5D;
-  transform: translateY(-8px);
-}
-
-.nav-floating-camera-btn:active {
-  transform: translateY(-4px);
-}
-
-.nav-floating-btn-label {
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  text-align: center;
-  white-space: nowrap;
-  margin-top: -6px;
+  transform: translateY(-10px);
 }
 
 .nav-floating-btn-label--mic {
+  font-size: 10px;
+  font-weight: 700;
   color: #123B5D;
-}
-
-.nav-floating-btn-label--camera {
-  color: #68757D;
-  font-weight: 600;
-  margin-top: -2px;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
 }
 
 /* Nav Camera Popover Menu */
@@ -315,15 +270,14 @@
 .nav-camera-popover {
   position: absolute;
   bottom: calc(100% + 14px);
-  left: 50%;
-  transform: translateX(-50%);
+  right: 18%;
   z-index: 999;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   box-shadow: 0 8px 24px rgba(18, 59, 93, 0.16);
   padding: 8px;
-  width: 280px;
+  width: 270px;
   max-width: calc(100vw - 24px);
   display: flex;
   flex-direction: column;

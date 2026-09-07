@@ -5,7 +5,6 @@ import {
   MessageSquareIcon,
   MicIcon,
   CameraIcon,
-  GridIcon,
   ClipboardCheckIcon,
   ScanDocIcon,
   FaceScanIcon,
@@ -19,19 +18,6 @@ interface Props {
   onOpenVoiceMode: () => void;
 }
 
-const TAB_CONFIG: Array<{
-  id: AppTab;
-  icon: React.FC<{ size?: number; color?: string }>;
-  en: string;
-  hi: string;
-  mr: string;
-}> = [
-  { id: "home", icon: HomeIcon, en: "Home", hi: "गृह", mr: "मुख्य" },
-  { id: "ask", icon: MessageSquareIcon, en: "Ask AI", hi: "प्रश्न पूछें", mr: "प्रश्न विचारा" },
-  { id: "services", icon: GridIcon, en: "Services", hi: "सेवाएं", mr: "सेवा" },
-  { id: "grievance", icon: ClipboardCheckIcon, en: "Grievance", hi: "शिकायत", mr: "तक्रार" },
-];
-
 const VOICE_LABEL: Record<string, string> = {
   en: "Ask by Voice",
   hi: "बोलकर पूछें",
@@ -41,13 +27,13 @@ const VOICE_LABEL: Record<string, string> = {
   bn: "ভয়েস দিয়ে",
 };
 
-const SCAN_LABEL: Record<string, string> = {
-  en: "Scan",
-  hi: "स्कैन",
-  mr: "स्कॅन",
-  gu: "સ્કેન",
-  ta: "ஸ்கேன்",
-  bn: "স্ক্যান",
+const CAMERA_LABEL: Record<string, string> = {
+  en: "Camera",
+  hi: "कैमरा",
+  mr: "कॅमेरा",
+  gu: "કેમેરો",
+  ta: "கேமரா",
+  bn: "ক্যামেরা",
 };
 
 const Navigation: React.FC<Props> = ({
@@ -76,12 +62,12 @@ const Navigation: React.FC<Props> = ({
   };
 
   const voiceText = VOICE_LABEL[language] ?? VOICE_LABEL.en;
-  const scanText = SCAN_LABEL[language] ?? SCAN_LABEL.en;
+  const cameraText = CAMERA_LABEL[language] ?? CAMERA_LABEL.en;
 
   return (
     <>
       <nav className="app-nav" aria-label="Primary Navigation">
-        {/* Floating popover menu directly above the floating camera button */}
+        {/* Floating popover menu directly above the Camera button */}
         {isCameraMenuOpen && (
           <>
             <div
@@ -92,7 +78,7 @@ const Navigation: React.FC<Props> = ({
             <div
               className="nav-camera-popover"
               role="menu"
-              aria-label="Scan Options"
+              aria-label="Camera Options"
             >
               <button
                 type="button"
@@ -134,134 +120,83 @@ const Navigation: React.FC<Props> = ({
         )}
 
         <div className="nav-container">
-          {/* Tab 1: Home */}
-          {(() => {
-            const tab = TAB_CONFIG[0];
-            const IconComp = tab.icon;
-            const label = (tab as any)[language] ?? tab.en;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                className={`nav-item ${isActive ? "nav-item--active" : ""}`}
-                onClick={() => onTabChange(tab.id)}
-                aria-selected={isActive}
-                role="tab"
-              >
-                <div className="nav-item__icon-wrapper">
-                  <IconComp size={20} color={isActive ? "#123B5D" : "#68757D"} />
-                </div>
-                <span className="nav-item__label">{label}</span>
-              </button>
-            );
-          })()}
-
-          {/* Tab 2: Ask AI */}
-          {(() => {
-            const tab = TAB_CONFIG[1];
-            const IconComp = tab.icon;
-            const label = (tab as any)[language] ?? tab.en;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                className={`nav-item ${isActive ? "nav-item--active" : ""}`}
-                onClick={() => onTabChange(tab.id)}
-                aria-selected={isActive}
-                role="tab"
-              >
-                <div className="nav-item__icon-wrapper">
-                  <IconComp size={20} color={isActive ? "#123B5D" : "#68757D"} />
-                </div>
-                <span className="nav-item__label">{label}</span>
-              </button>
-            );
-          })()}
-
-          {/* Center Floating Actions: Primary Navy Mic + Right Shifted Floating Camera */}
-          <div className="nav-floating-center-dock">
-            {/* 1. Primary Highlighted Navy Mic Button */}
-            <div className="nav-floating-action-group">
-              <button
-                type="button"
-                className="nav-floating-mic-btn"
-                onClick={onOpenVoiceMode}
-                aria-label={voiceText}
-                title="Speak to SahkaarSetu"
-              >
-                <MicIcon size={24} color="#FFFFFF" />
-              </button>
-              <span className="nav-floating-btn-label nav-floating-btn-label--mic">
-                {voiceText}
-              </span>
+          {/* 1. Home */}
+          <button
+            type="button"
+            className={`nav-item ${activeTab === "home" ? "nav-item--active" : ""}`}
+            onClick={() => onTabChange("home")}
+            aria-selected={activeTab === "home"}
+            role="tab"
+          >
+            <div className="nav-item__icon-wrapper">
+              <HomeIcon size={20} color={activeTab === "home" ? "#123B5D" : "#68757D"} />
             </div>
+            <span className="nav-item__label">
+              {language === "hi" ? "गृह" : language === "mr" ? "मुख्य" : "Home"}
+            </span>
+          </button>
 
-            {/* 2. Floating Camera Button shifted to the right of the mic */}
-            <div className="nav-floating-action-group">
-              <button
-                type="button"
-                className={`nav-floating-camera-btn ${
-                  isCameraMenuOpen ? "nav-floating-camera-btn--active" : ""
-                }`}
-                onClick={() => setIsCameraMenuOpen((prev) => !prev)}
-                aria-label={scanText}
-                title="Scan Document or Face"
-              >
-                <CameraIcon size={18} color="#0F6B68" />
-              </button>
-              <span className="nav-floating-btn-label nav-floating-btn-label--camera">
-                {scanText}
-              </span>
+          {/* 2. Ask AI */}
+          <button
+            type="button"
+            className={`nav-item ${activeTab === "ask" ? "nav-item--active" : ""}`}
+            onClick={() => onTabChange("ask")}
+            aria-selected={activeTab === "ask"}
+            role="tab"
+          >
+            <div className="nav-item__icon-wrapper">
+              <MessageSquareIcon size={20} color={activeTab === "ask" ? "#123B5D" : "#68757D"} />
             </div>
+            <span className="nav-item__label">
+              {language === "hi" ? "प्रश्न पूछें" : language === "mr" ? "प्रश्न विचारा" : "Ask AI"}
+            </span>
+          </button>
+
+          {/* 3. CENTER: Floating Highlighted Navy Blue Voice Action */}
+          <div className="nav-center-voice-group">
+            <button
+              type="button"
+              className="nav-floating-mic-btn"
+              onClick={onOpenVoiceMode}
+              aria-label={voiceText}
+              title="Speak to SahkaarSetu"
+            >
+              <MicIcon size={26} color="#FFFFFF" />
+            </button>
+            <span className="nav-floating-btn-label nav-floating-btn-label--mic">
+              {voiceText}
+            </span>
           </div>
 
-          {/* Tab 3: Services */}
-          {(() => {
-            const tab = TAB_CONFIG[2];
-            const IconComp = tab.icon;
-            const label = (tab as any)[language] ?? tab.en;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                className={`nav-item ${isActive ? "nav-item--active" : ""}`}
-                onClick={() => onTabChange(tab.id)}
-                aria-selected={isActive}
-                role="tab"
-              >
-                <div className="nav-item__icon-wrapper">
-                  <IconComp size={20} color={isActive ? "#123B5D" : "#68757D"} />
-                </div>
-                <span className="nav-item__label">{label}</span>
-              </button>
-            );
-          })()}
+          {/* 4. CAMERA BUTTON (Replaced Services) */}
+          <button
+            type="button"
+            className={`nav-item nav-camera-item ${isCameraMenuOpen ? "nav-item--active" : ""}`}
+            onClick={() => setIsCameraMenuOpen((prev) => !prev)}
+            aria-label={cameraText}
+            title="Scan Document or Face"
+          >
+            <div className="nav-item__icon-wrapper">
+              <CameraIcon size={20} color={isCameraMenuOpen ? "#123B5D" : "#0F6B68"} />
+            </div>
+            <span className="nav-item__label">{cameraText}</span>
+          </button>
 
-          {/* Tab 4: Grievance */}
-          {(() => {
-            const tab = TAB_CONFIG[3];
-            const IconComp = tab.icon;
-            const label = (tab as any)[language] ?? tab.en;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                className={`nav-item ${isActive ? "nav-item--active" : ""}`}
-                onClick={() => onTabChange(tab.id)}
-                aria-selected={isActive}
-                role="tab"
-              >
-                <div className="nav-item__icon-wrapper">
-                  <IconComp size={20} color={isActive ? "#123B5D" : "#68757D"} />
-                </div>
-                <span className="nav-item__label">{label}</span>
-              </button>
-            );
-          })()}
+          {/* 5. Grievance */}
+          <button
+            type="button"
+            className={`nav-item ${activeTab === "grievance" ? "nav-item--active" : ""}`}
+            onClick={() => onTabChange("grievance")}
+            aria-selected={activeTab === "grievance"}
+            role="tab"
+          >
+            <div className="nav-item__icon-wrapper">
+              <ClipboardCheckIcon size={20} color={activeTab === "grievance" ? "#123B5D" : "#68757D"} />
+            </div>
+            <span className="nav-item__label">
+              {language === "hi" ? "शिकायत" : language === "mr" ? "तक्रार" : "Grievance"}
+            </span>
+          </button>
         </div>
       </nav>
 
