@@ -70,7 +70,54 @@ export const ConversationalAnswer: React.FC<Props> = ({
     .replace(/^What Should I Do Now:?\s*/i, "")
     .trim();
 
-  const blocks = cleanContent.split(/\n\n+/);
+  // Parse content line-by-line into proper semantic blocks (headings, lists, paragraphs)
+  const lines = cleanContent.split("\n").map((l) => l.trim());
+  interface SectionBlock {
+    type: "heading" | "bullet_list" | "numbered_list" | "paragraph";
+    items: string[];
+  }
+  const parsedBlocks: SectionBlock[] = [];
+  let currentBlock: SectionBlock | null = null;
+
+  for (const line of lines) {
+    if (!line) {
+      if (currentBlock) {
+        parsedBlocks.push(currentBlock);
+        currentBlock = null;
+      }
+      continue;
+    }
+
+    if (line.startsWith("#")) {
+      if (currentBlock) parsedBlocks.push(currentBlock);
+      parsedBlocks.push({ type: "heading", items: [line.replace(/^#+\s*/, "")] });
+      currentBlock = null;
+    } else if (/^[-*•]\s+/.test(line)) {
+      const itemText = line.replace(/^[-*•]\s+/, "");
+      if (currentBlock && currentBlock.type === "bullet_list") {
+        currentBlock.items.push(itemText);
+      } else {
+        if (currentBlock) parsedBlocks.push(currentBlock);
+        currentBlock = { type: "bullet_list", items: [itemText] };
+      }
+    } else if (/^\d+\.\s+/.test(line)) {
+      const itemText = line.replace(/^\d+\.\s+/, "");
+      if (currentBlock && currentBlock.type === "numbered_list") {
+        currentBlock.items.push(itemText);
+      } else {
+        if (currentBlock) parsedBlocks.push(currentBlock);
+        currentBlock = { type: "numbered_list", items: [itemText] };
+      }
+    } else {
+      if (currentBlock && currentBlock.type === "paragraph") {
+        currentBlock.items.push(line);
+      } else {
+        if (currentBlock) parsedBlocks.push(currentBlock);
+        currentBlock = { type: "paragraph", items: [line] };
+      }
+    }
+  }
+  if (currentBlock) parsedBlocks.push(currentBlock);
 
   const isOfflineFallback =
     /unable to reach the assistance service|सहाय्य सेवेशी संपर्क साधू शकत नाही|सहायता सेवा से संपर्क नहीं कर पा रहा/i.test(content);
@@ -88,52 +135,38 @@ export const ConversationalAnswer: React.FC<Props> = ({
 
       {/* Main Conversational Markdown Body */}
       <div className="conversational-body">
-        {blocks.map((block, bIdx) => {
-          const trimmed = block.trim();
-          if (!trimmed) return null;
-
-          // Headings ###
-          if (trimmed.startsWith("#")) {
-            const headingText = trimmed.replace(/^#+\s*/, "");
+        {parsedBlocks.map((block, bIdx) => {
+          if (block.type === "heading") {
             return (
               <h3 key={bIdx} className="conversational-heading">
-                {renderFormattedText(headingText)}
+                {renderFormattedText(block.items[0])}
               </h3>
             );
           }
 
-          const lines = trimmed.split("\n").map((l) => l.trim()).filter(Boolean);
-          const isNumberedList = lines.length > 0 && lines.every((l) => /^\d+\.\s+/.test(l));
-          const isBulletList = lines.length > 0 && lines.every((l) => /^[-*•]\s+/.test(l));
-
-          // Ordered List (Numbered steps)
-          if (isNumberedList) {
-            return (
-              <ol key={bIdx} className="conversational-ol">
-                {lines.map((line, lIdx) => {
-                  const itemText = line.replace(/^\d+\.\s+/, "");
-                  return <li key={lIdx}>{renderFormattedText(itemText)}</li>;
-                })}
-              </ol>
-            );
-          }
-
-          // Unordered List (Bullet points)
-          if (isBulletList) {
+          if (block.type === "bullet_list") {
             return (
               <ul key={bIdx} className="conversational-ul">
-                {lines.map((line, lIdx) => {
-                  const itemText = line.replace(/^[-*•]\s+/, "");
-                  return <li key={lIdx}>{renderFormattedText(itemText)}</li>;
-                })}
+                {block.items.map((item, iIdx) => (
+                  <li key={iIdx}>{renderFormattedText(item)}</li>
+                ))}
               </ul>
             );
           }
 
-          // Paragraph
+          if (block.type === "numbered_list") {
+            return (
+              <ol key={bIdx} className="conversational-ol">
+                {block.items.map((item, iIdx) => (
+                  <li key={iIdx}>{renderFormattedText(item)}</li>
+                ))}
+              </ol>
+            );
+          }
+
           return (
             <p key={bIdx} className="conversational-p">
-              {renderFormattedText(trimmed)}
+              {renderFormattedText(block.items.join(" "))}
             </p>
           );
         })}
