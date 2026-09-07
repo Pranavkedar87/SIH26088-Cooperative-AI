@@ -13,8 +13,9 @@
 .platform-app {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100%;
   height: 100vh;
+  height: 100dvh;
   width: 100%;
   max-width: 100%;
   margin: 0;
@@ -153,6 +154,7 @@
   flex-shrink: 0;
   z-index: 30;
   box-shadow: 0 -1px 4px rgba(18, 59, 93, 0.04);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .nav-container {
@@ -4044,6 +4046,70 @@
 
   .language-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 4. Mobile Bottom Navigation & Footer (Full Visibility) */
+  .app-nav {
+    position: relative;
+    z-index: 40;
+    padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));
+    background: var(--color-surface);
+  }
+
+  .nav-container {
+    padding: 3px 4px;
+    gap: 2px;
+  }
+
+  .nav-item {
+    min-height: 44px;
+    padding: 2px 1px;
+    gap: 1px;
+  }
+
+  .nav-item__icon-wrapper {
+    width: 22px;
+    height: 22px;
+  }
+
+  .nav-item__label {
+    font-size: 10px;
+    letter-spacing: -0.2px;
+  }
+
+  .nav-floating-mic-btn {
+    width: 46px;
+    height: 46px;
+    transform: translateY(-8px);
+    margin-bottom: -3px;
+  }
+
+  .nav-floating-mic-btn:hover {
+    transform: translateY(-10px);
+  }
+
+  .nav-floating-mic-btn:active {
+    transform: translateY(-6px);
+  }
+
+  .nav-floating-btn-label--mic {
+    font-size: 9.5px;
+    letter-spacing: -0.2px;
+  }
+
+  .nav-camera-popover {
+    bottom: calc(100% + 10px);
+    right: 8px;
+    left: auto;
+    width: calc(100vw - 32px);
+    max-width: 320px;
+  }
+
+  .hub-trust-footer {
+    padding: 10px 8px;
+    font-size: 11px;
+    gap: 6px;
+    margin-top: 8px;
   }
 }
 
