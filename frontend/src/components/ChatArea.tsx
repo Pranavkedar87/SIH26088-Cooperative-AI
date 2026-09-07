@@ -16,21 +16,21 @@ interface Props {
 const LOADING_MESSAGES: Record<string, string[]> = {
   en: [
     "🔎 Understanding your question…",
-    "📚 Checking verified knowledge…",
-    "🤖 Preparing your answer…",
-    "✅ Almost ready…",
+    "🤖 Generating your answer…",
+    "⏳ Still working, almost there…",
+    "🔄 This is taking a bit longer, please wait…",
   ],
   hi: [
     "🔎 आपका प्रश्न समझा जा रहा है…",
-    "📚 सत्यापित जानकारी खोजी जा रही है…",
-    "🤖 आपका उत्तर तैयार हो रहा है…",
-    "✅ लगभग तैयार है…",
+    "🤖 उत्तर तैयार हो रहा है…",
+    "⏳ अभी भी काम हो रहा है, एक पल…",
+    "🔄 थोड़ा और समय लग रहा है, कृपया रुकें…",
   ],
   mr: [
     "🔎 तुमचा प्रश्न समजला जात आहे…",
-    "📚 सत्यापित ज्ञान तपासले जात आहे…",
-    "🤖 तुमचे उत्तर तयार होत आहे…",
-    "✅ जवळजवळ तयार आहे…",
+    "🤖 उत्तर तयार होत आहे…",
+    "⏳ अजून काम सुरू आहे, थोडी प्रतीक्षा करा…",
+    "🔄 जास्त वेळ लागत आहे, कृपया थांबा…",
   ],
 };
 
@@ -66,8 +66,8 @@ const ChatArea: React.FC<Props> = ({
     setLoadingMsgIdx(0);
     const msgs = LOADING_MESSAGES[language] ?? LOADING_MESSAGES.en;
     const id = setInterval(() => {
-      setLoadingMsgIdx((prev) => (prev + 1) % msgs.length);
-    }, 1800);
+      setLoadingMsgIdx((prev) => Math.min(prev + 1, msgs.length - 1));
+    }, 6000);
     return () => clearInterval(id);
   }, [isLoading, language]);
 

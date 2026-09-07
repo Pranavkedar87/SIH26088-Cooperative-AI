@@ -97,7 +97,7 @@ def clean_speech_text(text: str) -> str:
 def generate_structured_answer(
     system_instruction: str,
     user_prompt: str,
-    max_tokens: int = 1500,
+    max_tokens: int = 800,
 ) -> tuple[Optional[dict[str, Any]], str, dict[str, Any]]:
     """
     Primary synthesis generator using Gemini API (gemini-2.5-flash).
@@ -213,9 +213,10 @@ class RAGPipeline:
         router_mode = routing_decision.mode
         router_latency_ms = (time.perf_counter() - router_start) * 1000.0
 
-        # Stage 4: AI Search Query Generation & Knowledge Retrieval (RAG)
+        # Stage 4 + 5: RAG retrieval AND Web Search run IN PARALLEL for speed
         rag_start = time.perf_counter()
 
+        # Build effective search query for RAG + web
         if is_contextual_followup and session.topic:
             topic_query_prefix = session.topic
             if session.topic == "CROP_INSURANCE":
@@ -231,31 +232,43 @@ class RAGPipeline:
         if session.collected_slots.get("state"):
             effective_search_query += f" {session.collected_slots.get('state')}"
 
-        rag_chunks: list[RetrievedChunk] = []
-        if routing_decision.trigger_rag:
+        async def _fetch_rag() -> list:
+            if not routing_decision.trigger_rag:
+                return []
             try:
-                rag_chunks = retrieve_relevant_knowledge(
-                    query=effective_search_query,
-                    language=detected_language,
-                    intent=intent,
-                    top_k=4,
-                    match_threshold=0.45,
+                loop = asyncio.get_running_loop()
+                return await loop.run_in_executor(
+                    None,
+                    lambda: retrieve_relevant_knowledge(
+                        query=effective_search_query,
+                        language=detected_language,
+                        intent=intent,
+                        top_k=3,
+                        match_threshold=0.45,
+                    )
                 )
             except Exception as exc:
                 logger.error("Knowledge retrieval exception: %s", exc)
-                rag_chunks = []
-        rag_latency_ms = (time.perf_counter() - rag_start) * 1000.0
+                return []
 
-        # Stage 5: Live Internet Web Research
-        web_start = time.perf_counter()
-        web_results: List[Dict[str, Any]] = []
-        if routing_decision.trigger_web or (router_mode not in {RouterMode.GREETING, RouterMode.CONVERSATIONAL}):
+        async def _fetch_web() -> list:
+            # Only trigger web search when router explicitly requests it
+            if not routing_decision.trigger_web:
+                return []
             try:
-                web_results = search_web_knowledge(effective_search_query, max_results=4)
+                loop = asyncio.get_running_loop()
+                return await loop.run_in_executor(
+                    None,
+                    lambda: search_web_knowledge(effective_search_query, max_results=2)
+                )
             except Exception as exc:
                 logger.warning(f"Web search execution exception: {exc}")
-                web_results = []
-        web_search_latency_ms = (time.perf_counter() - web_start) * 1000.0
+                return []
+
+        # Run RAG + web search concurrently
+        rag_chunks, web_results = await asyncio.gather(_fetch_rag(), _fetch_web())
+        rag_latency_ms = (time.perf_counter() - rag_start) * 1000.0
+        web_search_latency_ms = rag_latency_ms  # both ran in parallel
 
         # Stage 6: Extract and combine verified source citations with Authority Levels
         sources_list: list[dict[str, Any]] = []
@@ -387,7 +400,7 @@ class RAGPipeline:
         prompt_build_latency_ms = (time.perf_counter() - prompt_start) * 1000.0
 
         # Stage 8: Call Provider-Agnostic LLM Engine (Gemini Primary -> Groq Fallback)
-        max_tokens = 350 if resp_mode == "voice" else 1500
+        max_tokens = 300 if resp_mode == "voice" else 800
         json_payload, used_model, llm_stats = generate_structured_answer(
             system_instruction=system_instruction,
             user_prompt=user_prompt,

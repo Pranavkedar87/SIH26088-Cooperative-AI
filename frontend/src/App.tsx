@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
 import type { ChatMessage, LanguageCode, AppTab, HistoryItem } from "./types";
-import { sendQuery } from "./api/client";
+import { sendQuery, wakeUpBackend } from "./api/client";
 import { useTextToSpeech } from "./hooks/useTextToSpeech";
 import { Header } from "./components/Header";
 import { SideDrawer } from "./components/SideDrawer";
@@ -66,6 +66,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     handleDetectLocation();
+    // Pre-warm the Render backend on app startup so it's ready when user asks
+    wakeUpBackend();
   }, [handleDetectLocation]);
 
   // Local storage history
@@ -135,10 +137,13 @@ const App: React.FC = () => {
           setSessionId(response.session_id);
         }
 
+        // Prefer display_answer (formatted markdown) over raw answer
+        const content = response.display_answer || response.answer || "";
+
         addMessage({
           id: uid(),
           role: "assistant",
-          content: response.answer,
+          content,
           timestamp: new Date(),
           language: response.language,
           sources: response.sources,
@@ -149,10 +154,10 @@ const App: React.FC = () => {
         console.error("sendQuery error:", err);
         const msg =
           language === "hi"
-            ? "सर्वर से संपर्क हो रहा है, कृपया पुनः प्रयास करें।"
+            ? "नेटवर्क एरर हुई। कृपया पुनः प्रयास करें।"
             : language === "mr"
-            ? "सर्व्हरशी संपर्क होत आहे, कृपया पुन्हा प्रयत्न करा."
-            : "Connecting to server… Please try again.";
+            ? "नेटवर्क एरर आला. कृपया पुन्हा प्रयत्न करा."
+            : "Network error. Please tap Send again.";
         setError(msg);
       } finally {
         setIsLoading(false);

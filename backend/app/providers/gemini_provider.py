@@ -288,7 +288,7 @@ class GeminiProvider(AIProvider):
 def query_gemini_llm(
     system_instruction: str,
     user_prompt: str,
-    max_tokens: int = 850,
+    max_tokens: int = 800,
     temperature: float = 0.2,
     response_mime_type: Optional[str] = "application/json",
 ) -> tuple[Optional[str], str, dict[str, Any]]:
@@ -306,7 +306,7 @@ def query_gemini_llm(
             return None, "none", stats
 
         stats["llm_actually_called"] = True
-        client = genai.Client(api_key=api_key)
+        client = genai.Client(api_key=api_key, http_options={"timeout": 30})
         models = [
             "gemini-3.7-flash",
             "gemini-flash-latest",

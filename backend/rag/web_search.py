@@ -144,7 +144,7 @@ def search_web_knowledge(query: str, max_results: int = 4) -> List[Dict[str, Any
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             },
         )
-        with urllib.request.urlopen(req, timeout=5.0) as resp:
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
             html = resp.read().decode("utf-8", errors="ignore")
             # Extract URLs, titles, and snippets
             matches = re.findall(
