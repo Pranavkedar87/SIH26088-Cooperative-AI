@@ -17,7 +17,7 @@ export const SplashScreen: React.FC<Props> = ({ onComplete }) => {
     <div className="splash-screen-canvas" onClick={onComplete} role="button" tabIndex={0}>
       <div className="splash-center-content">
         <div className="splash-logo-circle">
-          <SahkaarSetuLogo size={104} />
+          <SahkaarSetuLogo size={128} className="splash-logo-img" />
         </div>
         <h1 className="splash-app-title">SahkaarSetu</h1>
         <p className="splash-app-tagline">सहकार से समृद्धि • Cooperation for Prosperity</p>

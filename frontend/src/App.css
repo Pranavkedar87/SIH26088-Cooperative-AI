@@ -3945,7 +3945,7 @@
     gap: 6px;
   }
 
-  .sahkaar-brand-logo {
+  .header-brand-box .sahkaar-brand-logo {
     width: 32px !important;
     height: 32px !important;
   }
@@ -4131,7 +4131,7 @@
     gap: 4px;
   }
 
-  .sahkaar-brand-logo {
+  .header-brand-box .sahkaar-brand-logo {
     width: 28px !important;
     height: 28px !important;
   }
@@ -4665,20 +4665,27 @@
 }
 
 .splash-logo-circle {
-  width: 130px;
-  height: 130px;
+  width: 154px;
+  height: 154px;
   border-radius: 50%;
   background: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 30px rgba(18, 107, 98, 0.12);
-  margin-bottom: 6px;
+  box-shadow: 0 12px 36px rgba(18, 59, 93, 0.16);
+  margin-bottom: 12px;
   animation: pulseGlow 2.2s infinite ease-in-out;
 }
 
+.splash-logo-img,
+.splash-logo-circle .sahkaar-brand-logo {
+  width: 128px !important;
+  height: 128px !important;
+  object-fit: contain;
+}
+
 .splash-app-title {
-  font-size: 32px;
+  font-size: 38px;
   font-weight: 900;
   color: #123B5D;
   margin: 0;
@@ -4686,7 +4693,7 @@
 }
 
 .splash-app-tagline {
-  font-size: 13.5px;
+  font-size: 15.5px;
   color: #68757D;
   margin: 0;
   font-weight: 600;
@@ -4694,16 +4701,16 @@
 }
 
 .splash-spinner-container {
-  margin-top: 24px;
+  margin-top: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .splash-spinner-ring {
-  width: 38px;
-  height: 38px;
-  border: 3.5px solid rgba(18, 107, 98, 0.15);
+  width: 44px;
+  height: 44px;
+  border: 4px solid rgba(18, 59, 93, 0.15);
   border-top-color: #123B5D;
   border-radius: 50%;
   animation: spin 0.85s linear infinite;
