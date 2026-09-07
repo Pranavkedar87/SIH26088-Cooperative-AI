@@ -11,7 +11,11 @@ import {
   MicIcon,
   SendIcon,
   ShieldCheckIcon,
+  CameraIcon,
+  ScanDocIcon,
+  FaceScanIcon,
 } from "./Icons";
+import { CameraCaptureModal, type CameraMode } from "./CameraCaptureModal";
 
 interface Props {
   language: LanguageCode;
@@ -22,35 +26,44 @@ interface Props {
 
 const HERO_TEXT: Record<
   string,
-  { headline: string; sub: string; voiceBtn: string; typeOr: string; placeholder: string; helpHeader: string; helpSub: string }
+  { headline: string; sub: string; typeOr: string; placeholder: string; helpHeader: string; helpSub: string }
 > = {
   mr: {
     headline: "सहकारी सेवांसाठी तुमचा डिजिटल साथी",
     sub: "समजून घ्या • विचारा • पुढील पाऊल जाणून घ्या",
-    voiceBtn: "बोलून विचारा",
-    typeOr: "किंवा प्रश्न टाइप करा",
+    typeOr: "प्रश्न टाइप करा",
     placeholder: "सहकारी सेवा, योजना किंवा कायद्याबद्दल विचारा...",
     helpHeader: "तुम्हाला कशाबद्दल मदत हवी आहे?",
-    helpSub: "तुमची समस्या निवडा किंवा SahkaarSetu ला बोलून सांगा.",
+    helpSub: "तुमची समस्या निवडा किंवा SahkaarSetu ला विचारा.",
   },
   hi: {
     headline: "सहकारी सेवाओं के लिए आपका डिजिटल साथी",
     sub: "समझें • पूछें • अगला कदम जानें",
-    voiceBtn: "बोलकर पूछें",
-    typeOr: "या प्रश्न टाइप करें",
+    typeOr: "प्रश्न टाइप करें",
     placeholder: "सहकारी सेवाओं, योजनाओं या कानून के बारे में पूछें...",
     helpHeader: "आपको किस विषय में सहायता चाहिए?",
-    helpSub: "अपनी समस्या चुनें या SahkaarSetu से बोलकर कहें।",
+    helpSub: "अपनी समस्या चुनें या SahkaarSetu से पूछें।",
   },
   en: {
     headline: "Your Digital Companion for Cooperative Services",
     sub: "Understand • Ask • Know Next Steps",
-    voiceBtn: "Speak to SahkaarSetu",
-    typeOr: "or type your question",
+    typeOr: "Type your question",
     placeholder: "Ask about cooperative services, schemes or laws...",
     helpHeader: "What do you need help with?",
-    helpSub: "Select a topic or speak to SahkaarSetu directly.",
+    helpSub: "Select a topic or ask SahkaarSetu directly.",
   },
+};
+
+const VOICE_ACTION_LABEL: Record<string, string> = {
+  en: "Ask by Voice",
+  hi: "बोलकर पूछें",
+  mr: "बोलून विचारा",
+};
+
+const SCAN_ACTION_LABEL: Record<string, string> = {
+  en: "Scan",
+  hi: "स्कैन",
+  mr: "स्कॅन",
 };
 
 const SERVICE_CARDS: Array<{
@@ -133,6 +146,8 @@ const AssistanceHub: React.FC<Props> = ({
 }) => {
   const t = HERO_TEXT[language] ?? HERO_TEXT.en;
   const [typedInput, setTypedInput] = useState("");
+  const [isCameraMenuOpen, setIsCameraMenuOpen] = useState(false);
+  const [activeCameraMode, setActiveCameraMode] = useState<CameraMode | null>(null);
 
   const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,6 +155,11 @@ const AssistanceHub: React.FC<Props> = ({
       onStartAsk(typedInput.trim());
       setTypedInput("");
     }
+  };
+
+  const handleSelectCamera = (mode: CameraMode) => {
+    setIsCameraMenuOpen(false);
+    setActiveCameraMode(mode);
   };
 
   return (
@@ -150,23 +170,7 @@ const AssistanceHub: React.FC<Props> = ({
           <h2 className="hub-hero__headline">{t.headline}</h2>
           <p className="hub-hero__sub">{t.sub}</p>
 
-          {/* PRIMARY VOICE CTA */}
-          <button
-            type="button"
-            className="hero-voice-cta"
-            onClick={onOpenVoiceMode}
-            aria-label="Start Voice Assistance"
-          >
-            <div className="hero-voice-cta__icon">
-              <MicIcon size={24} color="#FFFFFF" />
-            </div>
-            <div className="hero-voice-cta__text">
-              <span className="cta-main-label">{t.voiceBtn}</span>
-              <span className="cta-sub-label">Hindi • Marathi • English</span>
-            </div>
-          </button>
-
-          {/* SECONDARY TEXT INPUT */}
+          {/* TEXT QUESTION INPUT (Remains Unchanged) */}
           <div className="hero-secondary-input">
             <span className="secondary-label">{t.typeOr}</span>
             <form onSubmit={handleTextSubmit} className="secondary-search-bar">
@@ -232,6 +236,96 @@ const AssistanceHub: React.FC<Props> = ({
         </div>
       </section>
 
+      {/* FLOATING VOICE + CAMERA ACTIONS IN LOWER CONTENT AREA (Above Bottom Nav) */}
+      <section className="hub-floating-actions-area" aria-label="Quick Voice and Scan Actions">
+        <div className="hub-action-controls-row">
+          {/* PRIMARY: ASK BY VOICE */}
+          <div className="hub-voice-action-group">
+            <button
+              type="button"
+              className="hub-primary-voice-btn"
+              onClick={onOpenVoiceMode}
+              aria-label={VOICE_ACTION_LABEL[language] ?? VOICE_ACTION_LABEL.en}
+            >
+              <MicIcon size={26} color="#FFFFFF" />
+            </button>
+            <span className="hub-action-label hub-action-label--primary">
+              {VOICE_ACTION_LABEL[language] ?? VOICE_ACTION_LABEL.en}
+            </span>
+          </div>
+
+          {/* SECONDARY: SCAN (CAMERA) */}
+          <div className="hub-camera-action-group">
+            <button
+              type="button"
+              className={`hub-secondary-camera-btn ${
+                isCameraMenuOpen ? "hub-secondary-camera-btn--active" : ""
+              }`}
+              onClick={() => setIsCameraMenuOpen((prev) => !prev)}
+              aria-label={SCAN_ACTION_LABEL[language] ?? SCAN_ACTION_LABEL.en}
+              title="Scan Document or Face"
+            >
+              <CameraIcon size={20} color="#0F6B68" />
+            </button>
+            <span className="hub-action-label hub-action-label--secondary">
+              {SCAN_ACTION_LABEL[language] ?? SCAN_ACTION_LABEL.en}
+            </span>
+
+            {/* Popover Action Menu */}
+            {isCameraMenuOpen && (
+              <>
+                <div
+                  className="hub-camera-popover-overlay"
+                  onClick={() => setIsCameraMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <div
+                  className="hub-camera-popover"
+                  role="menu"
+                  aria-label="Scan Options"
+                >
+                  <button
+                    type="button"
+                    className="hub-camera-popover-item"
+                    onClick={() => handleSelectCamera("document_scan")}
+                    role="menuitem"
+                  >
+                    <div className="hub-popover-icon-box">
+                      <ScanDocIcon size={18} color="#0F6B68" />
+                    </div>
+                    <div className="hub-popover-text">
+                      <span className="hub-popover-title">Scan Document</span>
+                      <span className="hub-popover-desc">
+                        Capture forms & certificates
+                      </span>
+                    </div>
+                  </button>
+
+                  <div className="hub-popover-divider" />
+
+                  <button
+                    type="button"
+                    className="hub-camera-popover-item"
+                    onClick={() => handleSelectCamera("face_scan")}
+                    role="menuitem"
+                  >
+                    <div className="hub-popover-icon-box">
+                      <FaceScanIcon size={18} color="#0F6B68" />
+                    </div>
+                    <div className="hub-popover-text">
+                      <span className="hub-popover-title">Face Scan (Optional)</span>
+                      <span className="hub-popover-desc">
+                        Preview assistant feature
+                      </span>
+                    </div>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Trust Element Footer Note */}
       <footer className="hub-trust-footer">
         <div className="trust-item">
@@ -247,6 +341,16 @@ const AssistanceHub: React.FC<Props> = ({
           <span>Cooperative Assistance</span>
         </div>
       </footer>
+
+      {/* Camera Capture Modal */}
+      {activeCameraMode && (
+        <CameraCaptureModal
+          mode={activeCameraMode}
+          isOpen={Boolean(activeCameraMode)}
+          onClose={() => setActiveCameraMode(null)}
+          language={language}
+        />
+      )}
     </div>
   );
 };
