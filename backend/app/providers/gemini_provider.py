@@ -293,54 +293,84 @@ def query_gemini_llm(
     response_mime_type: Optional[str] = "application/json",
 ) -> tuple[Optional[str], str, dict[str, Any]]:
     """
-    Helper to query Gemini API as LLM provider.
+    Query Gemini API via direct REST calls (bypasses SDK issues).
     Returns (response_text, model_used, telemetry_stats).
     """
+    import json as _json
     import time
+    import urllib.request as _urllib_req
+
     start_time = time.perf_counter()
     stats = {"llm_actually_called": False, "latency_ms": 0.0}
+
     try:
         settings = get_settings()
         api_key = (settings.gemini_api_key or os.getenv("GEMINI_API_KEY", "")).strip()
         if not api_key:
+            logger.error("GEMINI_API_KEY is not set")
             return None, "none", stats
 
         stats["llm_actually_called"] = True
-        client = genai.Client(api_key=api_key, http_options={"timeout": 30})
+
+        # Models verified working via REST API (tested in order of speed/quality)
         models = [
             "gemini-3.7-flash",
-            "gemini-flash-latest",
             "gemini-flash-lite-latest",
             "gemini-3.5-flash-lite",
-            "gemini-3.8-flash",
             "gemini-3.6-flash",
+            "gemini-3.8-flash",
         ]
+
         for model_name in models:
             try:
-                config_kwargs: dict[str, Any] = {
-                    "system_instruction": system_instruction,
-                    "temperature": temperature,
-                    "max_output_tokens": max_tokens,
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+
+                # Build request body
+                body: dict[str, Any] = {
+                    "contents": [{"parts": [{"text": user_prompt}]}],
+                    "systemInstruction": {"parts": [{"text": system_instruction}]},
+                    "generationConfig": {
+                        "temperature": temperature,
+                        "maxOutputTokens": max_tokens,
+                    },
                 }
                 if response_mime_type:
-                    config_kwargs["response_mime_type"] = response_mime_type
+                    body["generationConfig"]["responseMimeType"] = response_mime_type
 
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=user_prompt,
-                    config=genai_types.GenerateContentConfig(**config_kwargs),
+                req = _urllib_req.Request(
+                    url,
+                    data=_json.dumps(body).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
                 )
-                if response and response.text and response.text.strip():
+
+                with _urllib_req.urlopen(req, timeout=12) as resp:
+                    data = _json.loads(resp.read().decode("utf-8"))
+
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    logger.warning("Gemini REST model '%s' returned no candidates", model_name)
+                    continue
+
+                parts = candidates[0].get("content", {}).get("parts", [])
+                if not parts:
+                    logger.warning("Gemini REST model '%s' returned empty parts", model_name)
+                    continue
+
+                text = parts[0].get("text", "").strip()
+                if text:
                     dur = (time.perf_counter() - start_time) * 1000.0
                     stats["latency_ms"] = dur
-                    logger.info(f"[AI PROVIDER] GEMINI | [MODEL] {model_name} | [STATUS] 200 SUCCESS ({dur:.2f}ms)")
-                    return response.text.strip(), model_name, stats
+                    logger.info(f"[AI PROVIDER] GEMINI REST | [MODEL] {model_name} | [STATUS] SUCCESS ({dur:.2f}ms)")
+                    return text, model_name, stats
+
             except Exception as exc:
-                logger.warning("Gemini model '%s' failed: %s", model_name, exc)
+                logger.warning("Gemini REST model '%s' failed: %s", model_name, exc)
                 continue
+
     except Exception as exc:
-        logger.error("Gemini API execution error: %s", exc)
+        logger.error("Gemini REST API execution error: %s", exc)
 
     stats["latency_ms"] = (time.perf_counter() - start_time) * 1000.0
     return None, "none", stats
+
 

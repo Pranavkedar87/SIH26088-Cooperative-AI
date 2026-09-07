@@ -100,8 +100,10 @@ def generate_structured_answer(
     max_tokens: int = 800,
 ) -> tuple[Optional[dict[str, Any]], str, dict[str, Any]]:
     """
-    Primary synthesis generator using Gemini API (gemini-2.5-flash).
+    Primary synthesis generator: Gemini (REST) → Groq fallback.
+    Always returns a result if either provider works.
     """
+    # 1. Try Gemini first
     raw_answer, used_model, gemini_stats = query_gemini_llm(
         system_instruction=system_instruction,
         user_prompt=user_prompt,
@@ -112,8 +114,40 @@ def generate_structured_answer(
     if raw_answer:
         payload = extract_json_payload(raw_answer)
         if payload and isinstance(payload, dict) and ("display_answer" in payload or "summary" in payload or "title" in payload):
-            logger.info(f"[PRIMARY LLM] Structured output generated via Gemini ({used_model})")
+            logger.info(f"[PRIMARY LLM] Structured output via Gemini ({used_model})")
             return payload, f"GEMINI ({used_model})", gemini_stats
+
+    # 2. Groq fallback: generate a plain text answer and wrap it in our schema
+    logger.warning("[PRIMARY LLM] Gemini failed — switching to Groq fallback")
+    try:
+        groq_answer, groq_model, groq_stats = query_groq_llm(
+            system_instruction=system_instruction,
+            user_prompt=user_prompt,
+            max_tokens=max_tokens,
+            temperature=0.3,
+        )
+        if groq_answer:
+            # Try to parse as JSON first (Groq sometimes returns JSON)
+            payload = extract_json_payload(groq_answer)
+            if payload and isinstance(payload, dict) and ("display_answer" in payload or "summary" in payload or "title" in payload):
+                logger.info(f"[FALLBACK LLM] Structured JSON from Groq ({groq_model})")
+                return payload, f"GROQ ({groq_model})", groq_stats
+
+            # Wrap plain text response in our schema
+            wrapped = {
+                "display_answer": {
+                    "title": "SahkaarSetu AI",
+                    "summary": groq_answer.strip(),
+                    "what_should_i_do_now": [],
+                    "detailed_information": "",
+                    "next_guidance": "",
+                },
+                "spoken_answer": groq_answer.strip()[:300],
+            }
+            logger.info(f"[FALLBACK LLM] Plain text wrapped from Groq ({groq_model})")
+            return wrapped, f"GROQ ({groq_model})", groq_stats
+    except Exception as exc:
+        logger.error(f"Groq fallback also failed: {exc}")
 
     return None, "none", {}
 
