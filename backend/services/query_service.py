@@ -125,8 +125,12 @@ async def process_user_query(
         answer_focus=getattr(rag_response, "answer_focus", "OVERVIEW"),
         source=rag_response.source,
         sources=source_items,
+        suggested_followups=getattr(rag_response, "suggested_followups", []) or [],
         next_action=rag_response.next_action,
         session_id=res_session_id,
         conversation_id=conversation_id,
+        grounding_status=getattr(rag_response, "grounding_status", "VERIFIED"),
+        authority_level=getattr(rag_response, "authority_level", "OFFICIAL_GOVERNMENT"),
+        claims_validated=getattr(rag_response, "claims_validated", True),
     )
 

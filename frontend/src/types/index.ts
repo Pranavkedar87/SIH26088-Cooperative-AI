@@ -130,6 +130,11 @@ export interface SourceItem {
   document_id?: string | null;
 }
 
+export interface SuggestedFollowup {
+  label: string;
+  query: string;
+}
+
 export type MessageRole = "user" | "assistant";
 
 export interface ChatMessage {
@@ -142,6 +147,7 @@ export interface ChatMessage {
   sources?: SourceItem[];
   intent?: string;
   answer_focus?: string;
+  suggested_followups?: SuggestedFollowup[];
 }
 
 // ── API Contracts ─────────────────────────────────────────────────────────────
@@ -162,9 +168,13 @@ export interface QueryResponse {
   answer_focus?: string;
   source: string | null;
   sources?: SourceItem[];
+  suggested_followups?: SuggestedFollowup[];
   next_action: string | null;
   session_id?: string | null;
   conversation_id?: string | null;
+  grounding_status?: string;
+  authority_level?: string;
+  claims_validated?: boolean;
 }
 
 // ── Voice / Speech ───────────────────────────────────────────────────────────

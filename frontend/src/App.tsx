@@ -144,11 +144,13 @@ const App: React.FC = () => {
           id: uid(),
           role: "assistant",
           content,
+          spoken_answer: response.spoken_answer,
           timestamp: new Date(),
           language: response.language,
           sources: response.sources,
           intent: response.intent,
           answer_focus: response.answer_focus,
+          suggested_followups: response.suggested_followups,
         });
       } catch (err) {
         console.error("sendQuery error:", err);

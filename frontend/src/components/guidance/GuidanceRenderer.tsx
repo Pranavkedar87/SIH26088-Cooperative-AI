@@ -1,6 +1,6 @@
 import React from "react";
 import ConversationalAnswer from "./ConversationalAnswer";
-import type { LanguageCode, SourceItem } from "../../types";
+import type { LanguageCode, SourceItem, SuggestedFollowup } from "../../types";
 
 interface Props {
   rawContent: string;
@@ -9,6 +9,7 @@ interface Props {
   answerFocus?: string;
   onExecuteAction?: (query: string) => void;
   sources?: SourceItem[];
+  suggestedFollowups?: SuggestedFollowup[];
 }
 
 export const GuidanceRenderer: React.FC<Props> = ({
@@ -17,6 +18,7 @@ export const GuidanceRenderer: React.FC<Props> = ({
   answerFocus,
   onExecuteAction,
   sources = [],
+  suggestedFollowups = [],
 }) => {
   return (
     <ConversationalAnswer
@@ -25,6 +27,7 @@ export const GuidanceRenderer: React.FC<Props> = ({
       answerFocus={answerFocus}
       onExecuteAction={onExecuteAction}
       sources={sources}
+      suggestedFollowups={suggestedFollowups}
     />
   );
 };

@@ -45,7 +45,7 @@ def extract_json_payload(text: str) -> Optional[dict[str, Any]]:
 from app.config import get_settings
 from app.providers.groq_provider import query_groq_llm, GROQ_MODELS
 from app.providers.gemini_provider import query_gemini_llm
-from app.schemas.query import IntentCode, QueryRequest, QueryResponse
+from app.schemas.query import IntentCode, QueryRequest, QueryResponse, SuggestedFollowup
 from rag.intent import classify_intent, extract_topic_and_goal, extract_answer_focus
 from rag.prompts import RAG_SYSTEM_INSTRUCTION, DIRECT_RESPONSES, NO_KNOWLEDGE_FALLBACK, NO_KNOWLEDGE_FALLBACK_WITH_STATE, get_intent_fallback
 from rag.retriever import retrieve_relevant_knowledge, RetrievedChunk
@@ -150,6 +150,221 @@ def generate_structured_answer(
         logger.error(f"Groq fallback also failed: {exc}")
 
     return None, "none", {}
+
+
+def generate_contextual_followups(
+    intent: str,
+    topic: Optional[str],
+    answer_focus: str,
+    language: str,
+    message: str,
+    llm_followups: Optional[list] = None,
+) -> list[dict[str, str]]:
+    """
+    Produces 2 to 4 contextual follow-up questions tailored to the ongoing topic,
+    answer_focus, and user's selected language.
+    """
+    lang = language.lower() if language in ["en", "hi", "mr"] else "en"
+
+    # If LLM provided high quality followups with valid label & query, validate and sanitize
+    if llm_followups and isinstance(llm_followups, list):
+        sanitized = []
+        for item in llm_followups:
+            if isinstance(item, dict) and item.get("label") and item.get("query"):
+                lbl = str(item["label"]).strip()
+                qry = str(item["query"]).strip()
+                if 2 <= len(lbl) <= 60 and len(qry) >= 5:
+                    sanitized.append({"label": lbl, "query": qry})
+            elif isinstance(item, str) and item.strip():
+                lbl = item.strip()
+                sanitized.append({"label": lbl, "query": lbl})
+        if 2 <= len(sanitized) <= 4:
+            return sanitized
+
+    focus = (answer_focus or "OVERVIEW").upper()
+    top = (topic or "").upper()
+    intnt = (intent or "").upper()
+
+    # 1. CROP INSURANCE / PMFBY
+    if top == "CROP_INSURANCE" or intnt == "PMFBY":
+        if focus == "OVERVIEW":
+            if lang == "mr":
+                return [
+                    {"label": "मला कोणती कागदपत्रे लागतील?", "query": "पीएमएफबीवाय पीक नुकसान भरपाईसाठी आवश्यक कागदपत्रे कोणती आहेत?"},
+                    {"label": "नुकसान नोंदवण्याची प्रक्रिया काय आहे?", "query": "पीएमएफबीवाय पीक नुकसान नोंदणीची अधिकृत टप्पा-निहाय प्रक्रिया काय आहे?"},
+                    {"label": "अधिकृत संपर्क व हेल्पलाईन काय आहे?", "query": "पीएमएफबीवाय पीक विम्यासंदर्भात अधिकृत हेल्पलाइन नंबर आणि संपर्क तपशील काय आहेत?"},
+                ]
+            elif lang == "hi":
+                return [
+                    {"label": "मुझे कौन से दस्तावेज चाहिए?", "query": "पीएमएफबीवाई फसल नुकसान रिपोर्टिंग के लिए कौन से आवश्यक दस्तावेज हैं?"},
+                    {"label": "फसल नुकसान की प्रक्रिया क्या है?", "query": "पीएमएफबीवाई के तहत फसल नुकसान दर्ज करने की चरण-दर-चरण प्रक्रिया क्या है?"},
+                    {"label": "आधिकारिक हेल्पलाइन नंबर क्या है?", "query": "पीएमएफबीवाई फसल बीमा के लिए आधिकारिक हेल्पलाइन और संपर्क विवरण क्या हैं?"},
+                ]
+            else:
+                return [
+                    {"label": "What documents do I need?", "query": "What documents do I need for PMFBY crop damage reporting?"},
+                    {"label": "What is the reporting procedure?", "query": "What is the official procedure for PMFBY crop damage reporting?"},
+                    {"label": "Who should I contact?", "query": "Who are the official PMFBY helpline and contact authorities?"},
+                ]
+        elif focus == "DOCUMENTS":
+            if lang == "mr":
+                return [
+                    {"label": "अर्जाची प्रक्रिया काय आहे?", "query": "पीएमएफबीवाय अंतर्गत अर्ज किंवा नुकसान भरपाईची टप्पा-निहाय प्रक्रिया काय आहे?"},
+                    {"label": "नुकसान नोंदवण्याची मुदत किती आहे?", "query": "नैसर्गिक आपत्तीनंतर पीक नुकसान नोंदवण्याची अधिकृत मुदत काय आहे?"},
+                    {"label": "कागदपत्रे कुठे जमा करावीत?", "query": "पीक विम्याची कागदपत्रे कोठे आणि कोणाकडे जमा करावी लागतात?"},
+                ]
+            elif lang == "hi":
+                return [
+                    {"label": "आवेदन की प्रक्रिया क्या है?", "query": "पीएमएफबीवाई के तहत फसल बीमा क्लेम की चरण-दर-चरण प्रक्रिया क्या है?"},
+                    {"label": "नुकसान रिपोर्ट करने की समय सीमा क्या है?", "query": "प्राकृतिक आपदा के बाद फसल नुकसान रिपोर्ट करने की आधिकारिक समय सीमा क्या है?"},
+                    {"label": "दस्तावेज कहाँ जमा करें?", "query": "फसल बीमा क्लेम के दस्तावेज कहाँ और किसके पास जमा करने होते हैं?"},
+                ]
+            else:
+                return [
+                    {"label": "What is the application procedure?", "query": "What is the step-by-step procedure for PMFBY claim submission?"},
+                    {"label": "What is the reporting deadline?", "query": "What is the official deadline for reporting PMFBY localized crop damage?"},
+                    {"label": "Where should I submit documents?", "query": "Where and to whom should I submit PMFBY claim documents?"},
+                ]
+        elif focus == "PROCEDURE":
+            if lang == "mr":
+                return [
+                    {"label": "आवश्यक कागदपत्रांची यादी द्या", "query": "पीएमएफबीवाय पीक नुकसान भरपाईसाठी आवश्यक कागदपत्रांची चेकलिस्ट काय आहे?"},
+                    {"label": "नुकसान भरपाईची मुदत किती आहे?", "query": "पीक नुकसान झाल्यानंतर किती तासांत सूचना देणे बंधनकारक आहे?"},
+                    {"label": "स्थानिक अधिकारी कोण आहेत?", "query": "पीक विमा तक्रार किंवा मंजुरीसाठी स्थानिक तालुका कृषी अधिकारी व विमा प्रतिनिधी कोण आहेत?"},
+                ]
+            elif lang == "hi":
+                return [
+                    {"label": "आवश्यक दस्तावेजों की सूची दें", "query": "पीएमएफबीवाई क्लेम के लिए कौन-कौन से आवश्यक दस्तावेज तैयार रखने चाहिए?"},
+                    {"label": "सूचना देने की समय सीमा क्या है?", "query": "फसल खराब होने के कितने समय के भीतर सूचना देना आवश्यक है?"},
+                    {"label": "स्थानीय कृषि अधिकारी कौन हैं?", "query": "पीएमएफबीवाई सहायता के लिए स्थानीय कृषि अधिकारी या बीमा कंपनी से कैसे संपर्क करें?"},
+                ]
+            else:
+                return [
+                    {"label": "What documents do I need?", "query": "What is the required document checklist for PMFBY crop loss claims?"},
+                    {"label": "What is the reporting deadline?", "query": "What is the deadline within which crop damage must be reported under PMFBY?"},
+                    {"label": "Who should I contact locally?", "query": "Who is the local district agriculture officer or insurance representative for PMFBY?"},
+                ]
+        elif focus == "CONTACT":
+            if lang == "mr":
+                return [
+                    {"label": "अर्जाची टप्पा-निहाय प्रक्रिया काय आहे?", "query": "पीएमएफबीवाय क्लेम दाखल करण्याची संपूर्ण प्रक्रिया काय आहे?"},
+                    {"label": "कोणती कागदपत्रे सोबत ठेवावीत?", "query": "पीक विमा संपर्क करताना कोणती कागदपत्रे सोबत असणे आवश्यक आहे?"},
+                ]
+            elif lang == "hi":
+                return [
+                    {"label": "दावा करने की प्रक्रिया क्या है?", "query": "पीएमएफबीवाई क्लेम दर्ज करने की पूरी चरण-दर-चरण प्रक्रिया क्या है?"},
+                    {"label": "कौन से दस्तावेज तैयार रखें?", "query": "फसल बीमा क्लेम के लिए कौन से दस्तावेज तैयार रखने चाहिए?"},
+                ]
+            else:
+                return [
+                    {"label": "What is the claim procedure?", "query": "What is the step-by-step procedure to file a PMFBY crop insurance claim?"},
+                    {"label": "What documents should I keep ready?", "query": "What documents should I keep ready when contacting the PMFBY authority?"},
+                ]
+
+    # 2. PACS SERVICE / MEMBERSHIP
+    if top == "PACS_MEMBERSHIP" or intnt == "PACS_SERVICE":
+        if lang == "mr":
+            return [
+                {"label": "पीक कर्जासाठी कसा अर्ज करावा?", "query": "पॅक्स (PACS) मधून अल्पमुदत पीक कर्ज (KCC) मिळवण्यासाठी कसा अर्ज करावा?"},
+                {"label": "पॅक्स सदस्यत्वासाठी कागदपत्रे काय आहेत?", "query": "पॅक्स (PACS) चे सभासद होण्यासाठी कोणती कागदपत्रे आणि पात्रता लागते?"},
+                {"label": "पॅक्समध्ये इतर कोणत्या सेवा मिळतात?", "query": "पॅक्स (PACS) मध्ये खते, बी-बियाणे आणि कृषी अवजारांच्या कोणत्या सेवा मिळतात?"},
+            ]
+        elif lang == "hi":
+            return [
+                {"label": "फसल ऋण के लिए कैसे आवेदन करें?", "query": "पैक्स (PACS) से अल्पकालिक फसल ऋण (KCC) के लिए कैसे आवेदन करें?"},
+                {"label": "पैक्स सदस्यता के लिए दस्तावेज क्या हैं?", "query": "पैक्स (PACS) सदस्य बनने के लिए कौन से दस्तावेज और पात्रता आवश्यक है?"},
+                {"label": "पैक्स में कौन-कौन सी सेवाएं उपलब्ध हैं?", "query": "पैक्स (PACS) में खाद, बीज और कृषि उपकरणों की कौन सी सेवाएं मिलती हैं?"},
+            ]
+        else:
+            return [
+                {"label": "How can I apply for a crop loan?", "query": "How can an active PACS member apply for a KCC short-term crop loan?"},
+                {"label": "What documents are required?", "query": "What documents and eligibility are required for PACS membership and loans?"},
+                {"label": "What other services are available at PACS?", "query": "What agricultural inputs, warehousing, and custom hiring services are available at PACS?"},
+            ]
+
+    # 3. TRACTOR / AGRICULTURAL MECHANIZATION SUBSIDY
+    if top == "TRACTOR_PURCHASE" or (intnt == "MINISTRY_SCHEME" and any(k in message.lower() for k in ["tractor", "machin", "अवजार", "ट्रॅक्टर", "ट्रैक्टर", "यंत्र"])):
+        if lang == "mr":
+            return [
+                {"label": "ट्रॅक्टर अनुदानासाठी कागदपत्रे काय लागतात?", "query": "महाडीबीटी / SMAM अंतर्गत ट्रॅक्टर व कृषी अवजारे अनुदानासाठी आवश्यक कागदपत्रे काय आहेत?"},
+                {"label": "ऑनलाइन अर्ज कसा करावा?", "query": "महाडीबीटी पोर्टलवर ट्रॅक्टर अनुदानासाठी ऑनलाइन अर्ज करण्याची टप्पा-निहाय प्रक्रिया काय आहे?"},
+                {"label": "अनुदान किती टक्के मिळते?", "query": "लहान, अत्यल्प भूधारक व महिला शेतकऱ्यांसाठी ट्रॅक्टरवर किती टक्के अनुदान मिळते?"},
+            ]
+        elif lang == "hi":
+            return [
+                {"label": "ट्रैक्टर सब्सिडी के लिए दस्तावेज क्या हैं?", "query": "कृषि यंत्रीकरण (SMAM) के तहत ट्रैक्टर सब्सिडी के लिए कौन से दस्तावेज चाहिए?"},
+                {"label": "आवेदन की प्रक्रिया क्या है?", "query": "ट्रैक्टर सब्सिडी योजना के लिए ऑनलाइन आवेदन की चरण-दर-चरण प्रक्रिया क्या है?"},
+                {"label": "सब्सिडी की पात्रता क्या है?", "query": "ट्रैक्टर और कृषि यंत्र सब्सिडी के लिए पात्रता और अनुदान प्रतिशत क्या है?"},
+            ]
+        else:
+            return [
+                {"label": "What documents are required?", "query": "What documents are needed to apply for tractor and machinery subsidy under SMAM / MahaDBT?"},
+                {"label": "What is the application process?", "query": "What is the step-by-step application procedure for tractor subsidy on official government portals?"},
+                {"label": "What are the eligibility criteria?", "query": "What are the eligibility criteria and subsidy percentage for agricultural mechanization?"},
+            ]
+
+    # 4. GRIEVANCE REDRESSAL
+    if intnt == "GRIEVANCE":
+        if lang == "mr":
+            return [
+                {"label": "तक्रार कोणाकडे करावी?", "query": "सहकारी संस्थेच्या अन्यायाविरुद्ध जिल्हा उपनिबंधक (DDR) यांच्याकडे तक्रार कशी करावी?"},
+                {"label": "तक्रारीसोबत कोणती कागदपत्रे जोडावीत?", "query": "सहकारी तक्रार अर्जासोबत कोणते पुरावे व कागदपत्रे जोडणे आवश्यक आहे?"},
+                {"label": "सहकारी न्यायालयाचे नियम काय आहेत?", "query": "सहकारी वादावर दाद मागण्यासाठी सहकारी न्यायालयाची प्रक्रिया काय आहे?"},
+            ]
+        elif lang == "hi":
+            return [
+                {"label": "शिकायत किस अधिकारी से करें?", "query": "सहकारी संस्था के खिलाफ जिला उप-निबंधक (DDR) के पास शिकायत कैसे दर्ज करें?"},
+                {"label": "शिकायत के लिए कौन से दस्तावेज चाहिए?", "query": "सहकारी शिकायत दर्ज करने के लिए कौन से साक्ष्य और दस्तावेज संलग्न करने चाहिए?"},
+                {"label": "शिकायत निवारण की प्रक्रिया क्या है?", "query": "सहकारी विवादों के कानूनी निवारण की चरण-दर-चरण प्रक्रिया क्या है?"},
+            ]
+        else:
+            return [
+                {"label": "Which authority should I approach?", "query": "Which cooperative authority or District Deputy Registrar (DDR) should I approach for grievances?"},
+                {"label": "How can I prepare a formal complaint?", "query": "How should I draft and submit a formal written complaint against a cooperative society?"},
+                {"label": "What supporting documents are needed?", "query": "What evidence and supporting documents should be attached with a cooperative grievance?"},
+            ]
+
+    # 5. FINANCIAL LITERACY & CREDIT MANAGEMENT
+    if intnt == "FINANCIAL_LITERACY":
+        if lang == "mr":
+            return [
+                {"label": "KCC पीक कर्जाचे फायदे काय आहेत?", "query": "किसान क्रेडिट कार्ड (KCC) पीक कर्जावरील व्याज सवलत आणि फायदे काय आहेत?"},
+                {"label": "शेतकऱ्यांनी कर्ज व्यवस्थापन कसे करावे?", "query": "शेतकरी सभासदांनी योग्य आर्थिक नियोजन आणि वेळेवर कर्ज परतफेडीचे व्यवस्थापन कसे करावे?"},
+                {"label": "सरकारी बचत व विमा योजना कोणत्या आहेत?", "query": "ग्रामीण शेतकऱ्यांसाठी फायदेशीर सरकारी बचत आणि पेन्शन योजना कोणत्या आहेत?"},
+            ]
+        elif lang == "hi":
+            return [
+                {"label": "KCC फसल ऋण के लाभ क्या हैं?", "query": "किसान क्रेडिट कार्ड (KCC) फसल ऋण पर मिलने वाली ब्याज सब्सिडी और लाभ क्या हैं?"},
+                {"label": "कृषि ऋण प्रबंधन कैसे करें?", "query": "किसानों के लिए वित्तीय योजना और समय पर ऋण चुकाने के सर्वोत्तम तरीके क्या हैं?"},
+                {"label": "सरकारी बचत योजनाएं कौन सी हैं?", "query": "ग्रामीण किसानों के लिए उपलब्ध सरकारी बचत और सामाजिक सुरक्षा योजनाएं कौन सी हैं?"},
+            ]
+        else:
+            return [
+                {"label": "What is KCC loan benefit?", "query": "What are the interest subvention and financial benefits under Kisan Credit Card (KCC)?"},
+                {"label": "How can farmers manage credit?", "query": "What are the best financial management practices for cooperative members taking agricultural loans?"},
+                {"label": "What savings schemes exist?", "query": "What government rural savings, insurance, and pension schemes are available for farmers?"},
+            ]
+
+    # 6. UNIVERSAL CONTEXTUAL FALLBACK (General knowledge, science, schemes)
+    clean_msg = message[:35].strip()
+    if lang == "mr":
+        return [
+            {"label": "याबद्दल अधिक सोप्या भाषेत सांगा", "query": f"'{clean_msg}' बद्दल अधिक सोप्या आणि मुद्देसूद भाषेत स्पष्ट करा."},
+            {"label": "याची महत्त्वाची उदाहरणे काय आहेत?", "query": f"'{clean_msg}' चे मुख्य उपयोग आणि व्यावहारिक उदाहरणे काय आहेत?"},
+            {"label": "पुढील माहिती काय आहे?", "query": f"'{clean_msg}' संदर्भात पुढील महत्त्वाची माहिती व मार्गदर्शन काय आहे?"},
+        ]
+    elif lang == "hi":
+        return [
+            {"label": "इसे और सरल शब्दों में समझाएं", "query": f"'{clean_msg}' को और सरल व स्पष्ट शब्दों में समझाएं."},
+            {"label": "इसके मुख्य उदाहरण क्या हैं?", "query": f"'{clean_msg}' के मुख्य व्यावहारिक उदाहरण और उपयोग क्या हैं?"},
+            {"label": "इसके बारे में और बताएं", "query": f"'{clean_msg}' से संबंधित अन्य महत्वपूर्ण जानकारी क्या है?"},
+        ]
+    else:
+        return [
+            {"label": "Explain in simpler terms", "query": f"Can you explain '{clean_msg}' in simpler terms with key takeaways?"},
+            {"label": "What are practical examples?", "query": f"What are practical examples and applications for '{clean_msg}'?"},
+            {"label": "What should I know next?", "query": f"What are the most important next steps or related concepts for '{clean_msg}'?"},
+        ]
 
 
 class RAGPipeline:
@@ -597,6 +812,17 @@ class RAGPipeline:
             f"RESULT={'PASSED' if test_passed else 'FAILED'}"
         )
 
+        # Generate / Validate contextual suggested follow-up questions
+        raw_followups = json_payload.get("suggested_followups") if json_payload and isinstance(json_payload, dict) else None
+        followup_dicts = generate_contextual_followups(
+            intent=intent,
+            topic=current_topic,
+            answer_focus=answer_focus,
+            language=detected_language,
+            message=message,
+            llm_followups=raw_followups,
+        )
+
         response_obj = QueryResponse(
             answer=display_answer,
             display_answer=display_answer,
@@ -606,6 +832,10 @@ class RAGPipeline:
             answer_focus=answer_focus,
             source=primary_source,
             sources=sources_list,
+            suggested_followups=[
+                SuggestedFollowup(label=f["label"], query=f["query"])
+                for f in followup_dicts
+            ],
             next_action="Follow up or ask another cooperative query",
             session_id=session_id,
             grounding_status=g_status,

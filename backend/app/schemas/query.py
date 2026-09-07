@@ -53,6 +53,11 @@ class SourceItem(BaseModel):
     retrieved_at: Optional[str] = Field(default=None, description="ISO timestamp of retrieval.")
 
 
+class SuggestedFollowup(BaseModel):
+    label: str = Field(..., description="Short user-friendly suggestion text for display chip.")
+    query: str = Field(..., description="Complete contextual query sent to backend when clicked.")
+
+
 class QueryResponse(BaseModel):
     answer: str = Field(
         ...,
@@ -85,6 +90,10 @@ class QueryResponse(BaseModel):
     sources: list[SourceItem] = Field(
         default_factory=list,
         description="List of verified retrieved source citations.",
+    )
+    suggested_followups: list[SuggestedFollowup] = Field(
+        default_factory=list,
+        description="Contextual follow-up question suggestions for user to ask next.",
     )
     next_action: Optional[str] = Field(
         default=None,

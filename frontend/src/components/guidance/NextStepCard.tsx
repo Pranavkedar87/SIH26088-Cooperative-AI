@@ -1,9 +1,13 @@
 import React from "react";
-import type { NextAction } from "../../utils/guidanceParser";
 import { ArrowRightIcon, ChevronRightIcon } from "../Icons";
 
+export interface FollowUpAction {
+  label: string;
+  query: string;
+}
+
 interface Props {
-  actions: NextAction[];
+  actions: FollowUpAction[];
   onExecuteAction?: (query: string) => void;
   language?: string;
 }
@@ -17,28 +21,29 @@ export const NextStepCard: React.FC<Props> = ({
 
   const headerTitle =
     language === "hi"
-      ? "सुझाए गए प्रश्न"
+      ? "आप यह भी पूछ सकते हैं"
       : language === "en"
-      ? "Suggested Follow-ups"
-      : "पुढील पर्याय";
+      ? "You may also ask"
+      : "तुम्ही हे देखील विचारू शकता";
 
   return (
-    <div className="guidance-next-steps">
+    <div className="guidance-next-steps" role="region" aria-label={headerTitle}>
       <div className="guidance-next-steps__header">
         <ArrowRightIcon size={14} color="#176B5B" />
-        <span>{headerTitle}</span>
+        <span className="guidance-next-steps__title">{headerTitle}</span>
       </div>
-      <div className="guidance-next-steps__list">
+      <div className="guidance-next-steps__list" role="group">
         {actions.map((act, i) => (
           <button
             key={i}
             type="button"
             className="next-step-action-btn"
             onClick={() => onExecuteAction && onExecuteAction(act.query)}
+            aria-label={`${act.label} - Click to ask this question`}
           >
-            <span className="action-bullet">→</span>
+            <span className="action-bullet" aria-hidden="true">→</span>
             <span className="action-text">{act.label}</span>
-            <ChevronRightIcon size={14} />
+            <ChevronRightIcon size={14} aria-hidden="true" />
           </button>
         ))}
       </div>

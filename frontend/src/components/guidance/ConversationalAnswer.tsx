@@ -1,5 +1,5 @@
 import React from "react";
-import type { LanguageCode, SourceItem } from "../../types";
+import type { LanguageCode, SourceItem, SuggestedFollowup } from "../../types";
 import { getContextualActions, parseGuidance } from "../../utils/guidanceParser";
 import AnswerSummary from "./AnswerSummary";
 import NextStepCard from "./NextStepCard";
@@ -11,6 +11,7 @@ interface Props {
   answerFocus?: string;
   onExecuteAction?: (query: string) => void;
   sources?: SourceItem[];
+  suggestedFollowups?: SuggestedFollowup[];
 }
 
 function renderFormattedText(text: string): React.ReactNode[] {
@@ -57,11 +58,17 @@ export const ConversationalAnswer: React.FC<Props> = ({
   answerFocus,
   onExecuteAction,
   sources = [],
+  suggestedFollowups = [],
 }) => {
   if (!content || !content.trim()) return null;
 
   const guidance = parseGuidance(content, language, answerFocus);
   const effectiveFocus = (guidance.answerFocus || answerFocus || "OVERVIEW").toUpperCase();
+
+  const effectiveActions =
+    suggestedFollowups && suggestedFollowups.length > 0
+      ? suggestedFollowups
+      : getContextualActions(guidance.domain, language, effectiveFocus);
 
   // Strip generic legacy header prefixes
   const cleanContent = content
@@ -175,7 +182,7 @@ export const ConversationalAnswer: React.FC<Props> = ({
       {/* Suggested Follow-up Action Chips (Only for genuine responses) */}
       {!isOfflineFallback && (
         <NextStepCard
-          actions={getContextualActions(guidance.domain, language, effectiveFocus)}
+          actions={effectiveActions}
           onExecuteAction={onExecuteAction}
           language={language}
         />

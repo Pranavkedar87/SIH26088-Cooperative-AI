@@ -91,7 +91,13 @@ RAG_SYSTEM_INSTRUCTION = (
     '    "detailed_information": "<Comprehensive explanation in target language>",\n'
     '    "next_guidance": "<Helpful follow-up suggestion in target language>"\n'
     '  },\n'
-    '  "spoken_answer": "<1-3 natural spoken sentences, no markdown/URLs/asterisks, in target language>"\n'
+    '  "spoken_answer": "<1-3 natural spoken sentences, no markdown/URLs/asterisks, in target language>",\n'
+    '  "suggested_followups": [\n'
+    '    {\n'
+    '      "label": "<Short user-friendly question label (3-7 words) in target language, e.g. What documents do I need?>",\n'
+    '      "query": "<Complete contextual question to ask next in target language, e.g. What documents are required for PMFBY crop loss claim?>"\n'
+    '    }\n'
+    '  ]\n'
     '}'
 )
 

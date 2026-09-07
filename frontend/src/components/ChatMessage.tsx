@@ -42,14 +42,39 @@ const ChatMessage: React.FC<Props> = ({
   const handleDownloadPdf = async () => {
     try {
       setIsGeneratingPdf(true);
-      const parsed = parseGuidance(message.content, message.language);
+      const parsed = parseGuidance(message.content, message.language, message.answer_focus);
+
+      // Extract title from first markdown header if available
+      const headerMatch = message.content.match(/^#+\s*(.+)$/m);
+      const dynamicTitle = headerMatch ? headerMatch[1].replace(/[\*\_]/g, "").trim() : parsed.domainLabel;
+
+      // Extract document items if present
+      const docItems: string[] = [];
+      const lines = message.content.split("\n");
+      let inDocSection = false;
+      for (const line of lines) {
+        if (/document|दस्तावेज|कागदपत्र/i.test(line) && line.startsWith("#")) {
+          inDocSection = true;
+          continue;
+        }
+        if (inDocSection && line.startsWith("#")) {
+          inDocSection = false;
+        }
+        if (inDocSection && /^[-*•\d+\.]\s+/.test(line.trim())) {
+          docItems.push(line.replace(/^[-*•\d+\.]\s+/, "").replace(/[\*\_]/g, "").trim());
+        }
+      }
+
       await generateGuidancePdf({
+        title: dynamicTitle,
         question: userQuestion,
         language: message.language,
         domainLabel: parsed.domainLabel,
         summary: parsed.summary,
+        description: parsed.cleanParagraphs && parsed.cleanParagraphs.length > 1 ? parsed.cleanParagraphs.slice(1).join(" ") : undefined,
         keyFacts: parsed.keyFacts,
         steps: parsed.steps,
+        documents: docItems.length > 0 ? docItems : undefined,
         warnings: parsed.warnings,
         nextSteps: parsed.nextSteps,
         sources: message.sources?.map((s) => ({
@@ -109,6 +134,7 @@ const ChatMessage: React.FC<Props> = ({
             answerFocus={message.answer_focus}
             onExecuteAction={onFollowUp}
             sources={message.sources}
+            suggestedFollowups={message.suggested_followups}
           />
         )}
 
