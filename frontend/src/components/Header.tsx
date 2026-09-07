@@ -35,25 +35,10 @@ export const Header: React.FC<Props> = ({
       ? locationData.shortDisplayName || locationData.displayName
       : "Location";
 
-  const tagline =
-    language === "hi"
-      ? "बहुभाषी सहकार सहायता मंच"
-      : language === "mr"
-      ? "बहुभाषिक सहकार मदत व्यासपीठ"
-      : "Multilingual Cooperative Assistance Platform";
-
   return (
-    <header className="sahkaar-header" role="banner">
-      {/* Institutional Top Accent Bar */}
-      <div className="gov-top-bar">
-        <div className="gov-top-bar__container">
-          <span className="gov-top-bar__emblem">भारत सरकार | Government of India</span>
-          <span className="gov-top-bar__ministry">सहकार मंत्रालय | Ministry of Cooperation</span>
-        </div>
-      </div>
-
+    <header className="sahkaar-header">
       <div className="header-container">
-        {/* Left: Brand & Service Identity */}
+        {/* Left: Hamburger Menu & Brand */}
         <div className="header-left">
           <button
             type="button"
@@ -61,42 +46,46 @@ export const Header: React.FC<Props> = ({
             onClick={onOpenMenu}
             aria-label="Open Navigation Menu"
           >
-            <MenuIcon size={20} color="#123B5D" />
+            <MenuIcon size={22} color="#126B62" />
           </button>
 
           <div className="header-brand-box" onClick={onOpenMenu} role="button" tabIndex={0}>
-            <div className="header-logo-wrapper">
-              <SahkaarSetuLogo size={26} color="#0F6B68" />
-            </div>
+            <SahkaarSetuLogo size={28} color="#126B62" />
             <div className="header-brand-titles">
-              <h1 className="header-brand-name">SAHKAARSETU</h1>
-              <span className="header-brand-tagline">{tagline}</span>
+              <h1 className="header-brand-name">SahkaarSetu</h1>
+              <span className="header-brand-tagline">
+                {language === "hi"
+                  ? "सहकारी साथी"
+                  : language === "mr"
+                  ? "सहकारी साथी"
+                  : "Cooperative AI"}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Right: Operational Controls */}
+        {/* Right: Controls (Location, Notifications, Language) */}
         <div className="header-right">
-          {/* Live Location Selector */}
+          {/* Live Location Pill Button */}
           <button
             type="button"
             className="header-location-pill"
             onClick={onOpenLocation}
             title={locationData.displayName}
-            aria-label={`Current jurisdiction: ${displayLocationText}`}
+            aria-label="View Location Details"
           >
-            <MapPinIcon size={15} color="#0F6B68" />
+            <MapPinIcon size={18} color="#126B62" />
             <span className="header-location-text">{displayLocationText}</span>
           </button>
 
-          {/* Official Notifications */}
+          {/* Notification Bell Button */}
           <button
             type="button"
             className="header-icon-btn notification-bell-btn"
             onClick={onOpenNotifications}
-            aria-label="View Official Notifications"
+            aria-label="View Notifications"
           >
-            <BellIcon size={18} color="#123B5D" />
+            <BellIcon size={20} color="#126B62" />
             {unreadNotificationCount > 0 && (
               <span className="header-notification-badge">
                 {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
@@ -104,14 +93,14 @@ export const Header: React.FC<Props> = ({
             )}
           </button>
 
-          {/* Language Selector */}
+          {/* Language Selector Trigger Button */}
           <button
             type="button"
             className="header-icon-btn language-trigger-btn"
             onClick={onOpenLanguage}
-            aria-label="Change Portal Language"
+            aria-label="Change Language"
           >
-            <GlobeIcon size={18} color="#123B5D" />
+            <GlobeIcon size={20} color="#126B62" />
             <span className="language-badge-text">{language.toUpperCase()}</span>
           </button>
         </div>
@@ -119,5 +108,3 @@ export const Header: React.FC<Props> = ({
     </header>
   );
 };
-
-export default Header;
