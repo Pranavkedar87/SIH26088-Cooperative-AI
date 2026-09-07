@@ -83,7 +83,7 @@ export async function sendQuery(request: QueryRequest): Promise<QueryResponse> {
     try {
       attempts++;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout per request
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout per request for Render cold-start & Gemini synthesis
 
       const res = await fetch(`${BASE_URL}/api/query`, {
         method: "POST",
@@ -128,7 +128,7 @@ export async function sendVoiceQuery(request: QueryRequest): Promise<QueryRespon
     try {
       attempts++;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout per request for Render cold-start & Gemini synthesis
 
       const res = await fetch(`${BASE_URL}/api/voice/query`, {
         method: "POST",

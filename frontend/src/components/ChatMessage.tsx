@@ -89,6 +89,12 @@ const ChatMessage: React.FC<Props> = ({
     ? "Read Aloud"
     : "ऐकून घ्या";
 
+  const isOfflineFallback =
+    !isUser &&
+    /unable to reach the assistance service|सहाय्य सेवेशी संपर्क साधू शकत नाही|सहायता सेवा से संपर्क नहीं कर पा रहा/i.test(
+      message.content
+    );
+
   return (
     <div className={`chat-row chat-row--${message.role}`}>
       <div className="chat-card">
@@ -107,7 +113,7 @@ const ChatMessage: React.FC<Props> = ({
         )}
 
         {/* Source / Grounding Badge */}
-        {!isUser && (
+        {!isUser && !isOfflineFallback && (
           <div className="grounding-badge-row">
             {hasSources ? (
               <div className="grounded-tag grounded-tag--verified">
@@ -129,17 +135,19 @@ const ChatMessage: React.FC<Props> = ({
         {!isUser && (
           <div className="chat-card__footer-toolbar">
             <div className="chat-card__actions">
-              {/* Primary Action: Download Guidance PDF */}
-              <button
-                type="button"
-                className="action-btn action-btn--primary"
-                onClick={handleDownloadPdf}
-                disabled={isGeneratingPdf}
-                aria-label="Download guidance PDF"
-              >
-                <DownloadIcon size={14} color="#FFFFFF" />
-                <span>{pdfBtnLabel}</span>
-              </button>
+              {/* Primary Action: Download Guidance PDF (Only for genuine responses) */}
+              {!isOfflineFallback && (
+                <button
+                  type="button"
+                  className="action-btn action-btn--primary"
+                  onClick={handleDownloadPdf}
+                  disabled={isGeneratingPdf}
+                  aria-label="Download guidance PDF"
+                >
+                  <DownloadIcon size={14} color="#FFFFFF" />
+                  <span>{pdfBtnLabel}</span>
+                </button>
+              )}
 
               {/* Voice Read Aloud CTA */}
               {onSpeak && (

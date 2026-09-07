@@ -72,10 +72,13 @@ export const ConversationalAnswer: React.FC<Props> = ({
 
   const blocks = cleanContent.split(/\n\n+/);
 
+  const isOfflineFallback =
+    /unable to reach the assistance service|सहाय्य सेवेशी संपर्क साधू शकत नाही|सहायता सेवा से संपर्क नहीं कर पा रहा/i.test(content);
+
   return (
     <div className="conversational-answer-container" data-focus={effectiveFocus}>
       {/* Domain Badge Tag */}
-      {guidance.domainLabel && (
+      {guidance.domainLabel && !isOfflineFallback && (
         <AnswerSummary
           summary=""
           domainLabel={guidance.domainLabel}
@@ -169,12 +172,14 @@ export const ConversationalAnswer: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Suggested Follow-up Action Chips */}
-      <NextStepCard
-        actions={getContextualActions(guidance.domain, language, effectiveFocus)}
-        onExecuteAction={onExecuteAction}
-        language={language}
-      />
+      {/* Suggested Follow-up Action Chips (Only for genuine responses) */}
+      {!isOfflineFallback && (
+        <NextStepCard
+          actions={getContextualActions(guidance.domain, language, effectiveFocus)}
+          onExecuteAction={onExecuteAction}
+          language={language}
+        />
+      )}
     </div>
   );
 };
