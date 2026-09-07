@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { ChatMessage as ChatMessageType, LanguageCode } from "../types";
 import ChatMessage from "./ChatMessage";
+import { MessageSquareIcon } from "./Icons";
 
 interface Props {
   messages: ChatMessageType[];
@@ -12,35 +13,32 @@ interface Props {
   onSimplify?: (prompt: string) => void;
 }
 
-// Rotating contextual loading messages
+// Clean, professional institutional loading messages (No emojis or robotic labels)
 const LOADING_MESSAGES: Record<string, string[]> = {
   en: [
-    "🔎 Understanding your question…",
-    "🤖 Generating your answer…",
-    "⏳ Still working, almost there…",
-    "🔄 This is taking a bit longer, please wait…",
+    "Consulting verified cooperative & government records…",
+    "Synthesizing structured guidance note…",
+    "Validating official references, please wait…",
   ],
   hi: [
-    "🔎 आपका प्रश्न समझा जा रहा है…",
-    "🤖 उत्तर तैयार हो रहा है…",
-    "⏳ अभी भी काम हो रहा है, एक पल…",
-    "🔄 थोड़ा और समय लग रहा है, कृपया रुकें…",
+    "सत्यापित सहकार एवं सरकारी रिकॉर्ड की जांच हो रही है…",
+    "आधिकारिक मार्गदर्शन नोट तैयार किया जा रहा है…",
+    "सत्यापित संदर्भों की पुष्टि की जा रही है…",
   ],
   mr: [
-    "🔎 तुमचा प्रश्न समजला जात आहे…",
-    "🤖 उत्तर तयार होत आहे…",
-    "⏳ अजून काम सुरू आहे, थोडी प्रतीक्षा करा…",
-    "🔄 जास्त वेळ लागत आहे, कृपया थांबा…",
+    "अधिकृत सहकार व शासकीय नोंदींची पडताळणी सुरू आहे…",
+    "मार्गदर्शन नोंद तयार केली जात आहे…",
+    "संदर्भ माहितीची तपासणी सुरू आहे, कृपया थांबा…",
   ],
 };
 
 const EMPTY_TEXT: Record<string, string> = {
-  en: "Ask your question below to get started.",
-  hi: "शुरू करने के लिए नीचे अपना प्रश्न पूछें।",
-  mr: "प्रारंभ करण्यासाठी खाली तुमचा प्रश्न विचारा.",
+  en: "Type your query or select a topic to receive verified cooperative and agricultural guidance.",
+  hi: "सत्यापित सहकार एवं कृषि मार्गदर्शन प्राप्त करने के लिए नीचे अपना प्रश्न लिखें।",
+  mr: "अधिकृत सहकार व कृषी मार्गदर्शन मिळवण्यासाठी खाली तुमचा प्रश्न विचारा.",
 };
 
-const ChatArea: React.FC<Props> = ({
+export const ChatArea: React.FC<Props> = ({
   messages,
   isLoading,
   language,
@@ -57,7 +55,7 @@ const ChatArea: React.FC<Props> = ({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Rotate loading message every 1.8 s while loading
+  // Rotate loading message while loading
   useEffect(() => {
     if (!isLoading) {
       setLoadingMsgIdx(0);
@@ -67,16 +65,18 @@ const ChatArea: React.FC<Props> = ({
     const msgs = LOADING_MESSAGES[language] ?? LOADING_MESSAGES.en;
     const id = setInterval(() => {
       setLoadingMsgIdx((prev) => Math.min(prev + 1, msgs.length - 1));
-    }, 6000);
+    }, 5000);
     return () => clearInterval(id);
   }, [isLoading, language]);
 
   return (
-    <div className="chat-area" role="log" aria-live="polite" aria-label="Conversation">
+    <div className="chat-area" role="log" aria-live="polite" aria-label="Guidance Conversation Transcript">
       {messages.length === 0 && !isLoading && (
         <div className="chat-empty">
-          <span className="chat-empty__icon">🤝</span>
-          <p>{EMPTY_TEXT[language] ?? EMPTY_TEXT.en}</p>
+          <div className="chat-empty__icon-box">
+            <MessageSquareIcon size={24} color="#0F6B68" />
+          </div>
+          <p className="chat-empty__text">{EMPTY_TEXT[language] ?? EMPTY_TEXT.en}</p>
         </div>
       )}
 
@@ -100,10 +100,9 @@ const ChatArea: React.FC<Props> = ({
       })}
 
       {isLoading && (
-        <div className="chat-message chat-message--assistant">
-          <div className="chat-message__avatar" aria-hidden="true">🤝</div>
-          <div className="chat-message__bubble chat-message__bubble--loading">
-            <div className="typing-dots" aria-label="Loading">
+        <div className="chat-row chat-row--assistant">
+          <div className="chat-card chat-card--loading" role="status" aria-label="Loading response">
+            <div className="typing-dots" aria-hidden="true">
               <span className="typing-dot" />
               <span className="typing-dot" />
               <span className="typing-dot" />

@@ -20,16 +20,16 @@ const TAB_CONFIG: Array<{
   hi: string;
   mr: string;
 }> = [
-  { id: "home", icon: HomeIcon, en: "Home", hi: "गृह", mr: "मुख्य" },
-  { id: "ask", icon: MessageSquareIcon, en: "Ask AI", hi: "प्रश्न पूछें", mr: "प्रश्न विचारा" },
+  { id: "home", icon: HomeIcon, en: "Home", hi: "मुख्य पृष्ठ", mr: "मुख्य पृष्ठ" },
+  { id: "ask", icon: MessageSquareIcon, en: "Guidance", hi: "मार्गदर्शन", mr: "मार्गदर्शन" },
   { id: "services", icon: GridIcon, en: "Services", hi: "सेवाएं", mr: "सेवा" },
-  { id: "grievance", icon: ClipboardCheckIcon, en: "Grievance", hi: "शिकायत", mr: "तक्रार" },
+  { id: "grievance", icon: ClipboardCheckIcon, en: "Grievance", hi: "तक्रार / शिकायत", mr: "तक्रार निवारण" },
 ];
 
-const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
+export const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
   return (
-    <nav className="app-nav" aria-label="Primary Navigation">
-      <div className="nav-container">
+    <nav className="app-nav" aria-label="Primary Navigation" role="navigation">
+      <div className="nav-container" role="tablist">
         {TAB_CONFIG.map((tab) => {
           const IconComp = tab.icon;
           const label = (tab as any)[language] ?? tab.en;
@@ -43,9 +43,10 @@ const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
               onClick={() => onTabChange(tab.id)}
               aria-selected={isActive}
               role="tab"
+              aria-label={label}
             >
               <div className="nav-item__icon-wrapper">
-                <IconComp size={20} color={isActive ? "#176B5B" : "#66777A"} />
+                <IconComp size={18} color={isActive ? "#123B5D" : "#4A5D6E"} />
               </div>
               <span className="nav-item__label">{label}</span>
             </button>

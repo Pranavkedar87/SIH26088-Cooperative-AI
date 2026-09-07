@@ -6,76 +6,77 @@
 }
 
 :root {
-  /* ── SAHKAARSETU Refined Palette ─────────────────────────────────────────── */
-  --color-primary:        #126B62;   /* Primary Deep Teal */
-  --color-primary-dark:   #0E524B;
-  --color-primary-light:  #E8F3EF;   /* Soft Mint */
+  /* ── SAHKAARSETU Institutional Design System ───────────────────────────────
+     Human-designed digital public-service platform palette:
+     - Primary: Deep Navy #123B5D (Authority, Stability, Trust)
+     - Secondary: Cooperative Teal #0F6B68 (Cooperative Growth & Agriculture)
+     - Accent: National Saffron #F28C28 (Small precise accent points)
+     - Background: Warm Off-White #F7F6F2
+     - Surface: Pure White #FFFFFF
+     - Text: Dark Charcoal #1A2B3C, Secondary #4A5D6E, Muted #6B7D8C
+     - Border: Institutional Slate #DCE2E6, Subtle #EAEFF2
+  ─────────────────────────────────────────────────────────────────────────── */
+  --color-primary:        #123B5D;   /* Deep Navy */
+  --color-primary-dark:   #0B253C;
+  --color-primary-light:  #E8EEF3;   /* Soft Navy Tint */
 
-  --color-trust-blue:     #238477;   /* Secondary Cooperative Green */
-  --color-trust-light:    #EAF3F7;   /* Soft Blue */
+  --color-teal:           #0F6B68;   /* Cooperative Teal */
+  --color-teal-dark:      #0A4D4A;
+  --color-teal-light:     #EBF4F3;   /* Soft Teal Tint */
 
-  --color-accent:         #D4A72C;   /* Harvest Gold */
-  --color-accent-light:   #FFFDF5;
-  --color-accent-highlight:#F1C75B;  /* Warm Gold Highlight */
+  --color-accent:         #F28C28;   /* Saffron Accent */
+  --color-accent-light:   #FFF6EC;
+  --color-accent-dark:    #C86A10;
 
-  --color-bg:             #F7F5EE;   /* Warm Ivory Background */
-  --color-bg-alt:         #EFECE3;
-  --color-surface:        #FFFFFF;   /* Card White */
+  --color-bg:             #F7F6F2;   /* Warm Off-White */
+  --color-bg-alt:         #EFECE5;
+  --color-surface:        #FFFFFF;   /* Clean White */
 
-  --color-border:         #D6E0DC;   /* Light Border */
-  --color-border-light:   #E8EFEB;
+  --color-border:         #DCE2E6;   /* Crisp Institutional Border */
+  --color-border-light:   #EAEFF2;
+  --color-border-focus:   #123B5D;
 
-  --color-text:           #173C3A;   /* Dark Text */
-  --color-text-muted:     #667875;   /* Secondary Text */
-  --color-text-light:     #8F9FA4;
+  --color-text:           #1A2B3C;   /* High Contrast Text */
+  --color-text-secondary: #4A5D6E;   /* Secondary Subheadings & Body */
+  --color-text-muted:     #6B7D8C;   /* Captions & Metadata */
+  --color-text-light:     #8C9BA5;
 
-  /* Feedback */
-  --color-success:        #238477;   /* Success / Verified */
-  --color-success-light:  #E8F3EF;
-  --color-warning:        #D4A72C;   /* Warning */
-  --color-warning-light:  #FFFDF5;
-  --color-error:          #B94A48;   /* Error */
-  --color-error-light:    #FDF0F0;
+  /* Institutional Feedback Colors */
+  --color-success:        #0F6B68;
+  --color-success-light:  #EBF4F3;
+  --color-warning:        #B26A00;
+  --color-warning-light:  #FFF8ED;
+  --color-error:          #A82A2A;
+  --color-error-light:    #FCF1F1;
 
-  /* Radii per Design System */
-  --radius-card:   14px;   /* Cards: 14–16px */
-  --radius-btn:    10px;   /* Assistance input bar & buttons: 10px */
-  --radius-sm:     8px;
-  --radius-pill:   999px;
+  /* Human-Designed Restrained Radii (No Excessive Bubbles) */
+  --radius-card:   4px;
+  --radius-btn:    4px;
+  --radius-sm:     3px;
+  --radius-pill:   4px;
 
-  /* Minimal Crisp Shadows */
-  --shadow-sm:   0 1px 3px rgba(23, 60, 58, 0.05);
-  --shadow-md:   0 3px 10px rgba(23, 60, 58, 0.07);
-  --shadow-card: 0 2px 8px rgba(18, 107, 98, 0.04);
+  /* Crisp Border-First Shadows (No Fuzzy Artificial Drop Shadows) */
+  --shadow-sm:   0 1px 2px rgba(18, 59, 93, 0.05);
+  --shadow-md:   0 2px 4px rgba(18, 59, 93, 0.08);
+  --shadow-card: 0 1px 3px rgba(18, 59, 93, 0.06);
 
   /* Typography */
-  --font-sans: 'Segoe UI', system-ui, -apple-system, 'Noto Sans Devanagari', sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans Devanagari', 'Noto Sans', Helvetica, Arial, sans-serif;
   --font-size-base: 15px;
   --font-size-sm:   13.5px;
   --font-size-lg:   17px;
   --font-size-xl:   20px;
-  --font-size-2xl:  26px;
+  --font-size-2xl:  24px;
 }
 
-/* ── Subtle Animations ──────────────────────────────────────────────────────── */
+/* ── Subtle Transition Timings ────────────────────────────────────────────── */
 
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulseGold {
-  0%   { box-shadow: 0 0 0 0 rgba(212, 167, 44, 0.4); }
-  70%  { box-shadow: 0 0 0 10px rgba(212, 167, 44, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(212, 167, 44, 0); }
-}
-
-/* ── Reduced Motion ───────────────────────────────────────────────────────── */
+/* ── Reduced Motion Accessibility ─────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -85,7 +86,7 @@
   }
 }
 
-/* ── Base ─────────────────────────────────────────────────────────────────── */
+/* ── Base Reset & Setup ───────────────────────────────────────────────────── */
 
 html, body, #root {
   height: 100%;
@@ -95,4 +96,22 @@ html, body, #root {
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+a {
+  color: var(--color-teal);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

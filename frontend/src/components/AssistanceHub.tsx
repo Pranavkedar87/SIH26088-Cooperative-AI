@@ -25,31 +25,31 @@ const HERO_TEXT: Record<
   { headline: string; sub: string; voiceBtn: string; typeOr: string; placeholder: string; helpHeader: string; helpSub: string }
 > = {
   mr: {
-    headline: "सहकारी सेवांसाठी तुमचा डिजिटल साथी",
-    sub: "समजून घ्या • विचारा • पुढील पाऊल जाणून घ्या",
-    voiceBtn: "बोलून विचारा",
-    typeOr: "किंवा प्रश्न टाइप करा",
-    placeholder: "सहकारी सेवा, योजना किंवा कायद्याबद्दल विचारा...",
-    helpHeader: "तुम्हाला कशाबद्दल मदत हवी आहे?",
-    helpSub: "तुमची समस्या निवडा किंवा SahkaarSetu ला बोलून सांगा.",
+    headline: "सहकारी संस्था व शेतकरी सहाय्यता केंद्र",
+    sub: "पीक विमा, पॅक्स कर्ज, कायदेशीर सल्ला आणि योजनांची अधिकृत माहिती मिळवा.",
+    voiceBtn: "व्हॉईस सहाय्यक सुरू करा",
+    typeOr: "किंवा थेट प्रश्न विचारू शकता:",
+    placeholder: "उदा. पीएमएफबीवाय नुकसान भरपाई, पॅक्स पीक कर्ज, ट्रॅक्टर अनुदान...",
+    helpHeader: "सहकारी सेवा व योजना विभाग",
+    helpSub: "खालीलपैकी योग्य विभाग निवडून अधिकृत माहिती व टप्पा-निहाय मार्गदर्शन मिळवा.",
   },
   hi: {
-    headline: "सहकारी सेवाओं के लिए आपका डिजिटल साथी",
-    sub: "समझें • पूछें • अगला कदम जानें",
-    voiceBtn: "बोलकर पूछें",
-    typeOr: "या प्रश्न टाइप करें",
-    placeholder: "सहकारी सेवाओं, योजनाओं या कानून के बारे में पूछें...",
-    helpHeader: "आपको किस विषय में सहायता चाहिए?",
-    helpSub: "अपनी समस्या चुनें या SahkaarSetu से बोलकर कहें।",
+    headline: "सहकारी संस्था एवं किसान सहायता केंद्र",
+    sub: "फसल बीमा, पैक्स ऋण, कानूनी सलाह और सरकारी योजनाओं की आधिकारिक जानकारी प्राप्त करें।",
+    voiceBtn: "वॉइस सहायक शुरू करें",
+    typeOr: "या सीधे प्रश्न पूछें:",
+    placeholder: "उदा. पीएमएफबीवाई फसल नुकसान, पैक्स ऋण प्रक्रिया, ट्रैक्टर सब्सिडी...",
+    helpHeader: "सहकारी सेवा एवं योजना प्रभाग",
+    helpSub: "आवश्यक विभाग का चयन कर आधिकारिक जानकारी और मार्गदर्शन प्राप्त करें।",
   },
   en: {
-    headline: "Your Digital Companion for Cooperative Services",
-    sub: "Understand • Ask • Know Next Steps",
-    voiceBtn: "Speak to SahkaarSetu",
-    typeOr: "or type your question",
-    placeholder: "Ask about cooperative services, schemes or laws...",
-    helpHeader: "What do you need help with?",
-    helpSub: "Select a topic or speak to SahkaarSetu directly.",
+    headline: "Cooperative & Agricultural Assistance Portal",
+    sub: "Access verified guidance on PMFBY crop insurance, PACS services, credit schemes, and cooperative governance.",
+    voiceBtn: "Start Voice Assistant",
+    typeOr: "or type your question below:",
+    placeholder: "e.g. PMFBY crop loss claim, PACS KCC loan, tractor subsidy...",
+    helpHeader: "Cooperative Service & Information Directory",
+    helpSub: "Select a core service area to explore verified procedures and document checklists.",
   },
 };
 
@@ -66,66 +66,66 @@ const SERVICE_CARDS: Array<{
   {
     id: "crop_damage",
     icon: WheatIcon,
-    en: "Crop & Insurance",
-    hi: "फसल और बीमा",
-    mr: "पीक आणि विमा",
-    descEn: "PMFBY crop insurance and damage guidance",
-    descHi: "पीएमएफबीवाई फसल बीमा और मुआवजा सहायता",
-    descMr: "PMFBY पीक विमा व नुकसान मार्गदर्शन",
+    en: "Crop Insurance (PMFBY)",
+    hi: "फसल बीमा (PMFBY)",
+    mr: "पीक विमा योजना (PMFBY)",
+    descEn: "Loss reporting guidelines, timelines, and claim submission",
+    descHi: "नुकसान रिपोर्टिंग, समय सीमा और दावा प्रक्रिया",
+    descMr: "नुकसान नोंदणी, मुदत आणि भरपाई कार्यपद्धती",
   },
   {
     id: "pacs_help",
     icon: LandmarkIcon,
-    en: "PACS Services",
-    hi: "पैक्स सेवाएं",
-    mr: "पॅक्स सेवा",
-    descEn: "PACS credit, fertilizer, and member loans",
-    descHi: "पैक्स ऋण, उर्वरक और किसान सेवाएं",
-    descMr: "कर्ज, खते, बियाणे व सोसायटी सेवा",
+    en: "PACS Services & Credit",
+    hi: "पैक्स सेवाएं एवं ऋण",
+    mr: "पॅक्स सेवा व पीक कर्ज",
+    descEn: "KCC short-term crop loans, inputs, and membership rules",
+    descHi: "केसीसी अल्पकालिक ऋण, उर्वरक और सदस्यता नियम",
+    descMr: "अल्पमुदत पीक कर्ज, खते, बियाणे व सभासदत्व",
   },
   {
     id: "coop_rule",
     icon: ScaleIcon,
-    en: "Cooperative Rules",
-    hi: "सहकारी नियम",
-    mr: "सहकारी कायदे",
-    descEn: "Maharashtra Cooperative laws and by-laws",
-    descHi: "महाराष्ट्र सहकारी कानून और मॉडल उपनियम",
-    descMr: "कायदा, पोटनियम व कायदेशीर सल्ला",
+    en: "Cooperative Law & By-Laws",
+    hi: "सहकारी कानून एवं उपनियम",
+    mr: "सहकारी कायदा व उपविधी",
+    descEn: "MCS Act 1960 provisions, member rights, and audit rules",
+    descHi: "एमसीएस अधिनियम 1960, सदस्य अधिकार एवं ऑडिट नियम",
+    descMr: "महाराष्ट्र सहकारी संस्था कायदा १९६० व सभासद अधिकार",
   },
   {
     id: "financial_guidance",
     icon: WalletCardsIcon,
-    en: "Financial Literacy",
-    hi: "वित्तीय साक्षरता",
-    mr: "आर्थिक साक्षरता",
-    descEn: "KCC loans, interest subvention, and savings",
-    descHi: "केसीसी ऋण, ब्याज अनुदान और बचत मार्गदर्शन",
-    descMr: "आर्थिक साक्षरता, KCC व कर्ज सवलत",
+    en: "Agricultural Credit & Finance",
+    hi: "कृषि ऋण एवं वित्तीय साक्षरता",
+    mr: "कृषी पतपुरवठा व वित्तीय नियोजन",
+    descEn: "Interest subvention benefits, repayment, and credit scores",
+    descHi: "ब्याज अनुदान लाभ, समय पर पुनर्भुगतान और वित्तीय प्रबंधन",
+    descMr: "व्याज सवलत, वेळेवर परतफेड व आर्थिक साक्षरता",
   },
   {
     id: "schemes_entry",
     icon: FileCheckIcon,
-    en: "Government Schemes",
-    hi: "सरकारी योजनाएं",
-    mr: "सरकारी योजना",
-    descEn: "Ministry of Cooperation development schemes",
-    descHi: "सहकार मंत्रालय की विकास योजनाएं",
-    descMr: "सहकार मंत्रालयाच्या विकास योजना",
+    en: "Government Welfare Schemes",
+    hi: "सरकारी कल्याणकारी योजनाएं",
+    mr: "शासकीय कल्याणकारी योजना",
+    descEn: "Machinery subsidies, SMAM, storage, and ministry programs",
+    descHi: "कृषि यंत्रीकरण (SMAM), भंडारण और मंत्रालय की योजनाएं",
+    descMr: "महाडीबीटी कृषी यांत्रिकीकरण व अवजारे अनुदान योजना",
   },
   {
     id: "grievance_entry",
     icon: ClipboardCheckIcon,
-    en: "Grievance Assistance",
-    hi: "शिकायत सहायता",
-    mr: "तक्रार निवारण",
-    descEn: "Complaint steps and formal summary builder",
-    descHi: "शिकायत प्रक्रिया और औपचारिक सारांश",
-    descMr: "तक्रार निवारण मदत व मसुदा मार्गदर्शक",
+    en: "Grievance Redressal",
+    hi: "शिकायत निवारण प्रक्रिया",
+    mr: "तक्रार निवारण व मदत",
+    descEn: "Filing formal complaints with District Deputy Registrar (DDR)",
+    descHi: "जिला उप-निबंधक (DDR) के पास औपचारिक शिकायत दर्ज करने की विधि",
+    descMr: "जिल्हा उपनिबंधक (DDR) यांच्याकडे तक्रार करण्याची अधिकृत पद्धत",
   },
 ];
 
-const AssistanceHub: React.FC<Props> = ({
+export const AssistanceHub: React.FC<Props> = ({
   language,
   onStartAsk,
   onOpenVoiceMode,
@@ -143,54 +143,53 @@ const AssistanceHub: React.FC<Props> = ({
   };
 
   return (
-    <div className="assistance-hub" aria-label="SahkaarSetu Assistance Hub">
-      {/* Hero Section */}
+    <div className="assistance-hub" aria-label="Cooperative Assistance Portal Hub">
+      {/* Institutional Banner Section */}
       <section className="hub-hero">
         <div className="hub-hero__content">
+          <div className="hub-hero__badge">
+            <ShieldCheckIcon size={14} color="#123B5D" />
+            <span>Ministry of Cooperation Framework Guidance</span>
+          </div>
           <h2 className="hub-hero__headline">{t.headline}</h2>
           <p className="hub-hero__sub">{t.sub}</p>
 
-          {/* PRIMARY VOICE CTA */}
-          <button
-            type="button"
-            className="hero-voice-cta"
-            onClick={onOpenVoiceMode}
-            aria-label="Start Voice Assistance"
-          >
-            <div className="hero-voice-cta__icon">
-              <MicIcon size={24} color="#FFFFFF" />
-            </div>
-            <div className="hero-voice-cta__text">
+          <div className="hub-action-row">
+            {/* Primary Voice Action Button */}
+            <button
+              type="button"
+              className="hero-voice-cta"
+              onClick={onOpenVoiceMode}
+              aria-label="Start Voice Assistant"
+            >
+              <MicIcon size={18} color="#FFFFFF" />
               <span className="cta-main-label">{t.voiceBtn}</span>
-              <span className="cta-sub-label">Hindi • Marathi • English</span>
-            </div>
-          </button>
+            </button>
 
-          {/* SECONDARY TEXT INPUT */}
-          <div className="hero-secondary-input">
-            <span className="secondary-label">{t.typeOr}</span>
-            <form onSubmit={handleTextSubmit} className="secondary-search-bar">
+            {/* Direct Search Form */}
+            <form onSubmit={handleTextSubmit} className="hero-search-form" role="search">
               <input
                 type="text"
-                className="secondary-search-input"
+                className="hero-search-input"
                 value={typedInput}
                 onChange={(e) => setTypedInput(e.target.value)}
                 placeholder={t.placeholder}
+                aria-label="Search cooperative guidance topic"
               />
               <button
                 type="submit"
-                className="secondary-search-btn"
+                className="hero-search-submit"
                 disabled={!typedInput.trim()}
                 aria-label="Submit Question"
               >
-                <SendIcon size={16} color="#FFFFFF" />
+                <SendIcon size={15} color="#FFFFFF" />
               </button>
             </form>
           </div>
         </div>
       </section>
 
-      {/* Service Directory Section */}
+      {/* Structured Service Directory Section */}
       <section className="hub-services-section">
         <div className="hub-services-header">
           <h3 className="hub-services__title">{t.helpHeader}</h3>
@@ -217,14 +216,14 @@ const AssistanceHub: React.FC<Props> = ({
                 onClick={() => onSelectGuided(card.id)}
               >
                 <div className="hub-service-card__icon">
-                  <IconComp size={20} color="#126B62" />
+                  <IconComp size={18} color="#123B5D" />
                 </div>
                 <div className="hub-service-card__body">
                   <span className="hub-service-card__title">{title}</span>
                   <span className="hub-service-card__desc">{desc}</span>
                 </div>
                 <div className="hub-service-card__arrow">
-                  <ArrowRightIcon size={14} color="#667875" />
+                  <ArrowRightIcon size={14} color="#4A5D6E" />
                 </div>
               </button>
             );
@@ -232,19 +231,15 @@ const AssistanceHub: React.FC<Props> = ({
         </div>
       </section>
 
-      {/* Trust Element Footer Note */}
+      {/* Institutional Trust & Reference Footer */}
       <footer className="hub-trust-footer">
         <div className="trust-item">
-          <ShieldCheckIcon size={14} color="#126B62" />
-          <span>Source-backed guidance</span>
+          <ShieldCheckIcon size={13} color="#0F6B68" />
+          <span>Verified Government & NABARD Information Sources</span>
         </div>
         <span className="trust-dot">•</span>
         <div className="trust-item">
-          <span>Hindi • Marathi • English</span>
-        </div>
-        <span className="trust-dot">•</span>
-        <div className="trust-item">
-          <span>Cooperative Assistance</span>
+          <span>Multilingual Assistance (Hindi • Marathi • English)</span>
         </div>
       </footer>
     </div>
