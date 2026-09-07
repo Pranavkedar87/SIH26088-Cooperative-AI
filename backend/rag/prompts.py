@@ -171,10 +171,9 @@ def build_grounded_prompt(
 
     if response_mode == "voice":
         base_prompt += (
-            f"\n\nVOICE MODE INSTRUCTIONS: Provide a concise, natural, spoken response suitable for text-to-speech. "
-            f"Keep the total answer strictly to 2 to 3 clear sentences maximum. "
-            f"Do NOT use markdown headings, asterisks, bullet points, or URLs. "
-            f"Answer strictly in {lang_name}."
+            f"\n\nVOICE MODE INSTRUCTIONS: Output valid JSON matching the schema. "
+            f"Set 'spoken_answer' to 1 to 2 natural, conversational sentences in {lang_name} suitable for voice TTS playback. "
+            f"Keep structured sections concise and scannable in {lang_name}."
         )
 
     return base_prompt

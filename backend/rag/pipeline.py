@@ -15,7 +15,7 @@ from typing import Any, Optional, Dict, List
 
 
 def extract_json_payload(text: str) -> Optional[dict[str, Any]]:
-    """Extracts and parses structured JSON object from LLM response text."""
+    """Extracts and parses structured JSON object from LLM response text with auto-repair for truncated JSON."""
     if not text:
         return None
     cleaned = text.strip()
@@ -24,6 +24,7 @@ def extract_json_payload(text: str) -> Optional[dict[str, Any]]:
         cleaned = re.sub(r"\s*```$", "", cleaned)
         cleaned = cleaned.strip()
 
+    # 1. Direct parse
     try:
         data = json.loads(cleaned)
         if isinstance(data, dict):
@@ -31,7 +32,8 @@ def extract_json_payload(text: str) -> Optional[dict[str, Any]]:
     except Exception:
         pass
 
-    match = re.search(r"\{[\s\S]*\}", text)
+    # 2. Extract largest matched JSON block
+    match = re.search(r"\{[\s\S]*\}", cleaned)
     if match:
         try:
             data = json.loads(match.group(0))
@@ -39,6 +41,26 @@ def extract_json_payload(text: str) -> Optional[dict[str, Any]]:
                 return data
         except Exception:
             pass
+
+    # 3. Resilient Repair for partially truncated JSON
+    start_idx = cleaned.find("{")
+    if start_idx != -1:
+        partial = cleaned[start_idx:]
+        for split_char in [",", "\n"]:
+            subparts = partial.rsplit(split_char, 2)
+            for sub in subparts[:-1]:
+                cand = sub.strip()
+                if cand.count('"') % 2 != 0:
+                    cand += '"'
+                open_brackets = max(0, cand.count('[') - cand.count(']'))
+                open_braces = max(0, cand.count('{') - cand.count('}'))
+                cand = cand + (']' * open_brackets) + ('}' * open_braces)
+                try:
+                    data = json.loads(cand)
+                    if isinstance(data, dict):
+                        return data
+                except Exception:
+                    continue
 
     return None
 
@@ -105,11 +127,11 @@ def clean_speech_text(text: str) -> str:
 def generate_structured_answer(
     system_instruction: str,
     user_prompt: str,
-    max_tokens: int = 800,
+    max_tokens: int = 2048,
 ) -> tuple[Optional[dict[str, Any]], str, dict[str, Any]]:
     """
     Primary synthesis generator: Gemini (REST) → Groq fallback.
-    Always returns a result if either provider works.
+    Always returns a structured result if either provider works.
     """
     # 1. Try Gemini first
     raw_answer, used_model, gemini_stats = query_gemini_llm(
@@ -121,15 +143,18 @@ def generate_structured_answer(
     )
     if raw_answer:
         payload = extract_json_payload(raw_answer)
-        if payload and isinstance(payload, dict) and (
-            "direct_answer" in payload
-            or "sections" in payload
-            or "display_answer" in payload
-            or "summary" in payload
-            or "title" in payload
-        ):
+        if payload and isinstance(payload, dict):
             logger.info(f"[PRIMARY LLM] Structured output via Gemini ({used_model})")
             return payload, f"GEMINI ({used_model})", gemini_stats
+
+        # Wrap plain text or markdown response in structured schema
+        wrapped = {
+            "direct_answer": raw_answer.strip(),
+            "sections": [],
+            "spoken_answer": clean_speech_text(raw_answer)[:300],
+        }
+        logger.info(f"[PRIMARY LLM] Plain text/markdown wrapped from Gemini ({used_model})")
+        return wrapped, f"GEMINI ({used_model})", gemini_stats
 
     # 2. Groq fallback
     logger.warning("[PRIMARY LLM] Gemini failed — switching to Groq fallback")
@@ -142,13 +167,7 @@ def generate_structured_answer(
         )
         if groq_answer:
             payload = extract_json_payload(groq_answer)
-            if payload and isinstance(payload, dict) and (
-                "direct_answer" in payload
-                or "sections" in payload
-                or "display_answer" in payload
-                or "summary" in payload
-                or "title" in payload
-            ):
+            if payload and isinstance(payload, dict):
                 logger.info(f"[FALLBACK LLM] Structured JSON from Groq ({groq_model})")
                 return payload, f"GROQ ({groq_model})", groq_stats
 
@@ -156,7 +175,7 @@ def generate_structured_answer(
             wrapped = {
                 "direct_answer": groq_answer.strip(),
                 "sections": [],
-                "spoken_answer": groq_answer.strip()[:250],
+                "spoken_answer": clean_speech_text(groq_answer)[:300],
             }
             logger.info(f"[FALLBACK LLM] Plain text wrapped from Groq ({groq_model})")
             return wrapped, f"GROQ ({groq_model})", groq_stats
@@ -656,14 +675,15 @@ class RAGPipeline:
         if resp_mode == "voice":
             user_prompt += (
                 f"\n\nVOICE MODE INSTRUCTIONS:\n"
-                f"Keep answer concise, clear, and spoken-friendly in 2 to 3 natural sentences in {target_lang}. "
-                f"Do NOT include markdown syntax, asterisks, bullet markers, headings, or URLs."
+                f"Output valid JSON matching the schema. "
+                f"Set 'spoken_answer' to 1 to 2 conversational, natural sentences in {target_lang} for voice TTS playback (no markdown, no bullets). "
+                f"Keep structured sections concise and directly relevant."
             )
 
         prompt_build_latency_ms = (time.perf_counter() - prompt_start) * 1000.0
 
         # Stage 8: Call Provider-Agnostic LLM Engine (Gemini Primary -> Groq Fallback)
-        max_tokens = 300 if resp_mode == "voice" else 800
+        max_tokens = 2048
         json_payload, used_model, llm_stats = generate_structured_answer(
             system_instruction=system_instruction,
             user_prompt=user_prompt,
@@ -682,6 +702,10 @@ class RAGPipeline:
                 or disp_obj.get("direct_answer")
                 or disp_obj.get("summary")
                 or disp_obj.get("title")
+                or json_payload.get("answer")
+                or disp_obj.get("answer")
+                or json_payload.get("message")
+                or disp_obj.get("message")
                 or ""
             ).strip()
 
@@ -716,20 +740,25 @@ class RAGPipeline:
                             content=sec.get("content"),
                         ))
             else:
-                # Normalize legacy schema (what_should_i_do_now, detailed_information, next_guidance)
-                actions = disp_obj.get("what_should_i_do_now") or []
-                if actions and isinstance(actions, list):
+                # Dynamic normalization for root-level keys (steps, documents, key_facts, where_to_go, helpline, etc.)
+                steps_data = (
+                    disp_obj.get("steps")
+                    or disp_obj.get("action_steps")
+                    or disp_obj.get("what_should_i_do_now")
+                    or json_payload.get("steps")
+                )
+                if steps_data and isinstance(steps_data, list):
                     action_title = (
                         "What You Should Do" if detected_language == "en"
                         else "काय करावे?" if detected_language == "mr"
                         else "क्या करें?"
                     )
                     items = []
-                    for idx, act in enumerate(actions, 1):
+                    for idx, act in enumerate(steps_data, 1):
                         if isinstance(act, dict):
                             items.append(AnswerSectionItem(
-                                title=act.get("title", f"Step {idx}"),
-                                description=act.get("content", ""),
+                                title=act.get("title") or act.get("name") or f"Step {idx}",
+                                description=act.get("description") or act.get("content") or "",
                             ))
                         elif isinstance(act, str) and act.strip():
                             items.append(AnswerSectionItem(title=act.strip()))
@@ -740,19 +769,122 @@ class RAGPipeline:
                             items=items,
                         ))
 
-                if disp_obj.get("detailed_information"):
-                    parsed_sections.append(AnswerSection(
-                        type="details",
-                        title="Details" if detected_language == "en" else "तपशील" if detected_language == "mr" else "विवरण",
-                        content=str(disp_obj["detailed_information"]).strip(),
-                    ))
+                docs_data = (
+                    disp_obj.get("documents")
+                    or disp_obj.get("required_documents")
+                    or disp_obj.get("documents_required")
+                    or json_payload.get("documents")
+                )
+                if docs_data and isinstance(docs_data, list):
+                    doc_title = (
+                        "Required Documents" if detected_language == "en"
+                        else "आवश्यक कागदपत्रे" if detected_language == "mr"
+                        else "आवश्यक दस्तावेज"
+                    )
+                    items = []
+                    for itm in docs_data:
+                        if isinstance(itm, dict):
+                            items.append(AnswerSectionItem(
+                                name=itm.get("name") or itm.get("title"),
+                                description=itm.get("description") or itm.get("content"),
+                            ))
+                        elif isinstance(itm, str) and itm.strip():
+                            items.append(AnswerSectionItem(name=itm.strip()))
+                    if items:
+                        parsed_sections.append(AnswerSection(
+                            type="documents",
+                            title=doc_title,
+                            items=items,
+                        ))
 
-                if disp_obj.get("next_guidance"):
-                    parsed_sections.append(AnswerSection(
-                        type="next_action",
-                        title="Next Step" if detected_language == "en" else "पुढील पाऊल" if detected_language == "mr" else "अगला कदम",
-                        content=str(disp_obj["next_guidance"]).strip(),
-                    ))
+                facts_data = disp_obj.get("key_facts") or json_payload.get("key_facts")
+                if facts_data and isinstance(facts_data, list):
+                    fact_title = (
+                        "Key Facts" if detected_language == "en"
+                        else "महत्त्वाची माहिती" if detected_language == "mr"
+                        else "महत्वपूर्ण तथ्य"
+                    )
+                    items = []
+                    for itm in facts_data:
+                        if isinstance(itm, dict):
+                            items.append(AnswerSectionItem(
+                                label=itm.get("label") or itm.get("title"),
+                                value=itm.get("value") or itm.get("content") or itm.get("description"),
+                            ))
+                        elif isinstance(itm, str) and itm.strip():
+                            items.append(AnswerSectionItem(label=itm.strip()))
+                    if items:
+                        parsed_sections.append(AnswerSection(
+                            type="key_facts",
+                            title=fact_title,
+                            items=items,
+                        ))
+
+                channels_data = (
+                    disp_obj.get("where_to_go")
+                    or disp_obj.get("helpline")
+                    or disp_obj.get("channels")
+                    or disp_obj.get("where_to_apply")
+                    or json_payload.get("where_to_go")
+                    or json_payload.get("helpline")
+                )
+                if channels_data:
+                    chan_title = (
+                        "Where to Go / Contact" if detected_language == "en"
+                        else "कुठे संपर्क साधावा?" if detected_language == "mr"
+                        else "कहाँ संपर्क करें?"
+                    )
+                    if isinstance(channels_data, list):
+                        items = []
+                        for itm in channels_data:
+                            if isinstance(itm, dict):
+                                items.append(AnswerSectionItem(
+                                    name=itm.get("name") or itm.get("title"),
+                                    description=itm.get("description") or itm.get("content"),
+                                ))
+                            elif isinstance(itm, str) and itm.strip():
+                                items.append(AnswerSectionItem(name=itm.strip()))
+                        if items:
+                            parsed_sections.append(AnswerSection(
+                                type="where_to_go",
+                                title=chan_title,
+                                items=items,
+                            ))
+                    elif isinstance(channels_data, str) and channels_data.strip():
+                        parsed_sections.append(AnswerSection(
+                            type="where_to_go",
+                            title=chan_title,
+                            content=channels_data.strip(),
+                        ))
+
+                if disp_obj.get("detailed_information") or disp_obj.get("details"):
+                    det_content = str(disp_obj.get("detailed_information") or disp_obj.get("details") or "").strip()
+                    if det_content:
+                        parsed_sections.append(AnswerSection(
+                            type="details",
+                            title="Details" if detected_language == "en" else "तपशील" if detected_language == "mr" else "विवरण",
+                            content=det_content,
+                        ))
+
+                if disp_obj.get("next_guidance") or disp_obj.get("next_action"):
+                    nxt_content = str(disp_obj.get("next_guidance") or disp_obj.get("next_action") or "").strip()
+                    if nxt_content:
+                        parsed_sections.append(AnswerSection(
+                            type="next_action",
+                            title="Next Step" if detected_language == "en" else "पुढील पाऊल" if detected_language == "mr" else "अगला कदम",
+                            content=nxt_content,
+                        ))
+
+            # If direct_answer is still empty, synthesize from parsed sections
+            if not direct_answer:
+                if parsed_sections and parsed_sections[0].items and parsed_sections[0].items[0].title:
+                    direct_answer = parsed_sections[0].items[0].title
+                elif parsed_sections and parsed_sections[0].content:
+                    direct_answer = parsed_sections[0].content
+                elif json_payload.get("spoken_answer"):
+                    direct_answer = json_payload["spoken_answer"]
+                else:
+                    direct_answer = "सहाय्यता तपशील खालीलप्रमाणे आहेत:" if detected_language == "mr" else "सहायता विवरण निम्नलिखित है:" if detected_language == "hi" else "Here is the guidance:"
 
             # 3. Spoken Answer
             llm_spoken = json_payload.get("spoken_answer") or disp_obj.get("spoken_answer") or ""
