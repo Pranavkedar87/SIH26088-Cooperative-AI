@@ -10,7 +10,6 @@ import {
   ClipboardCheckIcon,
   ArrowRightIcon,
   SendIcon,
-  ShieldCheckIcon,
   MicIcon,
 } from "./Icons";
 
@@ -285,22 +284,6 @@ const AssistanceHub: React.FC<Props> = ({
           })}
         </div>
       </section>
-
-      {/* Trust Element Footer Note */}
-      <footer className="hub-trust-footer">
-        <div className="trust-item">
-          <ShieldCheckIcon size={14} color="#0F6B68" />
-          <span>Source-backed guidance</span>
-        </div>
-        <span className="trust-dot">•</span>
-        <div className="trust-item">
-          <span>Hindi • Marathi • English</span>
-        </div>
-        <span className="trust-dot">•</span>
-        <div className="trust-item">
-          <span>Cooperative Assistance</span>
-        </div>
-      </footer>
     </div>
   );
 };
