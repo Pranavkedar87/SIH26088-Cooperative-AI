@@ -12,9 +12,9 @@ interface Props {
 }
 
 const PLACEHOLDER: Record<string, string> = {
-  en: "Ask about cooperative services, schemes or laws…",
-  hi: "सहकारी सेवाओं, योजनाओं या कानून के बारे में पूछें…",
-  mr: "सहकारी सेवा, योजना किंवा कायद्याबद्दल विचारा…",
+  en: "Ask me anything — schemes, science, history, or any topic…",
+  hi: "कुछ भी पूछें — योजनाएं, विज्ञान, इतिहास, या कोई भी विषय…",
+  mr: "काहीही विचारा — योजना, विज्ञान, इतिहास किंवा कोणताही विषय…",
 };
 
 const STT_STATUS_LABEL: Record<string, { listening: string; processing: string }> = {

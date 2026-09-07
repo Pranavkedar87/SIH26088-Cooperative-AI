@@ -307,7 +307,7 @@ class RAGPipeline:
                 context_parts.append(f"[Web-{idx}]{auth_tag} {item.get('title')} ({item.get('source_name')}): {item.get('snippet')}")
 
         if not context_parts:
-            context_parts.append("GROUNDING CONTEXT: Use official Indian government agricultural mechanization guidelines, PACS rules, PMFBY policies, and Ministry of Cooperation schemes.")
+            context_parts.append("NO SPECIFIC GROUNDING CONTEXT RETRIEVED. Use your general knowledge to answer the user's question accurately and completely.")
 
         combined_context = "\n".join(context_parts)
 
@@ -329,7 +329,11 @@ class RAGPipeline:
 
         user_prompt += (
             f"\nOFFICIAL GROUNDED CONTEXT:\n{combined_context}\n\n"
-            f"STRICT INSTRUCTION: Synthesize the grounded context to answer the user's EXACT ORIGINAL QUESTION ('{message}') in {target_lang}. "
+            f"STRICT INSTRUCTION: Answer the user's EXACT ORIGINAL QUESTION ('{message}') in {target_lang}. "
+            f"If grounded context is available and relevant, use it. "
+            f"If the question is general knowledge, science, history, technology, or any other topic, "
+            f"answer from your own knowledge directly and completely. "
+            f"Do NOT restrict yourself to cooperative or agricultural topics only. "
         )
 
         if is_contextual_followup:
