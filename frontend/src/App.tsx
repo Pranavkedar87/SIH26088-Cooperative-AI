@@ -399,7 +399,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* Persistent 4-Tab Navigation Bar */}
+      {/* Persistent Navigation Bar with Floating Mic & Camera Actions */}
       <Navigation
         activeTab={activeTab}
         onTabChange={(tab) => {
@@ -408,6 +408,7 @@ const App: React.FC = () => {
           setActiveTab(tab);
         }}
         language={language}
+        onOpenVoiceMode={() => setIsVoiceModeOpen(true)}
       />
     </div>
   );

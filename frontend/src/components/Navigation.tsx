@@ -3,6 +3,7 @@ import type { AppTab, LanguageCode } from "../types";
 import {
   HomeIcon,
   MessageSquareIcon,
+  MicIcon,
   CameraIcon,
   GridIcon,
   ClipboardCheckIcon,
@@ -15,6 +16,7 @@ interface Props {
   activeTab: AppTab;
   onTabChange: (tab: AppTab) => void;
   language: LanguageCode;
+  onOpenVoiceMode: () => void;
 }
 
 const TAB_CONFIG: Array<{
@@ -30,16 +32,30 @@ const TAB_CONFIG: Array<{
   { id: "grievance", icon: ClipboardCheckIcon, en: "Grievance", hi: "शिकायत", mr: "तक्रार" },
 ];
 
-const CAMERA_LABEL: Record<string, string> = {
-  en: "Camera",
-  hi: "कैमरा",
-  mr: "कॅमेरा",
-  gu: "કેમેરો",
-  ta: "கேமரா",
-  bn: "ক্যামেরা",
+const VOICE_LABEL: Record<string, string> = {
+  en: "Ask by Voice",
+  hi: "बोलकर पूछें",
+  mr: "बोलून विचारा",
+  gu: "બોલીને પૂછો",
+  ta: "குரல் மூலம்",
+  bn: "ভয়েস দিয়ে",
 };
 
-const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
+const SCAN_LABEL: Record<string, string> = {
+  en: "Scan",
+  hi: "स्कैन",
+  mr: "स्कॅन",
+  gu: "સ્કેન",
+  ta: "ஸ்கேன்",
+  bn: "স্ক্যান",
+};
+
+const Navigation: React.FC<Props> = ({
+  activeTab,
+  onTabChange,
+  language,
+  onOpenVoiceMode,
+}) => {
   const [isCameraMenuOpen, setIsCameraMenuOpen] = useState(false);
   const [activeCameraMode, setActiveCameraMode] = useState<CameraMode | null>(null);
 
@@ -59,12 +75,13 @@ const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
     setActiveCameraMode(mode);
   };
 
-  const cameraText = CAMERA_LABEL[language] ?? CAMERA_LABEL.en;
+  const voiceText = VOICE_LABEL[language] ?? VOICE_LABEL.en;
+  const scanText = SCAN_LABEL[language] ?? SCAN_LABEL.en;
 
   return (
     <>
       <nav className="app-nav" aria-label="Primary Navigation">
-        {/* Floating popover menu directly above the center camera button */}
+        {/* Floating popover menu directly above the floating camera button */}
         {isCameraMenuOpen && (
           <>
             <div
@@ -75,7 +92,7 @@ const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
             <div
               className="nav-camera-popover"
               role="menu"
-              aria-label="Camera Options"
+              aria-label="Scan Options"
             >
               <button
                 type="button"
@@ -88,7 +105,9 @@ const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
                 </div>
                 <div className="nav-camera-popover-text">
                   <span className="nav-camera-popover-title">Scan Document</span>
-                  <span className="nav-camera-popover-desc">Capture forms, receipts & certificates</span>
+                  <span className="nav-camera-popover-desc">
+                    Capture forms, receipts & certificates
+                  </span>
                 </div>
               </button>
 
@@ -105,7 +124,9 @@ const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
                 </div>
                 <div className="nav-camera-popover-text">
                   <span className="nav-camera-popover-title">Face Scan (Optional)</span>
-                  <span className="nav-camera-popover-desc">Assistant preview functionality</span>
+                  <span className="nav-camera-popover-desc">
+                    Assistant preview feature
+                  </span>
                 </div>
               </button>
             </div>
@@ -159,19 +180,42 @@ const Navigation: React.FC<Props> = ({ activeTab, onTabChange, language }) => {
             );
           })()}
 
-          {/* Center Action Button: Camera */}
-          <button
-            type="button"
-            className={`nav-item nav-camera-item ${isCameraMenuOpen ? "nav-camera-item--active" : ""}`}
-            onClick={() => setIsCameraMenuOpen((prev) => !prev)}
-            aria-label="Scan Document or Face"
-            title="Scan Document or Face"
-          >
-            <div className="nav-camera-icon-wrapper">
-              <CameraIcon size={20} color={isCameraMenuOpen ? "#FFFFFF" : "#0F6B68"} />
+          {/* Center Floating Actions: Primary Navy Mic + Right Shifted Floating Camera */}
+          <div className="nav-floating-center-dock">
+            {/* 1. Primary Highlighted Navy Mic Button */}
+            <div className="nav-floating-action-group">
+              <button
+                type="button"
+                className="nav-floating-mic-btn"
+                onClick={onOpenVoiceMode}
+                aria-label={voiceText}
+                title="Speak to SahkaarSetu"
+              >
+                <MicIcon size={24} color="#FFFFFF" />
+              </button>
+              <span className="nav-floating-btn-label nav-floating-btn-label--mic">
+                {voiceText}
+              </span>
             </div>
-            <span className="nav-item__label">{cameraText}</span>
-          </button>
+
+            {/* 2. Floating Camera Button shifted to the right of the mic */}
+            <div className="nav-floating-action-group">
+              <button
+                type="button"
+                className={`nav-floating-camera-btn ${
+                  isCameraMenuOpen ? "nav-floating-camera-btn--active" : ""
+                }`}
+                onClick={() => setIsCameraMenuOpen((prev) => !prev)}
+                aria-label={scanText}
+                title="Scan Document or Face"
+              >
+                <CameraIcon size={18} color="#0F6B68" />
+              </button>
+              <span className="nav-floating-btn-label nav-floating-btn-label--camera">
+                {scanText}
+              </span>
+            </div>
+          </div>
 
           {/* Tab 3: Services */}
           {(() => {
