@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import math
 import logging
+import re
 import time
-from typing import Optional
+from typing import Any, Optional
 try:
     from typing_extensions import TypedDict
 except ImportError:
@@ -66,6 +67,15 @@ LOCAL_KNOWLEDGE_DOCUMENTS: list[dict[str, Any]] = [
         "content": "Pradhan Mantri Fasal Bima Yojana (PMFBY) covers crop damage due to non-preventable natural risks. Enrollment and claim deadlines are published season-wise.",
     },
     {
+        "title": "Sub-Mission on Agricultural Mechanization (SMAM) & Tractor Subsidy Guidelines",
+        "source_name": "Ministry of Agriculture & Farmers Welfare / MahaDBT",
+        "source_url": "https://mahadbt.maharashtra.gov.in",
+        "document_id": "doc-smam-tractor-001",
+        "document_type": "mechanization_guide",
+        "keywords": ["tractor", "mechanization", "farm machinery", "machinery", "sub-mission", "smam", "ट्रॅक्टर", "अनुदान", "यांत्रिकीकरण", "ट्रैक्टर", "सब्सिडी"],
+        "content": "Sub-Mission on Agricultural Mechanization (SMAM) and MahaDBT portal provide 40% to 50% subsidy for purchasing tractors, agricultural machinery, and establishing custom hiring centers for small, marginal, SC/ST, and women farmers. Required documents include 7/12 extract, 8A record, Aadhaar card, bank passbook, and dealer quotation.",
+    },
+    {
         "title": "Maharashtra Cooperative Societies Act 1960 & Society By-Laws",
         "source_name": "Maharashtra State Cooperative Department",
         "source_url": "https://maharashtra.gov.in",
@@ -91,7 +101,8 @@ def _cosine_similarity(v1: list[float], v2: list[float]) -> float:
 
 INTENT_ALLOWED_DOC_TYPES: dict[str, set[str]] = {
     "PMFBY": {"scheme_guide", "guide", "pmfby_guide", "policy_guide"},
-    "AGRICULTURAL_SUPPORT": {"scheme_guide", "policy_guide", "educational_guide", "guide", "pacs_guide"},
+    "AGRICULTURAL_SUPPORT": {"scheme_guide", "policy_guide", "mechanization_guide", "educational_guide", "guide", "pacs_guide"},
+    "MINISTRY_SCHEME": {"scheme_guide", "policy_guide", "mechanization_guide", "educational_guide", "guide", "pacs_guide"},
     "COOPERATIVE_LAW": {"legal_act", "act", "guide", "policy_guide"},
     "COOPERATIVE_BYLAW": {"legal_act", "bylaw", "guide", "policy_guide"},
     "PACS_SERVICE": {"policy_guide", "pacs_guide", "service_guide", "educational_guide", "guide"},
@@ -102,12 +113,15 @@ INTENT_ALLOWED_DOC_TYPES: dict[str, set[str]] = {
 
 def _is_doc_type_allowed(doc_type: Optional[str], intent: Optional[str]) -> bool:
     """Return True if doc_type matches the target intent domain."""
-    if not intent or intent not in INTENT_ALLOWED_DOC_TYPES:
-        return True
     if not doc_type:
         return True
-    allowed = INTENT_ALLOWED_DOC_TYPES[intent]
-    return doc_type in allowed
+    if intent and intent in INTENT_ALLOWED_DOC_TYPES:
+        allowed = INTENT_ALLOWED_DOC_TYPES[intent]
+        return doc_type in allowed
+    # For unspecified or general intents, legal_act is strictly restricted to legal/bylaw/grievance intents
+    if doc_type in {"legal_act", "act", "bylaw"} and intent not in {"COOPERATIVE_LAW", "COOPERATIVE_BYLAW", "GRIEVANCE"}:
+        return False
+    return True
 
 
 def _get_cached_chunks(client) -> list[dict]:
@@ -185,6 +199,7 @@ def retrieve_relevant_knowledge(
     client = get_supabase_client()
     if client is not None:
         embedding_provider = GeminiEmbeddingProvider()
+        query_vec = None
         try:
             query_vec = embedding_provider.embed_text(query)
             if query_vec and any(v != 0.0 for v in query_vec):
@@ -223,10 +238,51 @@ def retrieve_relevant_knowledge(
         except Exception as exc:
             logger.debug("Supabase RPC vector search unavailable: %s", exc)
 
-    # 2. Match local domain knowledge documents repository if Supabase vector DB yields 0 chunks
+        # 1b. Memory cache vector cosine similarity search if RPC yields 0 chunks
+        if not results and query_vec:
+            try:
+                cached_chunks = _get_cached_chunks(client)
+                scored = []
+                for chunk in cached_chunks:
+                    doc_type = chunk.get("document_type")
+                    if not _is_doc_type_allowed(doc_type, intent):
+                        continue
+                    sim = _cosine_similarity(query_vec, chunk.get("embedding", []))
+                    if sim >= match_threshold:
+                        scored.append((sim, chunk))
+                scored.sort(key=lambda x: x[0], reverse=True)
+                for sim, chunk in scored[:top_k]:
+                    results.append({
+                        "content": chunk.get("content", ""),
+                        "document_id": str(chunk.get("document_id", "")),
+                        "title": chunk.get("title", "Official Source"),
+                        "source_name": chunk.get("source_name"),
+                        "source_url": chunk.get("source_url"),
+                        "document_type": chunk.get("document_type"),
+                        "language": chunk.get("language"),
+                        "similarity": float(sim),
+                    })
+                if results:
+                    logger.info("Retrieved %d domain-filtered chunks via memory cache cosine similarity", len(results))
+                    return results
+            except Exception as exc:
+                logger.debug("Memory cache cosine similarity search error: %s", exc)
+
+    # 2. Match local domain knowledge documents repository using exact word boundaries
     q_lower = query.lower().strip()
     for doc in LOCAL_KNOWLEDGE_DOCUMENTS:
-        if any(kw in q_lower for kw in doc["keywords"]):
+        doc_type = doc.get("document_type")
+        if not _is_doc_type_allowed(doc_type, intent):
+            continue
+
+        matched = False
+        for kw in doc["keywords"]:
+            pattern = r'\b' + re.escape(kw) + r'\b'
+            if re.search(pattern, q_lower):
+                matched = True
+                break
+
+        if matched:
             results.append({
                 "content": doc["content"],
                 "document_id": doc["document_id"],

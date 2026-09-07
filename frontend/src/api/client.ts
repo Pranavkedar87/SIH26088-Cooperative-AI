@@ -145,13 +145,13 @@ function generateFallbackResponse(request: QueryRequest): QueryResponse {
     };
   }
 
-  // 5. Default General Assistance Fallback
+  // 5. Default Neutral Network/Timeout Assistance Fallback
   const defaultAns =
     lang === "hi"
-      ? "मैं सहकारसेतू एआई असिस्टेंट हूँ। मैं आपकी सहकारी कानूनों, फसल बीमा, PACS सेवाओं और कृषि सहायता में मार्गदर्शन कर सकती हूँ। आप मुझसे क्या पूछना चाहते हैं?"
+      ? "मैं अभी सहायता सेवा से संपर्क नहीं कर पा रहा हूँ। कृपया कुछ समय बाद पुनः प्रयास करें।"
       : lang === "mr"
-      ? "मी सहकारसेतू AI असिस्टंट आहे. सहकारी कायदे, पीक विमा, PACS सेवा आणि कृषी सहाय्याबद्दल मी तुम्हाला मदत करू शकते. तुम्हाला काय विचारायचे आहे?"
-      : "I am SahkaarSetu AI Assistant. I can assist you with cooperative governance, PACS services, PMFBY crop insurance, and agricultural credit guidance.";
+      ? "मी सध्या सहाय्य सेवेशी संपर्क साधू शकत नाही. कृपया थोड्या वेळाने पुन्हा प्रयत्न करा."
+      : "I'm unable to reach the assistance service right now. Please try again shortly.";
 
   return {
     answer: defaultAns,
@@ -159,7 +159,7 @@ function generateFallbackResponse(request: QueryRequest): QueryResponse {
     spoken_answer: defaultAns,
     language: lang,
     intent: "COOPERATIVE_GENERAL",
-    source: "SahkaarSetu Guidance",
+    source: "SahkaarSetu Network Assistance",
     sources: [],
     next_action: null,
   };
