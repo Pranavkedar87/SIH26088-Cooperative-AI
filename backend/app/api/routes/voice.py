@@ -168,6 +168,7 @@ async def voice_query(body: VoiceQueryRequest) -> VoiceQueryResponse:
 
         return VoiceQueryResponse(
             answer=res.answer,
+            structured_answer=res.structured_answer,
             display_answer=res.display_answer,
             spoken_answer=res.spoken_answer,
             language=res.language,
@@ -175,9 +176,13 @@ async def voice_query(body: VoiceQueryRequest) -> VoiceQueryResponse:
             answer_focus=res.answer_focus,
             source=res.source,
             sources=res.sources,
+            suggested_followups=res.suggested_followups,
             next_action=res.next_action,
             session_id=res.session_id,
             conversation_id=res.conversation_id,
+            grounding_status=res.grounding_status,
+            authority_level=res.authority_level,
+            claims_validated=res.claims_validated,
             audio_url=None,  # TTS audio stream URL will be populated in future hardware task
         )
 

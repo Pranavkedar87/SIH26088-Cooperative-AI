@@ -118,6 +118,7 @@ async def process_user_query(
     # 4. Return complete structured response immediately
     return QueryResponse(
         answer=rag_response.answer,
+        structured_answer=getattr(rag_response, "structured_answer", None),
         display_answer=rag_response.display_answer,
         spoken_answer=rag_response.spoken_answer,
         language=language,  # type: ignore[arg-type]
