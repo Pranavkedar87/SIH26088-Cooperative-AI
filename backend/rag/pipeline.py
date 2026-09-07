@@ -480,27 +480,16 @@ class RAGPipeline:
             else:
                 spoken_answer = clean_speech_text(summary or display_answer)
         else:
-            logger.warning("Gemini primary provider failed or returned invalid JSON. Using controlled error fallback.")
-            action_hdr = "What Should I Do Now:"
-            if detected_language == "mr":
-                action_hdr = "तुम्ही काय करू शकता:"
-            elif detected_language == "hi":
-                action_hdr = "आप क्या करें:"
+            logger.warning("Gemini primary provider failed or returned invalid JSON. Using neutral error fallback.")
+            raw_fallback = get_intent_fallback(intent, detected_language, answer_focus)
 
-            raw_fallback = f"### Official Guidance\n\n**{action_hdr}**\n1. Details: {get_intent_fallback(intent, detected_language, answer_focus)}"
-
-            sanitized_answer, claims_valid, corrected_claims = validate_and_sanitize_claims(
-                raw_answer=raw_fallback,
-                language=detected_language,
-                intent=intent,
-                grounding_context=combined_context,
-            )
-            display_answer = sanitized_answer.strip()
-            spoken_answer = clean_speech_text(sanitized_answer)
+            display_answer = raw_fallback.strip()
+            spoken_answer = clean_speech_text(display_answer)
 
             # SOURCE DISSOCIATION: Disassociate retrieved sources on technical generation failure
             sources_list = []
             primary_source = None
+            claims_valid = False
 
         g_status, overall_auth_level, claims_validated = evaluate_grounding_status(
             sources_list=sources_list,

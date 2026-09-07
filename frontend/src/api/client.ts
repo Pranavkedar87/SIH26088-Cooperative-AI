@@ -33,40 +33,14 @@ function generateFallbackResponse(request: QueryRequest): QueryResponse {
   const msg = request.message.toLowerCase();
   const lang = request.language || "en";
 
-  // 1. General Knowledge & Prime Minister Query
-  if (msg.includes("prime minister") || msg.includes("narendra modi") || msg.includes("pm of india") || msg.includes("minister")) {
-    const ans =
-      lang === "hi"
-        ? "भारत के वर्तमान प्रधानमंत्री नरेंद्र मोदी हैं। क्या आप उनकी किसी कृषि या सरकारी योजना के बारे में जानना चाहते हैं?"
-        : lang === "mr"
-        ? "भारताचे सध्याचे पंतप्रधान नरेंद्र मोदी आहेत. तुम्हाला त्यांच्या एखाद्या शासकीय योजनेबद्दल माहिती हवी आहे का?"
-        : "The Prime Minister of India is Narendra Modi. Would you like to know more about government schemes or agricultural initiatives?";
-    return {
-      answer: ans,
-      display_answer: ans,
-      spoken_answer: ans,
-      language: lang,
-      intent: "GENERAL_KNOWLEDGE",
-      source: "Official Indian Government Information",
-      sources: [
-        {
-          title: "Prime Minister's Office (PMO India)",
-          source_name: "pmoffice.gov.in",
-          source_url: "https://www.pmindia.gov.in",
-        },
-      ],
-      next_action: null,
-    };
-  }
-
-  // 2. Greetings & Conversational Inputs
+  // 1. Casual Greetings Only
   if (msg.includes("hello") || msg.includes("namaskar") || msg.includes("namaste") || msg.includes("hi") || msg.includes("hey")) {
     const ans =
       lang === "hi"
-        ? "नमस्ते! मैं सहकारसेतू वॉइस असिस्टेंट हूँ। आप मुझसे फसल बीमा, PACS ऋण, सहकारी नियम या सरकारी योजनाओं के बारे में पूछ सकते हैं।"
+        ? "नमस्ते! मैं सहकारसेतू वॉइस असिस्टेंट हूँ। मैं आपकी किस प्रकार सहायता कर सकता हूँ?"
         : lang === "mr"
-        ? "नमस्कार! मी सहकारसेतू व्हॉइस असिस्टंट आहे. पीक विमा, PACS कर्ज, सहकारी कायदे किंवा शासकीय योजनांबद्दल तुम्ही मला विचारू शकता."
-        : "Hello! I am SahkaarSetu Voice Assistant. How can I help you with crop insurance, PACS loans, cooperative rules, or government schemes today?";
+        ? "नमस्कार! मी सहकारसेतू व्हॉइस असिस्टंट आहे. मी तुम्हाला कशी मदत करू शकतो?"
+        : "Hello! I am SahkaarSetu Voice Assistant. How can I help you today?";
     return {
       answer: ans,
       display_answer: ans,
@@ -79,73 +53,7 @@ function generateFallbackResponse(request: QueryRequest): QueryResponse {
     };
   }
 
-  // 3. Agricultural Loans & Land Queries
-  if (msg.includes("loan") || msg.includes("land") || msg.includes("acre") || msg.includes("कर्ज") || msg.includes("ऋण") || msg.includes("जमीन") || msg.includes("एकर")) {
-    const ans =
-      lang === "hi"
-        ? "हाँ, आप अपनी भूमि और फसल के आधार पर किसान क्रेडिट कार्ड (KCC) या PACS फसल ऋण के लिए आवेदन कर सकते हैं। अधिक जानकारी के लिए 7/12 रिकॉर्ड के साथ स्थानीय PACS सचिव से संपर्क करें।"
-        : lang === "mr"
-        ? "होय, तुमच्या जमिनीच्या ७/१२ उताऱ्यानुसार तुम्ही किसान क्रेडिट कार्ड (KCC) किंवा PACS पीक कर्जासाठी अर्ज करू शकता. अधिक माहितीसाठी स्थानिक PACS सचिवांशी संपर्क साधा."
-        : "Yes, you can explore agricultural credit options such as a crop loan or Kisan Credit Card (KCC). Eligibility depends on your crop, land records, and local PACS rules.";
-    return {
-      answer: ans,
-      display_answer: ans,
-      spoken_answer: ans,
-      language: lang,
-      intent: "AGRICULTURAL_SUPPORT",
-      source: "NABARD & PACS Credit Guidelines",
-      sources: [
-        {
-          title: "Kisan Credit Card (KCC) Scheme Guidelines",
-          source_name: "Ministry of Agriculture",
-          source_url: "https://agri.gov.in",
-        },
-      ],
-      next_action: null,
-    };
-  }
-
-  // 4. PMFBY Crop Insurance Query
-  if (
-    msg.includes("pmfby") ||
-    msg.includes("crop") ||
-    msg.includes("insurance") ||
-    msg.includes("पिक") ||
-    msg.includes("फसल") ||
-    msg.includes("विमा") ||
-    msg.includes("बीमा") ||
-    msg.includes("नुकसान") ||
-    msg.includes("सोयाबीन") ||
-    msg.includes("soyabean") ||
-    msg.includes("soybean") ||
-    msg.includes("खराब") ||
-    msg.includes("ख़राब")
-  ) {
-    const ans =
-      lang === "hi"
-        ? "यदि आपकी फसल प्राकृतिक आपदा से प्रभावित हुई है, तो 72 घंटे के भीतर PMFBY ऐप या कृषि अधिकारी को सूचित करें। अपना 7/12 खसरा रिकॉर्ड और बैंक पासबुक तैयार रखें।"
-        : lang === "mr"
-        ? "अतिवृष्टी किंवा आपत्तीमुळे पिकाचे नुकसान झाल्यास ७२ तासांच्या आत PMFBY ॲप किंवा कृषी अधिकाऱ्याकडे तक्रार नोंदवणे बंधनकारक आहे. ७/१२ उतारा व आधार कार्ड सोबत ठेवा."
-        : "If your crop suffered damage, report it within 72 hours via the PMFBY app or to your local agriculture officer. Keep your 7/12 land extract and bank passbook ready.";
-    return {
-      answer: ans,
-      display_answer: ans,
-      spoken_answer: ans,
-      language: lang,
-      intent: "PMFBY",
-      source: "PMFBY Guidelines",
-      sources: [
-        {
-          title: "PMFBY Operational Guidelines",
-          source_name: "Ministry of Agriculture",
-          source_url: "https://pmfby.gov.in",
-        },
-      ],
-      next_action: null,
-    };
-  }
-
-  // 5. Default Neutral Network/Timeout Assistance Fallback
+  // 2. Default Neutral Network/Timeout Assistance Fallback (No Hardcoded Facts)
   const defaultAns =
     lang === "hi"
       ? "मैं अभी सहायता सेवा से संपर्क नहीं कर पा रहा हूँ। कृपया कुछ समय बाद पुनः प्रयास करें।"

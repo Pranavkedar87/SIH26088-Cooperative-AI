@@ -125,126 +125,19 @@ def build_grounded_prompt(
     return base_prompt
 
 
-INTENT_FALLBACKS: dict[str, dict[str, str]] = {
-    "PMFBY": {
-        "en": (
-            "If your crop has suffered damage due to unseasonal rain, inundation, or natural calamity under PMFBY, "
-            "it is mandatory to intimate the insurance company, bank, or local Agriculture Officer within 72 hours. "
-            "Please keep your 7/12 land extract, Aadhaar card, and bank passbook ready."
-        ),
-        "hi": (
-            "PMFBY फसल बीमा के तहत यदि आपकी फसल (जैसे सोयाबीन, कपास, धान) प्राकृतिक आपदा या अत्यधिक बारिश से खराब हुई है, "
-            "तो 72 घंटे के भीतर बीमा कंपनी, ऐप (Crop Insurance App) या स्थानीय कृषि अधिकारी को सूचित करना अनिवार्य है। "
-            "अपना 7/12 खसरा खतौनी, आधार कार्ड और बैंक पासबुक तैयार रखें।"
-        ),
-        "mr": (
-            "PMFBY पीक विम्याअंतर्गत अवेळी पाऊस किंवा नैसर्गिक आपत्तीमुळे पिकाचे नुकसान झाल्यास, "
-            "७२ तासांच्या आत विमा कंपनी, PMFBY ॲप किंवा स्थानिक कृषी अधिकाऱ्याकडे तक्रार नोंदवणे बंधनकारक आहे. "
-            "आपला ७/१२ उतारा, आधार कार्ड आणि बँक पासबुक तयार ठेवा."
-        ),
-    },
-    "PACS_SERVICE": {
-        "en": (
-            "Primary Agricultural Credit Societies (PACS) provide short-term crop loans, fertilizers, seeds, and storage support to farmers. "
-            "To apply for benefits or membership, submit your 7/12 land extract and Aadhaar card to your local PACS Secretary."
-        ),
-        "hi": (
-            "प्राथमिक कृषि साख समितियों (PACS) के माध्यम से किसानों को अल्पकालिक फसल ऋण, उर्वरक और बीज उपलब्ध कराए जाते हैं। "
-            "सदस्यता या ऋण के लिए अपने 7/12 खसरा रिकॉर्ड और आधार कार्ड के साथ स्थानीय PACS सचिव से संपर्क करें।"
-        ),
-        "mr": (
-            "प्राथमिक कृषी पतसंस्था (PACS) मार्फत शेतकऱ्यांना अल्पमुदत पीक कर्ज, खते व बियाणे पुरवले जातात. "
-            "सभासदत्व किंवा कर्जासाठी आपल्या ७/१२ उतारा व आधार कार्डसह स्थानिक PACS सचिवांशी संपर्क साधा."
-        ),
-    },
-    "GRIEVANCE": {
-        "en": (
-            "For disputes, unfair decisions, or delay in cooperative society services, you can file an official grievance with the District Deputy Registrar (DDR) or local Cooperative Officer. Keep your society receipts and written application ready."
-        ),
-        "hi": (
-            "सहकारी समिति या संस्था के विवाद या शिकायत के लिए आप जिला उप-निबंधक (DDR) या सहकारी अधिकारी के पास लिखित शिकायत दर्ज करा सकते हैं। अपने दस्तावेज और आवेदन तैयार रखें।"
-        ),
-        "mr": (
-            "सहकारी संस्थेतील तक्रार किंवा वादासाठी तुम्ही जिल्हा उपनिबंधक (DDR) किंवा सहकार अधिकाऱ्याकडे लेखी तक्रार नोंदवू शकता. अर्जाची प्रत व पावती सोबत ठेवा."
-        ),
-    },
-    "TRACTOR_PURCHASE": {
-        "en": (
-            "Government subsidy schemes for agricultural equipment (such as tractors) exist under the Sub-Mission on Agricultural Mechanization (SMAM) and state agriculture department portals. Eligibility ranges from 40% to 50% depending on farmer category."
-        ),
-        "hi": (
-            "कृषि उपकरणों (जैसे ट्रैक्टर) के लिए 'कृषि मशीनीकरण पर उप-मिशन' (SMAM) और राज्य कृषि विभाग के पोर्टलों के तहत 40% से 50% तक सब्सिडी सहायता योजनाएं उपलब्ध हैं।"
-        ),
-        "mr": (
-            "ट्रॅक्टर आणि कृषी अवजारांसाठी 'कृषी यांत्रिकीकरण उप-अभियान' (SMAM) आणि राज्य कृषी विभागाच्या योजनांतर्गत ४०% ते ५०% अनुदान उपलब्ध आहे."
-        ),
-    },
-    "MINISTRY_SCHEME": {
-        "en": (
-            "Government subsidy schemes for agricultural equipment (such as tractors) exist under the Sub-Mission on Agricultural Mechanization (SMAM) and state agriculture department portals. Eligibility ranges from 40% to 50% depending on farmer category."
-        ),
-        "hi": (
-            "कृषि उपकरणों (जैसे ट्रैक्टर) के लिए 'कृषि मशीनीकरण पर उप-मिशन' (SMAM) और राज्य कृषि विभाग के पोर्टलों के तहत 40% से 50% तक सब्सिडी सहायता योजनाएं उपलब्ध हैं।"
-        ),
-        "mr": (
-            "ट्रॅक्टर आणि कृषी अवजारांसाठी 'कृषी यांत्रिकीकरण उप-अभियान' (SMAM) आणि राज्य कृषी विभागाच्या योजनांतर्गत ४०% ते ५०% अनुदान उपलब्ध आहे."
-        ),
-    },
-    "DEFAULT": {
-        "en": (
-            "For guidance on cooperative laws, agricultural schemes, and PACS services, please verify with your local District Agriculture Office, PACS center, or official government portal."
-        ),
-        "hi": (
-            "सहकारी नियमों, सरकारी योजनाओं और PACS सेवाओं के संबंध में अधिकृत जानकारी के लिए कृपया निकटतम कृषि कार्यालय, PACS केंद्र या सरकारी पोर्टल से संपर्क करें।"
-        ),
-        "mr": (
-            "सहकारी नियम, शासकीय योजना व PACS सेवांच्या अधिकृत माहितीसाठी कृपया आपल्या स्थानिक कृषी कार्यालय, PACS केंद्र किंवा शासकीय पोर्टलशी संपर्क साधा."
-        ),
-    },
+# Neutral Technical Failure Fallback Messages (No Manual Factual Claims)
+TECHNICAL_ERROR_FALLBACK: dict[str, str] = {
+    "en": "I am unable to process your request right now. Please try again in a moment.",
+    "hi": "मैं अभी आपके अनुरोध को संसाधित करने में असमर्थ हूँ। कृपया कुछ देर बाद पुनः प्रयास करें।",
+    "mr": "मी आत्ता तुमची विनंती प्रक्रिया करू शकत नाही. कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.",
 }
 
-CONTACT_FALLBACKS: dict[str, dict[str, str]] = {
-    "PMFBY": {
-        "en": "Official PMFBY Crop Insurance helpline: 14447 (Toll-Free). Portal: pmfby.gov.in. Contact Authority: District Agriculture Officer (DAO) or local PACS Secretary.",
-        "hi": "PMFBY फसल बीमा आधिकारिक हेल्पलाइन: 14447 (टोल-फ्री)। वेब पोर्टल: pmfby.gov.in। संपर्क अधिकारी: जिला कृषि अधिकारी या स्थानीय PACS सचिव।",
-        "mr": "PMFBY पीक विमा अधिकृत हेल्पलाईन: १४४४७ (टोल-फ्री). अधिकृत पोर्टल: pmfby.gov.in. संपर्क अधिकारी: जिल्हा कृषी अधिकारी किंवा स्थानिक PACS सचिव.",
-    },
-    "DEFAULT": {
-        "en": "Official Agriculture & Cooperative Helpline: 14447 (Toll-Free) or contact your local District Agriculture Office / DDR.",
-        "hi": "आधिकारिक कृषि एवं सहकार हेल्पलाइन: 14447 (टोल-फ्री) या निकटतम जिला कृषि कार्यालय / DDR से संपर्क करें।",
-        "mr": "अधिकृत कृषी व सहकार हेल्पलाईन: १४४४७ (टोल-फ्री) किंवा आपल्या जिल्हा कृषी कार्यालय / DDR शी संपर्क साधा.",
-    },
-}
-
-DOCUMENT_FALLBACKS: dict[str, dict[str, str]] = {
-    "PMFBY": {
-        "en": "Required documents: 7/12 land extract, 8A record, Aadhaar card, bank passbook copy, and claim application form.",
-        "hi": "आवश्यक दस्तावेज: 7/12 खसरा, 8A खतौनी, आधार कार्ड, बैंक पासबुक और आवेदन पत्र।",
-        "mr": "आवश्यक कागदपत्रे: ७/१२ उतारा, ८अ दाखला, आधार कार्ड, बँक पासबुक आणि अर्ज.",
-    },
-    "DEFAULT": {
-        "en": "Required documents: 7/12 land extract, identity proof (Aadhaar card), bank passbook, and society application form.",
-        "hi": "आवश्यक दस्तावेज: 7/12 रिकॉर्ड, पहचान पत्र (आधार कार्ड), बैंक पासबुक और आवेदन पत्र।",
-        "mr": "आवश्यक कागदपत्रे: ७/१२ उतारा, ओळखपत्र (आधार कार्ड), बँक पासबुक आणि अर्ज.",
-    },
-}
-
-NO_KNOWLEDGE_FALLBACK = INTENT_FALLBACKS["DEFAULT"]
-NO_KNOWLEDGE_FALLBACK_WITH_STATE = INTENT_FALLBACKS["DEFAULT"]
+NO_KNOWLEDGE_FALLBACK = TECHNICAL_ERROR_FALLBACK
+NO_KNOWLEDGE_FALLBACK_WITH_STATE = TECHNICAL_ERROR_FALLBACK
 
 def get_intent_fallback(intent: str, language: str = "mr", focus: str = "OVERVIEW") -> str:
-    intent_key = (intent or "").upper()
-    focus_key = (focus or "OVERVIEW").upper()
+    """Returns neutral technical error message when LLM generation fails."""
     lang_code = language.lower() if language in ["en", "hi", "mr"] else "mr"
-
-    if focus_key == "CONTACT":
-        fb_dict = CONTACT_FALLBACKS.get(intent_key) or CONTACT_FALLBACKS["DEFAULT"]
-        return fb_dict.get(lang_code) or fb_dict["en"]
-    elif focus_key == "DOCUMENTS":
-        fb_dict = DOCUMENT_FALLBACKS.get(intent_key) or DOCUMENT_FALLBACKS["DEFAULT"]
-        return fb_dict.get(lang_code) or fb_dict["en"]
-    else:
-        fb_dict = INTENT_FALLBACKS.get(intent_key) or INTENT_FALLBACKS["DEFAULT"]
-        return fb_dict.get(lang_code) or fb_dict["en"]
+    return TECHNICAL_ERROR_FALLBACK.get(lang_code, TECHNICAL_ERROR_FALLBACK["en"])
 
 
