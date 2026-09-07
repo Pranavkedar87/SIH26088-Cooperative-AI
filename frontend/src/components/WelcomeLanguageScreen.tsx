@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { LanguageCode } from "../types";
 import { LANGUAGES } from "../types";
+import welcomeFarmerImg from "../assets/welcome-farmer.png";
 
 interface Props {
   initialLanguage: LanguageCode;
@@ -22,7 +23,7 @@ export const WelcomeLanguageScreen: React.FC<Props> = ({
         {/* Farmer & Wife Illustration */}
         <div className="welcome-illustration-box">
           <img
-            src="/welcome-farmer.png"
+            src={welcomeFarmerImg}
             alt="Namaste - Welcome from Indian Farmer and Wife"
             className="welcome-farmer-img"
           />

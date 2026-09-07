@@ -1,7 +1,8 @@
-import React, { useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import type { LanguageCode } from "../types";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
-import { MicIcon, SendIcon } from "./Icons";
+import { CameraIcon, MicIcon, SendIcon, ScanDocIcon, FaceScanIcon } from "./Icons";
+import { CameraCaptureModal, type CameraMode } from "./CameraCaptureModal";
 
 interface Props {
   language: LanguageCode;
@@ -24,7 +25,22 @@ const STT_STATUS_LABEL: Record<string, { listening: string; processing: string }
 };
 
 const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChange }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeCameraMode, setActiveCameraMode] = useState<CameraMode | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Close popover on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isMenuOpen) {
+        setIsMenuOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isMenuOpen]);
 
   const handleTranscript = useCallback(
     (text: string) => {
@@ -80,6 +96,7 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
   };
 
   const handleMicClick = () => {
+    if (isMenuOpen) setIsMenuOpen(false);
     if (status === "listening") {
       stopListening();
     } else {
@@ -88,8 +105,66 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
     }
   };
 
+  const toggleCameraMenu = () => {
+    setIsMenuOpen((prev) => !prev);
+  };
+
+  const handleSelectOption = (mode: CameraMode) => {
+    setIsMenuOpen(false);
+    setActiveCameraMode(mode);
+  };
+
   return (
     <div className="input-bar-container">
+      {/* Popover Action Menu */}
+      {isMenuOpen && (
+        <>
+          <div
+            className="camera-popover-overlay"
+            onClick={() => setIsMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            ref={popoverRef}
+            className="camera-action-popover"
+            role="menu"
+            aria-label="Camera Actions"
+          >
+            <button
+              type="button"
+              className="camera-popover-item"
+              onClick={() => handleSelectOption("document_scan")}
+              role="menuitem"
+            >
+              <div className="camera-popover-icon-box">
+                <ScanDocIcon size={18} color="#0F6B68" />
+              </div>
+              <div className="camera-popover-text">
+                <span className="camera-popover-title">Scan Document</span>
+                <span className="camera-popover-desc">Capture records, forms, or certificates</span>
+              </div>
+            </button>
+
+            <div className="camera-popover-divider" />
+
+            <button
+              type="button"
+              className="camera-popover-item"
+              onClick={() => handleSelectOption("face_scan")}
+              role="menuitem"
+            >
+              <div className="camera-popover-icon-box">
+                <FaceScanIcon size={18} color="#0F6B68" />
+              </div>
+              <div className="camera-popover-text">
+                <span className="camera-popover-title">Face Scan (Optional)</span>
+                <span className="camera-popover-desc">Additional camera feature preview</span>
+              </div>
+            </button>
+          </div>
+        </>
+      )}
+
       {/* Listening or processing status badge */}
       {status === "listening" && (
         <div className="stt-status-bar stt-status-bar--listening" role="status" aria-live="polite">
@@ -130,6 +205,18 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
           maxLength={2000}
         />
 
+        {/* Camera Button */}
+        <button
+          type="button"
+          className={`input-btn camera-btn ${isMenuOpen ? "camera-btn--active" : ""}`}
+          onClick={toggleCameraMenu}
+          disabled={isLoading}
+          aria-label="Camera options"
+          title="Scan document or face"
+        >
+          <CameraIcon size={18} color="#0F6B68" />
+        </button>
+
         {/* Microphone Button */}
         <button
           type="button"
@@ -159,6 +246,16 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
           <SendIcon size={18} color="#FFFFFF" />
         </button>
       </div>
+
+      {/* Camera Capture Modal */}
+      {activeCameraMode && (
+        <CameraCaptureModal
+          mode={activeCameraMode}
+          isOpen={Boolean(activeCameraMode)}
+          onClose={() => setActiveCameraMode(null)}
+          language={language}
+        />
+      )}
     </div>
   );
 };

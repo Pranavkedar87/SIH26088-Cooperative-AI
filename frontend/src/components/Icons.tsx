@@ -777,5 +777,128 @@ export const XIcon: React.FC<IconProps> = ({
   </svg>
 );
 
+export const CameraIcon: React.FC<IconProps> = ({
+  size = 18,
+  color = "currentColor",
+  strokeWidth = 1.8,
+  ...props
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <circle cx="12" cy="13" r="4" />
+  </svg>
+);
+
+export const ScanDocIcon: React.FC<IconProps> = ({
+  size = 20,
+  color = "currentColor",
+  strokeWidth = 1.8,
+  ...props
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M4 7V4a2 2 0 0 1 2-2h3" />
+    <path d="M15 2h3a2 2 0 0 1 2 2v3" />
+    <path d="M20 17v3a2 2 0 0 1-2 2h-3" />
+    <path d="M9 22H6a2 2 0 0 1-2-2v-3" />
+    <path d="M9 8h6" />
+    <path d="M9 12h6" />
+    <path d="M9 16h4" />
+  </svg>
+);
+
+export const FaceScanIcon: React.FC<IconProps> = ({
+  size = 20,
+  color = "currentColor",
+  strokeWidth = 1.8,
+  ...props
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M4 7V4a2 2 0 0 1 2-2h3" />
+    <path d="M15 2h3a2 2 0 0 1 2 2v3" />
+    <path d="M20 17v3a2 2 0 0 1-2 2h-3" />
+    <path d="M9 22H6a2 2 0 0 1-2-2v-3" />
+    <circle cx="9" cy="10" r="1.2" fill={color} />
+    <circle cx="15" cy="10" r="1.2" fill={color} />
+    <path d="M9.5 15a4.5 4.5 0 0 0 5 0" />
+  </svg>
+);
+
+export const RotateCcwIcon: React.FC<IconProps> = ({
+  size = 18,
+  color = "currentColor",
+  strokeWidth = 2,
+  ...props
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <polyline points="1 4 1 10 7 10" />
+    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+  </svg>
+);
+
+export const FlipCameraIcon: React.FC<IconProps> = ({
+  size = 18,
+  color = "currentColor",
+  strokeWidth = 2,
+  ...props
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke={color}
+    strokeWidth={strokeWidth}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M20 10c0-4.42-3.58-8-8-8a8.01 8.01 0 0 0-7.38 5" />
+    <polyline points="4 3 4 7 8 7" />
+    <path d="M4 14c0 4.42 3.58 8 8 8a8.01 8.01 0 0 0 7.38-5" />
+    <polyline points="20 21 20 17 16 17" />
+  </svg>
+);
+
+
 
 
