@@ -147,6 +147,7 @@
 /* ── 4-Tab Navigation Bar ───────────────────────────────────────────────── */
 
 .app-nav {
+  position: relative;
   background: var(--color-surface);
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
@@ -156,9 +157,9 @@
 
 .nav-container {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   align-items: center;
-  max-width: 600px;
+  max-width: 650px;
   margin: 0 auto;
   padding: 4px 6px;
   width: 100%;
@@ -171,7 +172,7 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 5px 2px;
+  padding: 4px 2px;
   background: transparent;
   border: none;
   color: var(--color-text-muted);
@@ -208,6 +209,114 @@
   font-size: 11px;
   line-height: 1.1;
   white-space: nowrap;
+}
+
+/* Center Camera Nav Item */
+.nav-camera-item {
+  position: relative;
+}
+
+.nav-camera-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--color-secondary-light);
+  border: 1px solid rgba(15, 107, 104, 0.25);
+  transition: all 0.15s ease;
+}
+
+.nav-camera-item:hover .nav-camera-icon-wrapper,
+.nav-camera-item--active .nav-camera-icon-wrapper {
+  background: var(--color-primary);
+  border-color: var(--color-primary-dark);
+}
+
+.nav-camera-item--active {
+  color: var(--color-primary) !important;
+}
+
+/* Nav Camera Popover Menu */
+.nav-camera-popover-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.nav-camera-popover {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 8px 24px rgba(18, 59, 93, 0.16);
+  padding: 8px;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: popoverFadeIn 0.18s ease-out;
+}
+
+.nav-camera-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.12s ease;
+}
+
+.nav-camera-popover-item:hover {
+  background: var(--color-primary-light);
+}
+
+.nav-camera-popover-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--color-secondary-light);
+  flex-shrink: 0;
+}
+
+.nav-camera-popover-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.nav-camera-popover-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.nav-camera-popover-desc {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+
+.nav-camera-popover-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 2px 0;
 }
 
 /* ── Main Viewport Canvas ───────────────────────────────────────────────── */
@@ -345,9 +454,8 @@
   font-weight: 500;
 }
 
-/* SECONDARY TEXT SEARCH & CAMERA INPUT */
+/* SECONDARY TEXT SEARCH INPUT */
 .hero-secondary-input {
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -374,7 +482,7 @@
 
 .secondary-search-bar:focus-within {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(18, 59, 93, 0.08);
+  box-shadow: 0 0 0 3px rgba(18, 107, 98, 0.12);
   background: #FFFFFF;
 }
 
@@ -393,41 +501,12 @@
   opacity: 0.7;
 }
 
-.hero-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-}
-
-.hero-action-btn:hover {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary);
-}
-
-.hero-camera-btn--active {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary) !important;
-}
-
-.hero-camera-popover {
-  bottom: calc(100% + 6px);
-  right: 48px;
-}
-
 .secondary-search-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: var(--radius-sm);
   background: var(--color-primary);
   border: none;

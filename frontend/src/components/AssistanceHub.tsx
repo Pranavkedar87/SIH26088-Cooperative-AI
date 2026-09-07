@@ -11,11 +11,7 @@ import {
   MicIcon,
   SendIcon,
   ShieldCheckIcon,
-  CameraIcon,
-  ScanDocIcon,
-  FaceScanIcon,
 } from "./Icons";
-import { CameraCaptureModal, type CameraMode } from "./CameraCaptureModal";
 
 interface Props {
   language: LanguageCode;
@@ -137,8 +133,6 @@ const AssistanceHub: React.FC<Props> = ({
 }) => {
   const t = HERO_TEXT[language] ?? HERO_TEXT.en;
   const [typedInput, setTypedInput] = useState("");
-  const [isCameraMenuOpen, setIsCameraMenuOpen] = useState(false);
-  const [activeCameraMode, setActiveCameraMode] = useState<CameraMode | null>(null);
 
   const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,11 +140,6 @@ const AssistanceHub: React.FC<Props> = ({
       onStartAsk(typedInput.trim());
       setTypedInput("");
     }
-  };
-
-  const handleSelectCameraOption = (mode: CameraMode) => {
-    setIsCameraMenuOpen(false);
-    setActiveCameraMode(mode);
   };
 
   return (
@@ -177,7 +166,7 @@ const AssistanceHub: React.FC<Props> = ({
             </div>
           </button>
 
-          {/* SECONDARY TEXT & CAMERA INPUT */}
+          {/* SECONDARY TEXT INPUT */}
           <div className="hero-secondary-input">
             <span className="secondary-label">{t.typeOr}</span>
             <form onSubmit={handleTextSubmit} className="secondary-search-bar">
@@ -188,30 +177,6 @@ const AssistanceHub: React.FC<Props> = ({
                 onChange={(e) => setTypedInput(e.target.value)}
                 placeholder={t.placeholder}
               />
-
-              {/* Camera Button */}
-              <button
-                type="button"
-                className={`hero-action-btn hero-camera-btn ${isCameraMenuOpen ? "hero-camera-btn--active" : ""}`}
-                onClick={() => setIsCameraMenuOpen((prev) => !prev)}
-                aria-label="Camera options"
-                title="Scan document or face"
-              >
-                <CameraIcon size={18} color="#0F6B68" />
-              </button>
-
-              {/* Microphone Button */}
-              <button
-                type="button"
-                className="hero-action-btn hero-mic-btn"
-                onClick={onOpenVoiceMode}
-                aria-label="Voice input"
-                title="Speak to SahkaarSetu"
-              >
-                <MicIcon size={18} color="#0F6B68" />
-              </button>
-
-              {/* Send Button */}
               <button
                 type="submit"
                 className="secondary-search-btn"
@@ -221,63 +186,9 @@ const AssistanceHub: React.FC<Props> = ({
                 <SendIcon size={16} color="#FFFFFF" />
               </button>
             </form>
-
-            {/* Popover Action Menu */}
-            {isCameraMenuOpen && (
-              <>
-                <div
-                  className="camera-popover-overlay"
-                  onClick={() => setIsCameraMenuOpen(false)}
-                  aria-hidden="true"
-                />
-                <div className="camera-action-popover hero-camera-popover" role="menu">
-                  <button
-                    type="button"
-                    className="camera-popover-item"
-                    onClick={() => handleSelectCameraOption("document_scan")}
-                    role="menuitem"
-                  >
-                    <div className="camera-popover-icon-box">
-                      <ScanDocIcon size={18} color="#0F6B68" />
-                    </div>
-                    <div className="camera-popover-text">
-                      <span className="camera-popover-title">Scan Document</span>
-                      <span className="camera-popover-desc">Capture records, forms, or certificates</span>
-                    </div>
-                  </button>
-
-                  <div className="camera-popover-divider" />
-
-                  <button
-                    type="button"
-                    className="camera-popover-item"
-                    onClick={() => handleSelectCameraOption("face_scan")}
-                    role="menuitem"
-                  >
-                    <div className="camera-popover-icon-box">
-                      <FaceScanIcon size={18} color="#0F6B68" />
-                    </div>
-                    <div className="camera-popover-text">
-                      <span className="camera-popover-title">Face Scan (Optional)</span>
-                      <span className="camera-popover-desc">Additional camera feature preview</span>
-                    </div>
-                  </button>
-                </div>
-              </>
-            )}
           </div>
         </div>
       </section>
-
-      {/* Camera Capture Modal */}
-      {activeCameraMode && (
-        <CameraCaptureModal
-          mode={activeCameraMode}
-          isOpen={Boolean(activeCameraMode)}
-          onClose={() => setActiveCameraMode(null)}
-          language={language}
-        />
-      )}
 
       {/* Service Directory Section */}
       <section className="hub-services-section">
