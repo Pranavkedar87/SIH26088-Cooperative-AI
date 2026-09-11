@@ -10,7 +10,6 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from google import genai
-from google.genai import types as genai_types
 
 from app.config import get_settings
 
