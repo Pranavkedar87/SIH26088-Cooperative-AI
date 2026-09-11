@@ -51,9 +51,9 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         return GeminiEmbeddingProvider._client
 
     def embed_text(self, text: str) -> list[float]:
-        """Generate a single 768-dim embedding vector via REST API with 2s timeout."""
+        """Generate a single 768-dim embedding vector via REST API with 5s timeout. Returns empty list on failure."""
         if not text or not text.strip():
-            return [0.0] * EMBEDDING_DIMENSION
+            return []
 
         import json as _json
         import urllib.request as _urllib_req
@@ -62,7 +62,8 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
         settings = get_settings()
         api_key = (settings.gemini_api_key or os.getenv("GEMINI_API_KEY", "")).strip()
         if not api_key:
-            return [0.0] * EMBEDDING_DIMENSION
+            logger.warning("GEMINI_API_KEY is not configured for embeddings.")
+            return []
 
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{DEFAULT_EMBEDDING_MODEL}:embedContent?key={api_key}"
@@ -75,15 +76,15 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
                 data=_json.dumps(body).encode("utf-8"),
                 headers={"Content-Type": "application/json"},
             )
-            with _urllib_req.urlopen(req, timeout=2.0) as resp:
+            with _urllib_req.urlopen(req, timeout=5.0) as resp:
                 data = _json.loads(resp.read().decode("utf-8"))
                 values = data.get("embedding", {}).get("values", [])
-                if values:
+                if values and len(values) == EMBEDDING_DIMENSION:
                     return list(values)
         except Exception as exc:
-            logger.debug("Fast embedding fallback: %s", exc)
+            logger.warning("Gemini embedding API call failed: %s", exc)
 
-        return [0.0] * EMBEDDING_DIMENSION
+        return []
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a batch of text snippets."""

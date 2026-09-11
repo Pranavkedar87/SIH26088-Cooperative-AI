@@ -17,7 +17,7 @@ except ImportError:
     from typing import TypedDict  # type: ignore[assignment]
 
 from database.supabase import get_supabase_client
-from rag.embeddings import GeminiEmbeddingProvider
+from rag.embeddings import GeminiEmbeddingProvider, EMBEDDING_DIMENSION
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +202,7 @@ def retrieve_relevant_knowledge(
         query_vec = None
         try:
             query_vec = embedding_provider.embed_text(query)
-            if query_vec and any(v != 0.0 for v in query_vec):
+            if query_vec and len(query_vec) == EMBEDDING_DIMENSION and any(v != 0.0 for v in query_vec):
                 # Try RPC match_knowledge_chunks
                 rpc_response = client.rpc(
                     "match_knowledge_chunks",
@@ -239,7 +239,7 @@ def retrieve_relevant_knowledge(
             logger.debug("Supabase RPC vector search unavailable: %s", exc)
 
         # 1b. Memory cache vector cosine similarity search if RPC yields 0 chunks
-        if not results and query_vec:
+        if not results and query_vec and len(query_vec) == EMBEDDING_DIMENSION and any(v != 0.0 for v in query_vec):
             try:
                 cached_chunks = _get_cached_chunks(client)
                 scored = []
