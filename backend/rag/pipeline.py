@@ -67,6 +67,7 @@ def extract_json_payload(text: str) -> Optional[dict[str, Any]]:
 from app.config import get_settings
 from app.providers.groq_provider import query_groq_llm, GROQ_MODELS
 from app.providers.gemini_provider import query_gemini_llm
+from app.providers.ollama_provider import query_ollama_llm, LOCAL_UNAVAILABLE_MESSAGE
 from app.schemas.query import (
     IntentCode,
     QueryRequest,
@@ -130,57 +131,89 @@ def generate_structured_answer(
     max_tokens: int = 2048,
 ) -> tuple[Optional[dict[str, Any]], str, dict[str, Any]]:
     """
-    Primary synthesis generator: Gemini (REST) → Groq fallback.
-    Always returns a structured result if either provider works.
+    Primary synthesis generator based on configured AI_PROVIDER:
+    - Default (AI_PROVIDER=ollama): Queries local Ollama instance (qwen3:8b).
+      Gemini is NOT called.
+    - If AI_PROVIDER=gemini: Queries Gemini API (with Groq fallback).
     """
-    # 1. Try Gemini first
-    raw_answer, used_model, gemini_stats = query_gemini_llm(
-        system_instruction=system_instruction,
-        user_prompt=user_prompt,
-        max_tokens=max_tokens,
-        temperature=0.2,
-        response_mime_type="application/json",
-    )
-    if raw_answer:
-        payload = extract_json_payload(raw_answer)
-        if payload and isinstance(payload, dict):
-            logger.info(f"[PRIMARY LLM] Structured output via Gemini ({used_model})")
-            return payload, f"GEMINI ({used_model})", gemini_stats
+    settings = get_settings()
+    provider_name = (settings.ai_provider or "ollama").lower().strip()
 
-        # Wrap plain text or markdown response in structured schema
-        wrapped = {
-            "direct_answer": raw_answer.strip(),
-            "sections": [],
-            "spoken_answer": clean_speech_text(raw_answer)[:300],
-        }
-        logger.info(f"[PRIMARY LLM] Plain text/markdown wrapped from Gemini ({used_model})")
-        return wrapped, f"GEMINI ({used_model})", gemini_stats
-
-    # 2. Groq fallback
-    logger.warning("[PRIMARY LLM] Gemini failed — switching to Groq fallback")
-    try:
-        groq_answer, groq_model, groq_stats = query_groq_llm(
+    if provider_name == "ollama":
+        raw_answer, used_model, ollama_stats = query_ollama_llm(
             system_instruction=system_instruction,
             user_prompt=user_prompt,
             max_tokens=max_tokens,
-            temperature=0.3,
+            temperature=0.2,
+            response_format="json",
         )
-        if groq_answer:
-            payload = extract_json_payload(groq_answer)
+        if raw_answer:
+            payload = extract_json_payload(raw_answer)
             if payload and isinstance(payload, dict):
-                logger.info(f"[FALLBACK LLM] Structured JSON from Groq ({groq_model})")
-                return payload, f"GROQ ({groq_model})", groq_stats
+                logger.info(f"[PRIMARY LLM] provider=ollama model={used_model} status=SUCCESS (Structured JSON)")
+                return payload, f"OLLAMA ({used_model})", ollama_stats
 
-            # Wrap plain text response in structured schema
+            # Wrap plain text or markdown response in structured schema
             wrapped = {
-                "direct_answer": groq_answer.strip(),
+                "direct_answer": raw_answer.strip(),
                 "sections": [],
-                "spoken_answer": clean_speech_text(groq_answer)[:300],
+                "spoken_answer": clean_speech_text(raw_answer)[:300],
             }
-            logger.info(f"[FALLBACK LLM] Plain text wrapped from Groq ({groq_model})")
-            return wrapped, f"GROQ ({groq_model})", groq_stats
-    except Exception as exc:
-        logger.error(f"Groq fallback also failed: {exc}")
+            logger.info(f"[PRIMARY LLM] provider=ollama model={used_model} status=SUCCESS (Plain text wrapped)")
+            return wrapped, f"OLLAMA ({used_model})", ollama_stats
+
+        logger.error(f"[PRIMARY LLM] provider=ollama model={settings.ollama_model} failed or is unavailable.")
+        return None, "none", ollama_stats
+
+    elif provider_name == "gemini":
+        # 1. Try Gemini first
+        raw_answer, used_model, gemini_stats = query_gemini_llm(
+            system_instruction=system_instruction,
+            user_prompt=user_prompt,
+            max_tokens=max_tokens,
+            temperature=0.2,
+            response_mime_type="application/json",
+        )
+        if raw_answer:
+            payload = extract_json_payload(raw_answer)
+            if payload and isinstance(payload, dict):
+                logger.info(f"[PRIMARY LLM] Structured output via Gemini ({used_model})")
+                return payload, f"GEMINI ({used_model})", gemini_stats
+
+            wrapped = {
+                "direct_answer": raw_answer.strip(),
+                "sections": [],
+                "spoken_answer": clean_speech_text(raw_answer)[:300],
+            }
+            logger.info(f"[PRIMARY LLM] Plain text/markdown wrapped from Gemini ({used_model})")
+            return wrapped, f"GEMINI ({used_model})", gemini_stats
+
+        # 2. Groq fallback for gemini mode
+        logger.warning("[PRIMARY LLM] Gemini failed — switching to Groq fallback")
+        try:
+            groq_answer, groq_model, groq_stats = query_groq_llm(
+                system_instruction=system_instruction,
+                user_prompt=user_prompt,
+                max_tokens=max_tokens,
+                temperature=0.3,
+            )
+            if groq_answer:
+                payload = extract_json_payload(groq_answer)
+                if payload and isinstance(payload, dict):
+                    logger.info(f"[FALLBACK LLM] Structured JSON from Groq ({groq_model})")
+                    return payload, f"GROQ ({groq_model})", groq_stats
+
+                wrapped = {
+                    "direct_answer": groq_answer.strip(),
+                    "sections": [],
+                    "spoken_answer": clean_speech_text(groq_answer)[:300],
+                }
+                logger.info(f"[FALLBACK LLM] Plain text wrapped from Groq ({groq_model})")
+                return wrapped, f"GROQ ({groq_model})", groq_stats
+        except Exception as exc:
+            logger.error(f"Groq fallback also failed: {exc}")
+
+        return None, "none", {}
 
     return None, "none", {}
 
@@ -953,10 +986,16 @@ class RAGPipeline:
                 suggested_followups=[],
             )
         else:
-            logger.warning("Gemini primary provider failed or returned invalid JSON. Using neutral error fallback.")
-            raw_fallback = get_intent_fallback(intent, detected_language, answer_focus)
+            settings = get_settings()
+            provider_name = (settings.ai_provider or "ollama").lower().strip()
+            if provider_name == "ollama":
+                logger.warning("Local Ollama provider failed or is unavailable. Returning structured unavailable error.")
+                display_answer = LOCAL_UNAVAILABLE_MESSAGE
+            else:
+                logger.warning("Primary provider failed. Using neutral error fallback.")
+                raw_fallback = get_intent_fallback(intent, detected_language, answer_focus)
+                display_answer = raw_fallback.strip()
 
-            display_answer = raw_fallback.strip()
             spoken_answer = clean_speech_text(display_answer)
 
             # SOURCE DISSOCIATION: Disassociate retrieved sources on technical generation failure
@@ -1018,7 +1057,7 @@ class RAGPipeline:
             f"CLAIMS_VALIDATED={claims_validated}\n"
             f"RESPONSE_MODE={resp_mode}\n"
             f"LLM_ACTUALLY_CALLED=True\n"
-            f"LLM=GROQ ({used_model})\n"
+            f"LLM={used_model}\n"
             f"SPOKEN_LANGUAGE={spoken_answer[:60]}...\n"
             f"TTS_LANGUAGE={tts_language}\n"
             f"FOLLOW_UP_LISTENING=True\n"

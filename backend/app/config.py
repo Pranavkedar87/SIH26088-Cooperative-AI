@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     )
 
     # ── AI & Voice Providers ──────────────────────────────────────────────
+    ai_provider: str = "ollama"
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "qwen3:8b"
+    ollama_timeout_seconds: float = 120.0
+
     gemini_api_key: str = ""
     groq_api_key: str = ""
 
