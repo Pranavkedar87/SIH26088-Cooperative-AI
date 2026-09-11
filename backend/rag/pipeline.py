@@ -607,13 +607,27 @@ class RAGPipeline:
 
         combined_context = "\n".join(context_parts)
 
-        lang_names = {"en": "English", "hi": "Hindi", "mr": "Marathi"}
+        lang_names = {
+            "en": "English",
+            "hi": "Hindi",
+            "mr": "Marathi",
+            "ta": "Tamil",
+            "te": "Telugu",
+            "kn": "Kannada",
+            "gu": "Gujarati",
+            "bn": "Bengali",
+            "pa": "Punjabi",
+            "ml": "Malayalam",
+        }
         target_lang = lang_names.get(detected_language, "English")
 
         system_instruction = RAG_SYSTEM_INSTRUCTION
         user_prompt = (
             f"ORIGINAL USER QUESTION: {message}\n"
-            f"STRICT RESPONSE LANGUAGE: {target_lang}\n"
+            f"⚠️ MANDATORY LANGUAGE RULE: You MUST respond ONLY in {target_lang}. "
+            f"The user typed in {target_lang}. Your ENTIRE response — direct_answer, sections, spoken_answer — "
+            f"MUST be written in {target_lang}. Do NOT switch to any other language. "
+            f"Do NOT respond in English if the question is in {target_lang}.\n"
             f"Detected Intent: {intent}\n"
             f"Answer Focus: {answer_focus}\n"
             f"Active Session Turn: {session.turn_number}\n"

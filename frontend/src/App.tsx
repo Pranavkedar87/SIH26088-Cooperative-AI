@@ -18,6 +18,7 @@ import VoiceModeView from "./components/VoiceModeView";
 import SplashScreen from "./components/SplashScreen";
 import WelcomeLanguageScreen from "./components/WelcomeLanguageScreen";
 import { detectUserLocation, type UserLocationData } from "./services/locationService";
+import { detectLanguageFromText } from "./utils/languageDetector";
 import "./App.css";
 
 let _id = 0;
@@ -156,12 +157,16 @@ const App: React.FC = () => {
       setError(null);
       setActiveTab("ask");
 
+      // Auto-detect language from what the user actually typed.
+      // Falls back to the UI language selector if detection is ambiguous.
+      const detectedLang = detectLanguageFromText(text, language);
+
       addMessage({
         id: uid(),
         role: "user",
         content: text,
         timestamp: new Date(),
-        language,
+        language: detectedLang,
       });
 
       setIsLoading(true);
@@ -170,7 +175,7 @@ const App: React.FC = () => {
       try {
         const response = await sendQuery({
           message: text,
-          language,
+          language: detectedLang,
           session_id: sessionId,
         });
 
@@ -188,7 +193,7 @@ const App: React.FC = () => {
           structured_answer: response.structured_answer,
           spoken_answer: response.spoken_answer,
           timestamp: new Date(),
-          language: response.language,
+          language: response.language || detectedLang,
           sources: response.sources,
           intent: response.intent,
           answer_focus: response.answer_focus,
@@ -197,9 +202,9 @@ const App: React.FC = () => {
       } catch (err) {
         console.error("sendQuery error:", err);
         const msg =
-          language === "hi"
+          detectedLang === "hi"
             ? "नेटवर्क एरर हुई। कृपया पुनः प्रयास करें।"
-            : language === "mr"
+            : detectedLang === "mr"
             ? "नेटवर्क एरर आला. कृपया पुन्हा प्रयत्न करा."
             : "Network error. Please tap Send again.";
         setError(msg);
