@@ -19,6 +19,7 @@ import SplashScreen from "./components/SplashScreen";
 import WelcomeLanguageScreen from "./components/WelcomeLanguageScreen";
 import { detectUserLocation, type UserLocationData } from "./services/locationService";
 import { detectLanguageFromText } from "./utils/languageDetector";
+import { useTranslation, isRTL } from "./i18n";
 import "./App.css";
 
 let _id = 0;
@@ -69,6 +70,8 @@ const App: React.FC = () => {
   const [appPhase, setAppPhase] = useState<"splash" | "language_select" | "dashboard">("splash");
   const [activeTab, setActiveTab] = useState<AppTab>("home");
   const [language, setLanguage] = useState<LanguageCode>("en");
+  const t = useTranslation(language);
+  const isQaSupportedLang = language === "en" || language === "hi" || language === "mr";
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -201,13 +204,7 @@ const App: React.FC = () => {
         });
       } catch (err) {
         console.error("sendQuery error:", err);
-        const msg =
-          detectedLang === "hi"
-            ? "नेटवर्क एरर हुई। कृपया पुनः प्रयास करें।"
-            : detectedLang === "mr"
-            ? "नेटवर्क एरर आला. कृपया पुन्हा प्रयत्न करा."
-            : "Network error. Please tap Send again.";
-        setError(msg);
+        setError(t("chat.networkError"));
       } finally {
         setIsLoading(false);
       }
@@ -247,7 +244,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="platform-app">
+    <div className="platform-app" dir={isRTL(language) ? "rtl" : "ltr"}>
       {/* Top Header Component */}
       <Header
         language={language}
@@ -284,6 +281,7 @@ const App: React.FC = () => {
         locationData={locationData}
         onRefreshLocation={handleDetectLocation}
         isDetecting={isDetectingLocation}
+        language={language}
       />
 
       {/* 22 Scheduled Languages Selector Modal */}
@@ -354,6 +352,27 @@ const App: React.FC = () => {
         {/* Tab 2: ASK AI Chat Assistant */}
         {activeTab === "ask" && (
           <div className="chat-tab-container">
+            {!isQaSupportedLang && (
+              <div
+                className="qa-lang-notice-banner"
+                role="status"
+                style={{
+                  margin: "8px 16px 0",
+                  padding: "10px 14px",
+                  background: "#EFF6FF",
+                  border: "1px solid #BFDBFE",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  color: "#1E40AF",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                }}
+              >
+                <span style={{ fontSize: "16px", flexShrink: 0 }}>ℹ️</span>
+                <span>{t("qa.notice")}</span>
+              </div>
+            )}
             <ChatArea
               messages={messages}
               isLoading={isLoading}

@@ -570,6 +570,11 @@ class RAGPipeline:
                     "source_name": chunk.get("source_name") or "Cooperative DB",
                     "source_url": url,
                     "document_id": chunk.get("document_id"),
+                    "document_type": chunk.get("document_type", "UNKNOWN"),
+                    "authority_level": chunk.get("authority_level", "UNKNOWN"),
+                    "jurisdiction": chunk.get("jurisdiction", "UNKNOWN"),
+                    "currentness_status": chunk.get("currentness_status", "UNKNOWN"),
+                    "verification_status": chunk.get("verification_status", "NEEDS_VERIFICATION"),
                 })
 
         for web_item in web_results:
@@ -592,9 +597,18 @@ class RAGPipeline:
         prompt_start = time.perf_counter()
         context_parts = []
         if rag_chunks:
-            context_parts.append("--- OFFICIAL GROUNDED RAG KNOWLEDGE BASE ---")
+            context_parts.append("--- OFFICIAL GROUNDED RAG KNOWLEDGE BASE (GOVERNED) ---")
             for idx, chunk in enumerate(rag_chunks, 1):
-                context_parts.append(f"[{idx}] {chunk.get('title')}: {chunk.get('content')}")
+                gov_info = (
+                    f"[Document: {chunk.get('title', 'Unknown')} | "
+                    f"Type: {chunk.get('document_type', 'UNKNOWN')} | "
+                    f"Authority: {chunk.get('authority_level', 'UNKNOWN')} | "
+                    f"Jurisdiction: {chunk.get('jurisdiction', 'UNKNOWN')} | "
+                    f"Currentness: {chunk.get('currentness_status', 'UNKNOWN')} | "
+                    f"Verification: {chunk.get('verification_status', 'NEEDS_VERIFICATION')} | "
+                    f"Precedence Tier: {chunk.get('precedence_tier', 10)}]"
+                )
+                context_parts.append(f"[{idx}] {gov_info}\nContent: {chunk.get('content')}")
 
         if web_results:
             context_parts.append("--- LIVE AUTHORITATIVE WEB RESEARCH SOURCES ---")
@@ -968,10 +982,16 @@ class RAGPipeline:
                 sources=[
                     SourceItem(
                         title=s["title"],
+                        document_type=s.get("document_type", "UNKNOWN"),
+                        authority_level=s.get("authority_level", "UNKNOWN"),
+                        jurisdiction=s.get("jurisdiction", "UNKNOWN"),
+                        currentness_status=s.get("currentness_status", "UNKNOWN"),
+                        verification_status=s.get("verification_status", "NEEDS_VERIFICATION"),
+                        page_number=s.get("page_number"),
+                        section_number=s.get("section_number"),
                         source_name=s.get("source_name"),
                         source_url=s.get("source_url"),
                         document_id=s.get("document_id"),
-                        authority_level=s.get("authority_level", "OFFICIAL_GOVERNMENT"),
                         retrieved_at=s.get("retrieved_at"),
                     ) for s in sources_list
                 ],

@@ -79,7 +79,13 @@ def sanitize_source_citations(raw_sources: List[Dict[str, Any]], is_legal_or_gov
             "source_url": url,
             "url": url,
             "document_id": item.get("document_id"),
+            "document_type": item.get("document_type", "UNKNOWN"),
             "authority_level": authority,
+            "jurisdiction": item.get("jurisdiction", "UNKNOWN"),
+            "currentness_status": item.get("currentness_status", "UNKNOWN"),
+            "verification_status": item.get("verification_status", "NEEDS_VERIFICATION"),
+            "page_number": item.get("page_number"),
+            "section_number": item.get("section_number"),
             "retrieved_at": current_iso_time,
         })
 

@@ -1,5 +1,6 @@
 import React from "react";
 import type { AppTab, LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import {
   SahkaarSetuLogo,
   HomeIcon,
@@ -22,16 +23,14 @@ interface Props {
 const NAV_ITEMS: Array<{
   id: AppTab;
   icon: React.FC<{ size?: number; color?: string }>;
-  en: string;
-  hi: string;
-  mr: string;
+  translationKey: string;
 }> = [
-  { id: "home", icon: HomeIcon, en: "Home Hub", hi: "गृह केंद्र", mr: "मुख्य केंद्र" },
-  { id: "notifications", icon: BellIcon, en: "Notifications & Alerts", hi: "सूचनाएं एवं अलर्ट", mr: "सूचना आणि अलर्ट" },
-  { id: "ask", icon: MessageSquareIcon, en: "Ask AI Assistant", hi: "प्रश्न पूछें", mr: "प्रश्न विचारा" },
-  { id: "services", icon: GridIcon, en: "Services Directory", hi: "सेवा निर्देशिका", mr: "सेवा निर्देशिका" },
-  { id: "grievance", icon: ClipboardCheckIcon, en: "Grievance Portal", hi: "शिकायत पोर्टल", mr: "तक्रार निवारण" },
-  { id: "history", icon: HistoryIcon, en: "Query History", hi: "इतिहास", mr: "इतिहास" },
+  { id: "home", icon: HomeIcon, translationKey: "drawer.home" },
+  { id: "notifications", icon: BellIcon, translationKey: "drawer.notifications" },
+  { id: "ask", icon: MessageSquareIcon, translationKey: "drawer.ask" },
+  { id: "services", icon: GridIcon, translationKey: "drawer.services" },
+  { id: "grievance", icon: ClipboardCheckIcon, translationKey: "drawer.grievance" },
+  { id: "history", icon: HistoryIcon, translationKey: "drawer.history" },
 ];
 
 export const SideDrawer: React.FC<Props> = ({
@@ -41,6 +40,8 @@ export const SideDrawer: React.FC<Props> = ({
   onSelectTab,
   language,
 }) => {
+  const t = useTranslation(language);
+
   if (!isOpen) return null;
 
   return (
@@ -51,16 +52,15 @@ export const SideDrawer: React.FC<Props> = ({
             <SahkaarSetuLogo size={44} />
             <div className="drawer-brand-text">
               <h2 className="drawer-brand-name">SahkaarSetu</h2>
-              <span className="drawer-brand-tagline">
-                {language === "hi"
-                  ? "आपका सहकारी साथी"
-                  : language === "mr"
-                  ? "तुमचा सहकारी साथी"
-                  : "Your Cooperative Companion"}
-              </span>
+              <span className="drawer-brand-tagline">{t("drawer.tagline")}</span>
             </div>
           </div>
-          <button type="button" className="drawer-close-btn" onClick={onClose} aria-label="Close menu">
+          <button
+            type="button"
+            className="drawer-close-btn"
+            onClick={onClose}
+            aria-label={t("drawer.closeMenu")}
+          >
             <XIcon size={20} />
           </button>
         </div>
@@ -68,7 +68,7 @@ export const SideDrawer: React.FC<Props> = ({
         <nav className="drawer-nav">
           {NAV_ITEMS.map((item) => {
             const IconComp = item.icon;
-            const label = item[language as "en" | "hi" | "mr"] || item.en;
+            const label = t(item.translationKey);
             const isActive = activeTab === item.id;
 
             return (
@@ -89,11 +89,11 @@ export const SideDrawer: React.FC<Props> = ({
         </nav>
 
         <div className="drawer-footer">
-          <p className="drawer-footer-text">
-            Official Multilingual Cooperative Governance Platform
-          </p>
+          <p className="drawer-footer-text">{t("drawer.footer")}</p>
         </div>
       </aside>
     </div>
   );
 };
+
+export default SideDrawer;

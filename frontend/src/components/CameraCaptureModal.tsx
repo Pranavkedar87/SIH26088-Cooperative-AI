@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import type { LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import {
   ScanDocIcon,
   FaceScanIcon,
@@ -72,6 +73,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
   onClose,
   language,
 }) => {
+  const t = useTranslation(language);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [cameraFacing, setCameraFacing] = useState<"user" | "environment">(
@@ -199,10 +201,10 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
             )}
             <div>
               <h2 className="camera-modal-title">
-                {currentLabels.title[langKey as keyof typeof currentLabels.title]}
+                {currentLabels.title[langKey as keyof typeof currentLabels.title] || currentLabels.title.en}
               </h2>
               <span className="camera-modal-sub">
-                {mode === "document_scan" ? "Institutional Doc Assist" : "Optional Preview Feature"}
+                {mode === "document_scan" ? t("camera.docAssist") : t("camera.optionalPreview")}
               </span>
             </div>
           </div>
@@ -210,7 +212,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
             type="button"
             className="camera-close-btn"
             onClick={onClose}
-            aria-label="Close camera"
+            aria-label={t("common.close")}
           >
             <XIcon size={18} color="#24323A" />
           </button>
@@ -229,7 +231,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
                     className="camera-action-btn camera-btn-primary"
                     onClick={() => startCamera(cameraFacing)}
                   >
-                    Retry Camera
+                    {t("camera.retry")}
                   </button>
                 </div>
               ) : (
@@ -260,7 +262,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
 
                   {/* Top helper tag */}
                   <div className="camera-viewfinder-hint">
-                    {currentLabels.hint[langKey as keyof typeof currentLabels.hint]}
+                    {currentLabels.hint[langKey as keyof typeof currentLabels.hint] || currentLabels.hint.en}
                   </div>
                 </div>
               )}
@@ -274,7 +276,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
               />
               <div className="camera-preview-badge">
                 <CheckIcon size={14} color="#0F6B68" />
-                <span>Captured</span>
+                <span>{t("camera.captured")}</span>
               </div>
             </div>
           )}
@@ -287,12 +289,12 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
         <div className="camera-disclaimer-banner">
           <p>
             {capturedImage
-              ? currentLabels.capturedMessage[
+              ? (currentLabels.capturedMessage[
                   langKey as keyof typeof currentLabels.capturedMessage
-                ]
-              : currentLabels.disclaimer[
+                ] || currentLabels.capturedMessage.en)
+              : (currentLabels.disclaimer[
                   langKey as keyof typeof currentLabels.disclaimer
-                ]}
+                ] || currentLabels.disclaimer.en)}
           </p>
         </div>
 
@@ -304,11 +306,11 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
                 type="button"
                 className="camera-tool-btn"
                 onClick={handleFlipCamera}
-                title="Switch Camera"
-                aria-label="Switch Camera"
+                title={t("common.flip")}
+                aria-label={t("common.flip")}
               >
                 <FlipCameraIcon size={18} color="#123B5D" />
-                <span>Flip</span>
+                <span>{t("common.flip")}</span>
               </button>
 
               <button
@@ -325,9 +327,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
                 type="button"
                 className="camera-tool-btn"
                 onClick={onClose}
-                aria-label="Cancel"
+                aria-label={t("common.cancel")}
               >
-                <span>Cancel</span>
+                <span>{t("common.cancel")}</span>
               </button>
             </div>
           ) : (
@@ -338,7 +340,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
                 onClick={handleRetake}
               >
                 <RotateCcwIcon size={16} color="#123B5D" />
-                <span>Retake</span>
+                <span>{t("camera.retake")}</span>
               </button>
               <button
                 type="button"
@@ -346,7 +348,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
                 onClick={onClose}
               >
                 <CheckIcon size={16} color="#FFFFFF" />
-                <span>Done</span>
+                <span>{t("common.done")}</span>
               </button>
             </div>
           )}

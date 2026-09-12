@@ -1,13 +1,16 @@
 import React, { useState } from "react";
-import type { SourceItem } from "../types";
+import type { SourceItem, LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import { ShieldCheckIcon, ExternalLinkIcon } from "./Icons";
 
 interface Props {
   sources: SourceItem[];
+  language?: LanguageCode;
 }
 
-const SourcesAccordion: React.FC<Props> = ({ sources }) => {
+const SourcesAccordion: React.FC<Props> = ({ sources, language = "en" }) => {
   const [open, setOpen] = useState(false);
+  const t = useTranslation(language);
 
   if (!sources || sources.length === 0) return null;
 
@@ -18,11 +21,11 @@ const SourcesAccordion: React.FC<Props> = ({ sources }) => {
         className="sources-drawer__toggle"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label={`${open ? "Hide" : "Show"} sources`}
+        aria-label={`${open ? t("sources.hide") : t("sources.show")} sources`}
       >
         <ShieldCheckIcon size={14} color="#2C6E8F" />
         <span className="sources-drawer__label">
-          Source-backed guidance ({sources.length})
+          {t("sources.sourceBackedGuidance")} ({sources.length})
         </span>
         <span className="sources-drawer__arrow" aria-hidden="true">
           {open ? "▲" : "▼"}
@@ -46,7 +49,7 @@ const SourcesAccordion: React.FC<Props> = ({ sources }) => {
                   rel="noopener noreferrer"
                   className="sources-drawer__link"
                 >
-                  <span>View official source</span>
+                  <span>{t("sources.viewOfficialSource")}</span>
                   <ExternalLinkIcon size={12} color="#2C6E8F" />
                 </a>
               )}

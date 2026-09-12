@@ -125,9 +125,17 @@ export const QUICK_TOPICS: QuickTopic[] = [
 
 export interface SourceItem {
   title: string;
+  document_type?: string | null;
+  authority_level?: string | null;
+  jurisdiction?: string | null;
+  currentness_status?: string | null;
+  verification_status?: string | null;
+  page_number?: string | null;
+  section_number?: string | null;
   source_name?: string | null;
   source_url?: string | null;
   document_id?: string | null;
+  retrieved_at?: string | null;
 }
 
 export interface SuggestedFollowup {
@@ -163,9 +171,11 @@ export interface AnswerSection {
 
 export interface StructuredAnswerData {
   direct_answer: string;
+  answer_focus?: string;
   sections: AnswerSection[];
   spoken_answer?: string;
   suggested_followups?: SuggestedFollowup[];
+  sources?: SourceItem[];
 }
 
 export type MessageRole = "user" | "assistant";

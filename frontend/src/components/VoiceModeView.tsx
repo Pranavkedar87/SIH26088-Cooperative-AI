@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import type { LanguageCode, ChatMessage, VoiceState } from "../types";
+import { useTranslation } from "../i18n";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { useTextToSpeech } from "../hooks/useTextToSpeech";
 import { sendVoiceQuery, wakeUpBackend } from "../api/client";
@@ -291,7 +292,8 @@ export const VoiceModeView: React.FC<Props> = ({
     },
   };
 
-  const currentBadge = stateBadgeMap[voiceState]?.[activeLang] || stateBadgeMap[voiceState]?.mr;
+  const t = useTranslation(activeLang);
+  const currentBadge = stateBadgeMap[voiceState]?.[activeLang] || stateBadgeMap[voiceState]?.en || stateBadgeMap[voiceState]?.mr;
 
   // Dynamic Intent Label based on detected intent
   const currentIntent = aiResponse?.intent || "CASUAL_GREETING";
@@ -359,7 +361,7 @@ export const VoiceModeView: React.FC<Props> = ({
           <div className="voice-user-transcript">
             <div className="transcript-meta-row">
               <span className="transcript-label">
-                {activeLang === "hi" ? "आपने कहा:" : activeLang === "en" ? "YOU SAID:" : "तुम्ही म्हणालात:"}
+                {t("voice.youSaid")}
               </span>
               <div className="transcript-tags">
                 <span className="transcript-tag-lang">🌐 {langDisplayName}</span>
@@ -403,7 +405,7 @@ export const VoiceModeView: React.FC<Props> = ({
                   onClick={handleStopSpeakingClick}
                 >
                   <PauseIcon size={16} />
-                  <span>{activeLang === "hi" ? "रोकें (बोलें)" : activeLang === "en" ? "Stop & Speak" : "थांबवा (बोलण्यासाठी)"}</span>
+                  <span>{t("voice.stopAndSpeak")}</span>
                 </button>
               ) : (
                 <button
@@ -418,7 +420,7 @@ export const VoiceModeView: React.FC<Props> = ({
                 >
                   <SpeakerIcon size={16} />
                   <span>
-                    {activeLang === "hi" ? "फिर ऐकें" : activeLang === "en" ? "Listen Again" : "पुन्हा ऐका"}
+                    {t("voice.listenAgain")}
                   </span>
                 </button>
               )}
@@ -426,7 +428,7 @@ export const VoiceModeView: React.FC<Props> = ({
               {/* Continuous Voice Assistant Indicator */}
               <div className="voice-continuous-indicator">
                 <span className="voice-continuous-dot" />
-                <span>Continuous Voice Active</span>
+                <span>{t("voice.continuousActive")}</span>
               </div>
             </div>
           </div>
@@ -445,11 +447,7 @@ export const VoiceModeView: React.FC<Props> = ({
             }}
           >
             <span>
-              {activeLang === "hi"
-                ? "लिखित चैट उत्तर देखें"
-                : activeLang === "en"
-                ? "View Detailed Text Chat"
-                : "सविस्तर मजकूर चॅट पाहा"}
+              {t("voice.viewTextChat")}
             </span>
             <ArrowRightIcon size={14} />
           </button>

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
 import type { LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import {
   WheatIcon,
@@ -20,105 +21,49 @@ interface Props {
   onSelectGuided: (flowType: string) => void;
 }
 
-const HERO_TEXT: Record<
-  string,
-  { headline: string; sub: string; typeOr: string; placeholder: string; helpHeader: string; helpSub: string }
-> = {
-  mr: {
-    headline: "सहकारी सेवांसाठी तुमचा डिजिटल साथी",
-    sub: "समजून घ्या • विचारा • पुढील पाऊल जाणून घ्या",
-    typeOr: "प्रश्न टाइप करा किंवा बोला",
-    placeholder: "सहकारी सेवा, योजना किंवा कायद्याबद्दल विचारा...",
-    helpHeader: "तुम्हाला कशाबद्दल मदत हवी आहे?",
-    helpSub: "तुमची समस्या निवडा किंवा SahkaarSetu ला विचारा.",
-  },
-  hi: {
-    headline: "सहकारी सेवाओं के लिए आपका डिजिटल साथी",
-    sub: "समझें • पूछें • अगला कदम जानें",
-    typeOr: "प्रश्न टाइप करें या बोलें",
-    placeholder: "सहकारी सेवाओं, योजनाओं या कानून के बारे में पूछें...",
-    helpHeader: "आपको किस विषय में सहायता चाहिए?",
-    helpSub: "अपनी समस्या चुनें या SahkaarSetu से पूछें।",
-  },
-  en: {
-    headline: "Your Digital Companion for Cooperative Services",
-    sub: "Understand • Ask • Know Next Steps",
-    typeOr: "Type your question or speak",
-    placeholder: "Ask about cooperative services, schemes or laws...",
-    helpHeader: "What do you need help with?",
-    helpSub: "Select a topic or ask SahkaarSetu directly.",
-  },
-};
-
-const SERVICE_CARDS: Array<{
+interface ServiceCardConfig {
   id: string;
   icon: React.FC<{ size?: number; color?: string }>;
-  en: string;
-  hi: string;
-  mr: string;
-  descEn: string;
-  descHi: string;
-  descMr: string;
-}> = [
+  titleKey: string;
+  descKey: string;
+}
+
+const SERVICE_CARDS: ServiceCardConfig[] = [
   {
     id: "crop_damage",
     icon: WheatIcon,
-    en: "Crop & Insurance",
-    hi: "फसल और बीमा",
-    mr: "पीक आणि विमा",
-    descEn: "PMFBY crop insurance and damage guidance",
-    descHi: "पीएमएफबीवाई फसल बीमा और मुआवजा सहायता",
-    descMr: "PMFBY पीक विमा व नुकसान मार्गदर्शन",
+    titleKey: "home.serviceCrop",
+    descKey: "home.serviceCropDesc",
   },
   {
     id: "pacs_help",
     icon: LandmarkIcon,
-    en: "PACS Services",
-    hi: "पैक्स सेवाएं",
-    mr: "पॅक्स सेवा",
-    descEn: "PACS credit, fertilizer, and member loans",
-    descHi: "पैक्स ऋण, उर्वरक और किसान सेवाएं",
-    descMr: "कर्ज, खते, बियाणे व सोसायटी सेवा",
+    titleKey: "home.servicePacs",
+    descKey: "home.servicePacsDesc",
   },
   {
     id: "coop_rule",
     icon: ScaleIcon,
-    en: "Cooperative Rules",
-    hi: "सहकारी नियम",
-    mr: "सहकारी कायदे",
-    descEn: "Maharashtra Cooperative laws and by-laws",
-    descHi: "महाराष्ट्र सहकारी कानून और मॉडल उपनियम",
-    descMr: "कायदा, पोटनियम व कायदेशीर सल्ला",
+    titleKey: "home.serviceRules",
+    descKey: "home.serviceRulesDesc",
   },
   {
     id: "financial_guidance",
     icon: WalletCardsIcon,
-    en: "Financial Literacy",
-    hi: "वित्तीय साक्षरता",
-    mr: "आर्थिक साक्षरता",
-    descEn: "KCC loans, interest subvention, and savings",
-    descHi: "केसीसी ऋण, ब्याज अनुदान और बचत मार्गदर्शन",
-    descMr: "आर्थिक साक्षरता, KCC व कर्ज सवलत",
+    titleKey: "home.serviceFinance",
+    descKey: "home.serviceFinanceDesc",
   },
   {
     id: "schemes_entry",
     icon: FileCheckIcon,
-    en: "Government Schemes",
-    hi: "सरकारी योजनाएं",
-    mr: "सरकारी योजना",
-    descEn: "Ministry of Cooperation development schemes",
-    descHi: "सहकार मंत्रालय की विकास योजनाएं",
-    descMr: "सहकार मंत्रालयाच्या विकास योजना",
+    titleKey: "home.serviceSchemes",
+    descKey: "home.serviceSchemesDesc",
   },
   {
     id: "grievance_entry",
     icon: ClipboardCheckIcon,
-    en: "Grievance Assistance",
-    hi: "शिकायत सहायता",
-    mr: "तक्रार निवारण",
-    descEn: "Complaint steps and formal summary builder",
-    descHi: "शिकायत प्रक्रिया और औपचारिक सारांश",
-    descMr: "तक्रार निवारण मदत व मसुदा मार्गदर्शक",
+    titleKey: "home.serviceGrievance",
+    descKey: "home.serviceGrievanceDesc",
   },
 ];
 
@@ -127,7 +72,7 @@ const AssistanceHub: React.FC<Props> = ({
   onStartAsk,
   onSelectGuided,
 }) => {
-  const t = HERO_TEXT[language] ?? HERO_TEXT.en;
+  const t = useTranslation(language);
   const [typedInput, setTypedInput] = useState("");
 
   const handleTranscript = useCallback((text: string) => {
@@ -166,24 +111,18 @@ const AssistanceHub: React.FC<Props> = ({
       {/* Hero Section */}
       <section className="hub-hero">
         <div className="hub-hero__content">
-          <h2 className="hub-hero__headline">{t.headline}</h2>
-          <p className="hub-hero__sub">{t.sub}</p>
+          <h2 className="hub-hero__headline">{t("home.heroHeadline")}</h2>
+          <p className="hub-hero__sub">{t("home.heroSub")}</p>
 
           {/* TEXT QUESTION INPUT WITH VOICE-TO-TEXT MIC BUTTON */}
           <div className="hero-secondary-input">
-            <span className="secondary-label">{t.typeOr}</span>
+            <span className="secondary-label">{t("home.typeOr")}</span>
 
             {/* Listening Status Badge */}
             {status === "listening" && (
               <div className="hero-stt-status hero-stt-status--listening">
                 <MicIcon size={14} color="#C53030" />
-                <span>
-                  {language === "hi"
-                    ? "सुन रहा हूँ… अब बोलें (आवाज़ टेक्स्ट में बदल रही है)"
-                    : language === "mr"
-                    ? "ऐकत आहे… आता बोला (आवाज मजकुरात रूपांतरित होत आहे)"
-                    : "Listening… speak now (converting voice to text)"}
-                </span>
+                <span>{t("home.listeningBadge")}</span>
               </div>
             )}
 
@@ -198,12 +137,8 @@ const AssistanceHub: React.FC<Props> = ({
                 }}
                 placeholder={
                   status === "listening"
-                    ? language === "hi"
-                      ? "आवाज़ पहचान रहा हूँ..."
-                      : language === "mr"
-                      ? "आवाज ओळखत आहे..."
-                      : "Converting voice to text..."
-                    : t.placeholder
+                    ? t("home.convertingVoice")
+                    : t("home.placeholder")
                 }
               />
 
@@ -216,12 +151,12 @@ const AssistanceHub: React.FC<Props> = ({
                 onClick={handleMicClick}
                 title={
                   !isSupported
-                    ? "Voice input not supported"
+                    ? t("home.voiceNotSupported")
                     : status === "listening"
-                    ? "Listening… Click to stop"
-                    : "Click to speak and convert voice to text"
+                    ? t("home.clickToStop")
+                    : t("home.clickToSpeak")
                 }
-                aria-label="Convert voice to text"
+                aria-label={t("home.clickToSpeak")}
               >
                 <MicIcon
                   size={18}
@@ -234,7 +169,7 @@ const AssistanceHub: React.FC<Props> = ({
                 type="submit"
                 className="secondary-search-btn"
                 disabled={!typedInput.trim()}
-                aria-label="Submit Question"
+                aria-label={t("home.submitQuestion")}
               >
                 <SendIcon size={16} color="#FFFFFF" />
               </button>
@@ -246,20 +181,15 @@ const AssistanceHub: React.FC<Props> = ({
       {/* Service Directory Section */}
       <section className="hub-services-section">
         <div className="hub-services-header">
-          <h3 className="hub-services__title">{t.helpHeader}</h3>
-          <p className="hub-services__sub">{t.helpSub}</p>
+          <h3 className="hub-services__title">{t("home.helpHeader")}</h3>
+          <p className="hub-services__sub">{t("home.helpSub")}</p>
         </div>
 
         <div className="hub-services-grid" role="list">
           {SERVICE_CARDS.map((card) => {
             const IconComp = card.icon;
-            const title = (card as any)[language] ?? card.en;
-            const desc =
-              language === "hi"
-                ? card.descHi
-                : language === "mr"
-                ? card.descMr
-                : card.descEn;
+            const title = t(card.titleKey);
+            const desc = t(card.descKey);
 
             return (
               <button

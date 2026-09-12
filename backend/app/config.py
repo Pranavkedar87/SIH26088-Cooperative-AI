@@ -43,6 +43,17 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
 
+    # ── Admin Authentication (Phase 2A.1) ──────────────────────────────────
+    jwt_secret_key: str = "sahkaarsetu-admin-jwt-secret-key-development-seed-2026"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 480  # 8 hours
+
+    # ── Dev / Demo Seed Credentials ────────────────────────────────────────
+    dev_admin_email: str = "admin@sahkaarsetu.local"
+    dev_admin_password: str = "SahkaarSetu@Admin2026"
+    dev_staff_email: str = "staff@sahkaarsetu.local"
+    dev_staff_password: str = "SahkaarSetu@Staff2026"
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

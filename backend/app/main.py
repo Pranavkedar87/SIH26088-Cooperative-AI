@@ -20,7 +20,17 @@ if str(_backend_dir) not in sys.path:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
-from app.api.routes import health, query, conversations, voice, vision, knowledge, grievance
+from app.api.routes import (
+    health,
+    query,
+    conversations,
+    voice,
+    vision,
+    knowledge,
+    grievance,
+    admin_auth,
+    admin_grievances,
+)
 
 # ── Settings ─────────────────────────────────────────────────────────────────
 settings = get_settings()
@@ -61,6 +71,8 @@ app.include_router(voice.router)
 app.include_router(vision.router)
 app.include_router(knowledge.router)
 app.include_router(grievance.router)
+app.include_router(admin_auth.router)
+app.include_router(admin_grievances.router)
 
 logger.info("Cooperative AI Assistant API started | env=%s", settings.app_env)
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { ChatMessage as ChatMessageType, LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import ChatMessage from "./ChatMessage";
 
 interface Props {
@@ -12,34 +13,6 @@ interface Props {
   onSimplify?: (prompt: string) => void;
 }
 
-// Rotating contextual loading messages
-const LOADING_MESSAGES: Record<string, string[]> = {
-  en: [
-    "🔎 Understanding your question…",
-    "🤖 Generating your answer…",
-    "⏳ Still working, almost there…",
-    "🔄 This is taking a bit longer, please wait…",
-  ],
-  hi: [
-    "🔎 आपका प्रश्न समझा जा रहा है…",
-    "🤖 उत्तर तैयार हो रहा है…",
-    "⏳ अभी भी काम हो रहा है, एक पल…",
-    "🔄 थोड़ा और समय लग रहा है, कृपया रुकें…",
-  ],
-  mr: [
-    "🔎 तुमचा प्रश्न समजला जात आहे…",
-    "🤖 उत्तर तयार होत आहे…",
-    "⏳ अजून काम सुरू आहे, थोडी प्रतीक्षा करा…",
-    "🔄 जास्त वेळ लागत आहे, कृपया थांबा…",
-  ],
-};
-
-const EMPTY_TEXT: Record<string, string> = {
-  en: "Ask your question below to get started.",
-  hi: "शुरू करने के लिए नीचे अपना प्रश्न पूछें।",
-  mr: "प्रारंभ करण्यासाठी खाली तुमचा प्रश्न विचारा.",
-};
-
 const ChatArea: React.FC<Props> = ({
   messages,
   isLoading,
@@ -51,32 +24,39 @@ const ChatArea: React.FC<Props> = ({
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  const t = useTranslation(language);
+
+  const loadingMessages = [
+    t("chat.loading1"),
+    t("chat.loading2"),
+    t("chat.loading3"),
+    t("chat.loading4"),
+  ];
 
   // Scroll to bottom on new messages / loading state change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Rotate loading message every 1.8 s while loading
+  // Rotate loading message every 6s while loading
   useEffect(() => {
     if (!isLoading) {
       setLoadingMsgIdx(0);
       return;
     }
     setLoadingMsgIdx(0);
-    const msgs = LOADING_MESSAGES[language] ?? LOADING_MESSAGES.en;
     const id = setInterval(() => {
-      setLoadingMsgIdx((prev) => Math.min(prev + 1, msgs.length - 1));
+      setLoadingMsgIdx((prev) => Math.min(prev + 1, loadingMessages.length - 1));
     }, 6000);
     return () => clearInterval(id);
-  }, [isLoading, language]);
+  }, [isLoading, loadingMessages.length]);
 
   return (
     <div className="chat-area" role="log" aria-live="polite" aria-label="Conversation">
       {messages.length === 0 && !isLoading && (
         <div className="chat-empty">
           <span className="chat-empty__icon">🤝</span>
-          <p>{EMPTY_TEXT[language] ?? EMPTY_TEXT.en}</p>
+          <p>{t("chat.emptyState")}</p>
         </div>
       )}
 
@@ -109,7 +89,7 @@ const ChatArea: React.FC<Props> = ({
               <span className="typing-dot" />
             </div>
             <span className="loading-message-text" key={loadingMsgIdx}>
-              {(LOADING_MESSAGES[language] ?? LOADING_MESSAGES.en)[loadingMsgIdx]}
+              {loadingMessages[loadingMsgIdx]}
             </span>
           </div>
         </div>

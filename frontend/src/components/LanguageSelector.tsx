@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import type { LanguageCode } from "../types";
 import { LANGUAGES } from "../types";
+import { useTranslation } from "../i18n";
 import { GoogleTranslateIcon, CheckIcon } from "./Icons";
 
 interface Props {
@@ -17,6 +18,7 @@ export const LanguageModal: React.FC<Props> = ({
   onClose,
 }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const t = useTranslation(selected);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -50,7 +52,7 @@ export const LanguageModal: React.FC<Props> = ({
       >
         {/* Dropdown Header */}
         <div className="lang-dropdown-header">
-          <span className="lang-dropdown-title">भाषा चुनें</span>
+          <span className="lang-dropdown-title">{t("language.selectTitle")}</span>
           <GoogleTranslateIcon size={18} color="#0F6B68" />
         </div>
 
@@ -86,4 +88,3 @@ export const LanguageModal: React.FC<Props> = ({
 };
 
 export default LanguageModal;
-

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { LanguageCode } from "../types";
 import { LANGUAGES } from "../types";
+import { useTranslation } from "../i18n";
 import welcomeFarmerImg from "../assets/welcome-farmer.png";
 
 interface Props {
@@ -13,12 +14,13 @@ export const WelcomeLanguageScreen: React.FC<Props> = ({
   onConfirm,
 }) => {
   const [selectedLang, setSelectedLang] = useState<LanguageCode>(initialLanguage);
+  const t = useTranslation(selectedLang);
 
   return (
     <div className="welcome-lang-canvas" role="region" aria-label="Welcome and Language Selection">
       <div className="welcome-lang-container">
         {/* Top Welcome Title */}
-        <h1 className="welcome-main-title">Welcome to SahkaarSetu</h1>
+        <h1 className="welcome-main-title">{t("welcome.title")}</h1>
 
         {/* Farmer & Wife Illustration */}
         <div className="welcome-illustration-box">
@@ -30,7 +32,7 @@ export const WelcomeLanguageScreen: React.FC<Props> = ({
         </div>
 
         {/* Subtitle / Prompt */}
-        <h2 className="welcome-select-title">Select Language / भाषा चुनें</h2>
+        <h2 className="welcome-select-title">{t("welcome.selectLanguage")}</h2>
 
         {/* 2-Column Language Grid */}
         <div className="welcome-lang-grid">
@@ -60,7 +62,7 @@ export const WelcomeLanguageScreen: React.FC<Props> = ({
             className="welcome-continue-btn"
             onClick={() => onConfirm(selectedLang)}
           >
-            Continue
+            {t("common.continue")}
           </button>
         </div>
       </div>

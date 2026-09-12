@@ -6,6 +6,7 @@ import type {
   SourceItem,
   SuggestedFollowup,
 } from "../../types";
+import { useTranslation } from "../../i18n";
 import {
   ShieldCheckIcon,
   ExternalLinkIcon,
@@ -61,14 +62,19 @@ function renderFormattedText(text: string): React.ReactNode[] {
   return parts;
 }
 
-const DIRECT_LABEL: Record<string, string> = {
-  mr: "थोडक्यात उत्तर",
-  hi: "सीधा जवाब",
-  en: "Direct Answer",
-  gu: "સીધો જવાબ",
-  ta: "நேரடி பதில்",
-  bn: "সরাসরি উত্তর",
-};
+function renderParagraphs(text: string): React.ReactNode[] {
+  if (!text) return [];
+  const blocks = text.split(/\n\n+/);
+  return blocks.map((block, idx) => {
+    const trimmed = block.trim();
+    if (!trimmed) return null;
+    return (
+      <p key={idx} className="conversational-p">
+        {renderFormattedText(trimmed)}
+      </p>
+    );
+  });
+}
 
 export const StructuredResponseCard: React.FC<Props> = ({
   data,
@@ -77,13 +83,13 @@ export const StructuredResponseCard: React.FC<Props> = ({
   sources = [],
   suggestedFollowups = [],
 }) => {
+  const t = useTranslation(language);
   const [expandedDetails, setExpandedDetails] = useState<Record<number, boolean>>({});
 
   const toggleDetail = (idx: number) => {
     setExpandedDetails((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
 
-  const directLabel = DIRECT_LABEL[language] ?? DIRECT_LABEL.en;
   const followups =
     suggestedFollowups.length > 0
       ? suggestedFollowups
@@ -91,19 +97,20 @@ export const StructuredResponseCard: React.FC<Props> = ({
       ? data.suggested_followups
       : [];
 
+  const effectiveSources =
+    sources.length > 0
+      ? sources
+      : data.sources && data.sources.length > 0
+      ? data.sources
+      : [];
+
   return (
     <div className="structured-response-container">
-      {/* 1. DIRECT ANSWER HIGHLIGHT CARD */}
+      {/* 1. PRIMARY CONVERSATIONAL DIRECT ANSWER */}
       {data.direct_answer && (
-        <section className="structured-direct-answer" aria-label={directLabel}>
-          <div className="structured-direct-badge">
-            <span className="direct-badge-dot" />
-            <span className="direct-badge-title">{directLabel}</span>
-          </div>
-          <div className="structured-direct-content">
-            {renderFormattedText(data.direct_answer)}
-          </div>
-        </section>
+        <div className="conversational-body structured-conversational-body">
+          {renderParagraphs(data.direct_answer)}
+        </div>
       )}
 
       {/* 2. DYNAMIC SECTIONS RENDERER */}
@@ -303,31 +310,65 @@ export const StructuredResponseCard: React.FC<Props> = ({
       )}
 
       {/* 3. VERIFIED OFFICIAL SOURCES CHIPS */}
-      {sources && sources.length > 0 && (
+      {effectiveSources && effectiveSources.length > 0 && (
         <div className="conversational-sources-block">
           <div className="conversational-sources-title">
             <ShieldCheckIcon size={13} color="#0F6B68" />
             <span>
-              {language === "hi"
-                ? "अधिकृत स्रोत एवं संदर्भ:"
-                : language === "en"
-                ? "Official Sources & References:"
-                : "अधिकृत स्रोत व संदर्भ:"}
+              {t("sources.officialSources")}
             </span>
           </div>
           <div className="conversational-sources-chips">
-            {sources.map((src, i) => (
-              <span key={i} className="conversational-source-chip">
-                {src.title}
-                {src.source_url && (
-                  <a
-                    href={src.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="conversational-source-link"
-                  >
-                    <ExternalLinkIcon size={11} color="#0F6B68" />
-                  </a>
+            {effectiveSources.map((src, i) => (
+              <span key={i} className="conversational-source-chip" style={{ display: 'inline-flex', flexDirection: 'column', gap: '4px', padding: '6px 10px', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                  <span>{src.title}</span>
+                  {src.source_url && (
+                    <a
+                      href={src.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="conversational-source-link"
+                    >
+                      <ExternalLinkIcon size={11} color="#0F6B68" />
+                    </a>
+                  )}
+                </div>
+                {(src.authority_level || src.jurisdiction || src.currentness_status || src.verification_status) && (
+                  <div style={{ fontSize: '10px', opacity: 0.85, display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                    {src.authority_level && src.authority_level !== "UNKNOWN" && (
+                      <span style={{ background: '#eef2f6', padding: '1px 5px', borderRadius: '3px' }}>
+                        🏛️ {src.authority_level.replace(/_/g, ' ')}
+                      </span>
+                    )}
+                    {src.jurisdiction && src.jurisdiction !== "UNKNOWN" && (
+                      <span style={{ background: '#eef2f6', padding: '1px 5px', borderRadius: '3px' }}>
+                        📍 {src.jurisdiction}
+                      </span>
+                    )}
+                    {src.currentness_status && (
+                      <span style={{
+                        background: src.currentness_status === 'ACTIVE_IN_FORCE' ? '#e6f4ea' : '#fef7e0',
+                        color: src.currentness_status === 'ACTIVE_IN_FORCE' ? '#137333' : '#b06000',
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        fontWeight: 500
+                      }}>
+                        ⏱️ {src.currentness_status === 'ACTIVE_IN_FORCE' ? 'In Force' : (src.currentness_status === 'NEEDS_VERIFICATION' ? 'Currency Unconfirmed' : src.currentness_status)}
+                      </span>
+                    )}
+                    {src.verification_status && (
+                      <span style={{
+                        background: src.verification_status === 'VERIFIED_OFFICIAL' ? '#e6f4ea' : '#fef7e0',
+                        color: src.verification_status === 'VERIFIED_OFFICIAL' ? '#137333' : '#b06000',
+                        padding: '1px 5px',
+                        borderRadius: '3px',
+                        fontWeight: 500
+                      }}>
+                        🛡️ {src.verification_status === 'VERIFIED_OFFICIAL' ? 'Verified Official' : (src.verification_status === 'OFFICIAL_NEEDS_VERIFICATION' ? 'Official (Needs Verification)' : 'Needs Verification')}
+                      </span>
+                    )}
+                  </div>
                 )}
               </span>
             ))}
@@ -339,11 +380,7 @@ export const StructuredResponseCard: React.FC<Props> = ({
       {followups && followups.length > 0 && onExecuteAction && (
         <div className="structured-followups-block">
           <div className="structured-followups-label">
-            {language === "hi"
-              ? "आप आगे यह पूछ सकते हैं:"
-              : language === "en"
-              ? "You can ask next:"
-              : "तुम्ही पुढे हे विचारू शकता:"}
+            {t("guidance.youCanAskNext")}
           </div>
           <div className="structured-followups-grid">
             {followups.map((item, idx) => (

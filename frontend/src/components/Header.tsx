@@ -1,6 +1,7 @@
 import React from "react";
 import type { LanguageCode } from "../types";
 import type { UserLocationData } from "../services/locationService";
+import { useTranslation } from "../i18n";
 import {
   MenuIcon,
   SahkaarSetuLogo,
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export const Header: React.FC<Props> = ({
+  language,
   locationData,
   unreadNotificationCount,
   hideNotificationBell = false,
@@ -29,12 +31,14 @@ export const Header: React.FC<Props> = ({
   onOpenNotifications,
   onOpenLanguage,
 }) => {
+  const t = useTranslation(language);
+
   const displayLocationText =
     locationData.status === "detecting"
-      ? "Detecting location..."
+      ? t("header.detectingLocation")
       : locationData.status === "available"
       ? locationData.shortDisplayName || locationData.displayName
-      : "Location";
+      : t("header.location");
 
   return (
     <header className="sahkaar-header">
@@ -45,7 +49,7 @@ export const Header: React.FC<Props> = ({
             type="button"
             className="header-icon-btn menu-toggle-btn"
             onClick={onOpenMenu}
-            aria-label="Open Navigation Menu"
+            aria-label={t("header.openMenu")}
           >
             <MenuIcon size={22} color="#0F6B68" />
           </button>
@@ -54,7 +58,7 @@ export const Header: React.FC<Props> = ({
             <SahkaarSetuLogo size={36} />
             <div className="header-brand-titles">
               <h1 className="header-brand-name">SahkaarSetu</h1>
-              <span className="header-brand-tagline">Cooperative AI</span>
+              <span className="header-brand-tagline">{t("header.tagline")}</span>
             </div>
           </div>
         </div>
@@ -67,7 +71,7 @@ export const Header: React.FC<Props> = ({
             className="header-location-pill"
             onClick={onOpenLocation}
             title={locationData.displayName}
-            aria-label="View Location Details"
+            aria-label={t("header.viewLocationDetails")}
           >
             <MapPinIcon size={18} color="#0F6B68" />
             <span className="header-location-text">{displayLocationText}</span>
@@ -79,7 +83,7 @@ export const Header: React.FC<Props> = ({
               type="button"
               className="header-icon-btn notification-bell-btn"
               onClick={onOpenNotifications}
-              aria-label="View Notifications"
+              aria-label={t("header.viewNotifications")}
             >
               <BellIcon size={20} color="#0F6B68" />
               {unreadNotificationCount > 0 && (
@@ -95,8 +99,8 @@ export const Header: React.FC<Props> = ({
             type="button"
             className="header-icon-btn language-trigger-btn"
             onClick={onOpenLanguage}
-            aria-label="Change Language"
-            title="Change Language"
+            aria-label={t("header.changeLanguage")}
+            title={t("header.changeLanguage")}
           >
             <GoogleTranslateIcon size={20} color="#0F6B68" />
           </button>
@@ -105,3 +109,5 @@ export const Header: React.FC<Props> = ({
     </header>
   );
 };
+
+export default Header;

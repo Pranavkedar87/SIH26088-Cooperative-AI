@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import {
   BellIcon,
   CheckIcon,
@@ -32,42 +33,6 @@ interface Props {
   onBack?: () => void;
 }
 
-const TEXT = {
-  en: {
-    back: "Back",
-    title: "Notifications & Alerts",
-    sub: "Official scheme deadlines, PACS updates, and cooperative notices",
-    all: "All",
-    unread: "Unread",
-    markAllRead: "Mark all as read",
-    emptyTitle: "You're all caught up",
-    emptySub: "Important cooperative updates, scheme notifications, and PACS alerts will appear here.",
-    askAiBtn: "Ask SahkaarSetu AI",
-  },
-  hi: {
-    back: "वापस जाएं",
-    title: "सूचनाएं एवं अलर्ट",
-    sub: "आधिकारिक योजना समय सीमा, पैक्स अपडेट और सहकारी सूचनाएं",
-    all: "सभी",
-    unread: "अपठित",
-    markAllRead: "सभी को पढ़ा हुआ चिह्नित करें",
-    emptyTitle: "कोई नई सूचना नहीं है",
-    emptySub: "महत्वपूर्ण सहकारी अपडेट, योजना सूचनाएं और पैक्स अलर्ट यहां दिखाई देंगे।",
-    askAiBtn: "सहकारसेतू से पूछें",
-  },
-  mr: {
-    back: "मागे जा",
-    title: "सूचना आणि अलर्ट",
-    sub: "अधिकृत योजनांच्या मुदती, पॅक्स अपडेट्स आणि सहकारी सूचना",
-    all: "सर्व",
-    unread: "न वाचलेले",
-    markAllRead: "सर्व वाचलेले म्हणून चिन्हांकित करा",
-    emptyTitle: "कोणतीही नवीन सूचना नाही",
-    emptySub: "महत्त्वाचे सहकारी अपडेट्स, योजनांच्या सूचना आणि पॅक्स अलर्ट येथे दिसतील.",
-    askAiBtn: "सहकारसेतूला विचारा",
-  },
-};
-
 export const NotificationsView: React.FC<Props> = ({
   language = "en",
   notifications,
@@ -77,7 +42,7 @@ export const NotificationsView: React.FC<Props> = ({
   onBack,
 }) => {
   const [filter, setFilter] = useState<string>("all");
-  const t = TEXT[language as "en" | "hi" | "mr"] || TEXT.en;
+  const t = useTranslation(language);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -112,10 +77,10 @@ export const NotificationsView: React.FC<Props> = ({
               type="button"
               className="notifications-back-btn"
               onClick={onBack}
-              aria-label={t.back}
+              aria-label={t("common.back")}
             >
               <ArrowLeftIcon size={18} color="#0F6B68" />
-              <span>{t.back}</span>
+              <span>{t("common.back")}</span>
             </button>
           </div>
         )}
@@ -128,8 +93,8 @@ export const NotificationsView: React.FC<Props> = ({
               {unreadCount > 0 && <span className="notif-badge-pill">{unreadCount}</span>}
             </div>
             <div className="notifications-header-text">
-              <h2 className="notifications-tab-title">{t.title}</h2>
-              <p className="notifications-tab-sub">{t.sub}</p>
+              <h2 className="notifications-tab-title">{t("notifications.title")}</h2>
+              <p className="notifications-tab-sub">{t("notifications.sub")}</p>
             </div>
           </div>
 
@@ -138,10 +103,10 @@ export const NotificationsView: React.FC<Props> = ({
               type="button"
               className="mark-all-read-btn"
               onClick={onMarkAllRead}
-              aria-label={t.markAllRead}
+              aria-label={t("notifications.markAllRead")}
             >
               <CheckIcon size={14} />
-              <span>{t.markAllRead}</span>
+              <span>{t("notifications.markAllRead")}</span>
             </button>
           )}
         </div>
@@ -153,7 +118,7 @@ export const NotificationsView: React.FC<Props> = ({
             className={`notif-filter-chip ${filter === "all" ? "notif-filter-chip--active" : ""}`}
             onClick={() => setFilter("all")}
           >
-            {t.all} ({notifications.length})
+            {t("notifications.all")} ({notifications.length})
           </button>
           {unreadCount > 0 && (
             <button
@@ -161,7 +126,7 @@ export const NotificationsView: React.FC<Props> = ({
               className={`notif-filter-chip ${filter === "unread" ? "notif-filter-chip--active" : ""}`}
               onClick={() => setFilter("unread")}
             >
-              {t.unread} ({unreadCount})
+              {t("notifications.unread")} ({unreadCount})
             </button>
           )}
           <button
@@ -169,21 +134,21 @@ export const NotificationsView: React.FC<Props> = ({
             className={`notif-filter-chip ${filter === "Insurance" ? "notif-filter-chip--active" : ""}`}
             onClick={() => setFilter("Insurance")}
           >
-            PMFBY / Insurance
+            {t("notifications.filterInsurance")}
           </button>
           <button
             type="button"
             className={`notif-filter-chip ${filter === "PACS" ? "notif-filter-chip--active" : ""}`}
             onClick={() => setFilter("PACS")}
           >
-            PACS
+            {t("notifications.filterPacs")}
           </button>
           <button
             type="button"
             className={`notif-filter-chip ${filter === "Scheme" ? "notif-filter-chip--active" : ""}`}
             onClick={() => setFilter("Scheme")}
           >
-            Schemes
+            {t("notifications.filterSchemes")}
           </button>
         </div>
 
@@ -193,8 +158,8 @@ export const NotificationsView: React.FC<Props> = ({
             <div className="notif-empty-icon">
               <ShieldCheckIcon size={44} color="#0F6B68" />
             </div>
-            <h3 className="notif-empty-title">{t.emptyTitle}</h3>
-            <p className="notif-empty-desc">{t.emptySub}</p>
+            <h3 className="notif-empty-title">{t("notifications.emptyTitle")}</h3>
+            <p className="notif-empty-desc">{t("notifications.emptySub")}</p>
           </div>
         ) : (
           <div className="notifications-list-grid">
@@ -229,7 +194,7 @@ export const NotificationsView: React.FC<Props> = ({
                     }}
                   >
                     <MessageSquareIcon size={14} color="#0F6B68" />
-                    <span>{t.askAiBtn}</span>
+                    <span>{t("notifications.askAiBtn")}</span>
                     <ArrowRightIcon size={12} color="#0F6B68" />
                   </button>
                 </div>

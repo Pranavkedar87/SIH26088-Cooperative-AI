@@ -46,10 +46,16 @@ class QueryRequest(BaseModel):
 
 class SourceItem(BaseModel):
     title: str = Field(..., description="Title of the source document.")
+    document_type: Optional[str] = Field(default="UNKNOWN", description="Type of document (ACT, RULE, BYLAW, etc.)")
+    authority_level: Optional[str] = Field(default="UNKNOWN", description="Authority tier: CENTRAL_GOVERNMENT | STATE_GOVERNMENT | etc.")
+    jurisdiction: Optional[str] = Field(default="UNKNOWN", description="Applicable jurisdiction.")
+    currentness_status: Optional[str] = Field(default="UNKNOWN", description="Status (ACTIVE_IN_FORCE, SUPERSEDED, etc.)")
+    verification_status: Optional[str] = Field(default="NEEDS_VERIFICATION", description="Verification level.")
+    page_number: Optional[str] = Field(default=None, description="Page number/range.")
+    section_number: Optional[str] = Field(default=None, description="Section number/identifier.")
     source_name: Optional[str] = Field(default=None, description="Publishing organization or authority.")
     source_url: Optional[str] = Field(default=None, description="Verified official source URL if available.")
     document_id: Optional[str] = Field(default=None, description="Document UUID.")
-    authority_level: Optional[str] = Field(default="OFFICIAL_GOVERNMENT", description="Authority tier: OFFICIAL_GOVERNMENT | INSTITUTIONAL | GENERAL")
     retrieved_at: Optional[str] = Field(default=None, description="ISO timestamp of retrieval.")
 
 
@@ -78,7 +84,11 @@ class AnswerSection(BaseModel):
 
 
 class StructuredAnswerPayload(BaseModel):
-    direct_answer: str = Field(..., description="1-3 short, direct sentences answering the query immediately.")
+    direct_answer: str = Field(..., description="Conversational direct answer answering the query immediately.")
+    answer_focus: Optional[str] = Field(
+        default="overview",
+        description="Semantic answer focus: overview | procedure | documents | contact | eligibility | deadline | next_step | complaint | general",
+    )
     sections: list[AnswerSection] = Field(
         default_factory=list,
         description="Dynamic list of relevant structured sections decided by AI.",
@@ -87,6 +97,10 @@ class StructuredAnswerPayload(BaseModel):
     suggested_followups: list[SuggestedFollowup] = Field(
         default_factory=list,
         description="Contextual follow-up suggestions.",
+    )
+    sources: list[SourceItem] = Field(
+        default_factory=list,
+        description="Verified source citations.",
     )
 
 

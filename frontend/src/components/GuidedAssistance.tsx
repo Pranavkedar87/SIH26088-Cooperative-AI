@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import {
   WheatIcon,
   LandmarkIcon,
@@ -202,6 +203,7 @@ const FLOW_CONFIGS: Record<string, FlowConfig> = {
 };
 
 const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack }) => {
+  const t = useTranslation(language);
   const config = FLOW_CONFIGS[flowType] ?? FLOW_CONFIGS.crop_damage;
 
   const [step1Val, setStep1Val] = useState<StepOption | null>(config.step1Options[0] ?? null);
@@ -224,8 +226,8 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
     <div className="guided-wizard" aria-label="Guided Assistance Wizard">
       {/* Wizard Header Bar */}
       <div className="wizard-header">
-        <button type="button" className="wizard-back-btn" onClick={onBack} aria-label="Go back">
-          ← {language === "hi" ? "वापस" : language === "mr" ? "मागे" : "Back"}
+        <button type="button" className="wizard-back-btn" onClick={onBack} aria-label={t("common.back")}>
+          ← {t("common.back")}
         </button>
         <div className="wizard-title-group">
           <IconComp size={22} color="#0F6B68" />
@@ -308,14 +310,14 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
                 className="wizard-sec-btn"
                 onClick={() => setCurrentStep(1)}
               >
-                ← {language === "hi" ? "पिछला" : language === "mr" ? "मागे" : "Previous"}
+                ← {t("common.back")}
               </button>
               <button
                 type="button"
                 className="wizard-next-btn"
                 onClick={() => setCurrentStep(3)}
               >
-                <span>{language === "hi" ? "मार्गदर्शन देखें" : language === "mr" ? "मार्गदर्शन पहा" : "View Guidance"}</span>
+                <span>{t("common.next")}</span>
                 <ArrowRightIcon size={16} color="#FFFFFF" />
               </button>
             </div>
@@ -325,16 +327,12 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
         {currentStep === 3 && (
           <div className="wizard-step-panel">
             <h4 className="step-question">
-              {language === "hi"
-                ? "आवश्यक चेकलिस्ट एवं कार्रवाई"
-                : language === "mr"
-                ? "आवश्यक यादी व कारवाई"
-                : "Required Checklist & Next Steps"}
+              {t("guidance.checklistTitle")}
             </h4>
 
             <div className="checklist-box">
               <span className="checklist-title">
-                {language === "hi" ? "आवश्यक दस्तावेज एवं कदम" : language === "mr" ? "महत्त्वाची कागदपत्रे व पायऱ्या" : "Document & Action Checklist"}
+                {t("guidance.checklistTitle")}
               </span>
               <ul className="checklist-items">
                 {config.checklist.map((item, idx) => (
@@ -350,7 +348,7 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
               <div className="callout-header">
                 <ShieldCheckIcon size={16} color="#176B5B" />
                 <span className="callout-heading">
-                  {language === "hi" ? "सहकारसेतु प्रामाणिक मार्गदर्शन" : language === "mr" ? "सहकारसेतू अधिकृत मार्गदर्शन" : "SahkaarSetu Source-backed Guidance"}
+                  {t("sources.sourceBackedGuidance")}
                 </span>
               </div>
               <p className="callout-text">
@@ -368,7 +366,7 @@ const GuidedAssistance: React.FC<Props> = ({ flowType, language, onAskAI, onBack
                 className="wizard-sec-btn"
                 onClick={() => setCurrentStep(2)}
               >
-                ← {language === "hi" ? "पिछला" : language === "mr" ? "मागे" : "Previous"}
+                ← {t("common.back")}
               </button>
               <button type="button" className="wizard-next-btn" onClick={handleFinish}>
                 <span>{language === "hi" ? "उत्तर प्राप्त करें" : language === "mr" ? "उत्तर मिळवा" : "Get Source-backed Guidance"}</span>

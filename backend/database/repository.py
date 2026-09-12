@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Optional
+from datetime import datetime, timezone
+from typing import Any, Optional
 
 from database.supabase import get_supabase_client
 
@@ -149,24 +150,41 @@ def create_grievance(
     Create a new grievance record in Supabase.
     Returns grievance UUID string or None on failure.
     """
-    client = get_supabase_client()
-    if client is None:
-        return None
-
     grievance_id = _new_id()
-    try:
-        client.table("grievances").insert({
-            "id": grievance_id,
-            "conversation_id": conversation_id,
-            "category": category,
-            "description": description,
-            "status": status,
-        }).execute()
-        logger.info("Grievance record created: %s (category=%s)", grievance_id, category)
-        return grievance_id
-    except Exception as exc:
-        logger.error("Failed to create grievance: %s", exc)
-        return None
+    now_iso = datetime.now(timezone.utc).isoformat()
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            client.table("grievances").insert({
+                "id": grievance_id,
+                "conversation_id": conversation_id,
+                "category": category,
+                "description": description,
+                "status": status,
+            }).execute()
+            logger.info("Grievance record created in Supabase: %s (category=%s)", grievance_id, category)
+        except Exception as exc:
+            logger.warning("Failed to create grievance in Supabase (will use fallback): %s", exc)
+
+    # Mirror into in-memory dev fallback for immediate administrative triage
+    _init_dev_grievances_fallback()
+    _DEV_GRIEVANCES_FALLBACK[grievance_id] = {
+        "id": grievance_id,
+        "conversation_id": conversation_id,
+        "category": category,
+        "description": description,
+        "status": status,
+        "priority": "medium",
+        "assigned_staff": None,
+        "pacs_name": None,
+        "citizen_masked_name": "Citizen (Protected)",
+        "citizen_phone_masked": "+91 98******45",
+        "staff_notes": [],
+        "ai_guidance": "Grievance recorded for administrative review.",
+        "created_at": now_iso,
+        "updated_at": now_iso,
+    }
+    return grievance_id
 
 
 def get_grievance(grievance_id: str) -> Optional[dict]:
@@ -175,17 +193,429 @@ def get_grievance(grievance_id: str) -> Optional[dict]:
     Returns dict or None if not found/error.
     """
     client = get_supabase_client()
-    if client is None:
+    if client is not None:
+        try:
+            res = client.table("grievances").select("*").eq("id", grievance_id).execute()
+            if res.data and len(res.data) > 0:
+                return res.data[0]
+        except Exception as exc:
+            logger.debug("Supabase get_grievance error: %s", exc)
+
+    _init_dev_grievances_fallback()
+    return _DEV_GRIEVANCES_FALLBACK.get(grievance_id)
+
+
+# ── Admin Grievance Triage (Phase 2A.2) ────────────────────────────────────────
+
+_DEV_GRIEVANCES_FALLBACK: dict[str, dict] = {}
+
+VALID_STATUS_LIFECYCLE: dict[str, set[str]] = {
+    "draft": {"submitted"},
+    "submitted": {"under_review", "draft"},
+    "under_review": {"resolved", "submitted"},
+    "resolved": {"closed", "under_review"},
+    "closed": {"under_review"},
+}
+
+
+def normalize_status(val: Optional[str]) -> Optional[str]:
+    if not val:
+        return None
+    s = val.strip().lower().replace(" ", "_").replace("-", "_")
+    mapping = {
+        "new": "submitted",
+        "assigned": "under_review",
+        "in_progress": "under_review",
+        "escalated": "under_review",
+        "escalate_to_ddr": "under_review",
+        "mark_resolved": "resolved",
+    }
+    return mapping.get(s, s)
+
+
+def normalize_priority(val: Optional[str]) -> Optional[str]:
+    if not val:
+        return None
+    p = val.strip().lower()
+    if p in ("urgent", "high", "medium", "low"):
+        return p
+    return "medium"
+
+
+def _init_dev_grievances_fallback() -> None:
+    if _DEV_GRIEVANCES_FALLBACK:
+        return
+
+    cases = [
+        {
+            "id": "GRV-2026-001",
+            "conversation_id": None,
+            "category": "PMFBY",
+            "pacs_name": "Dindori Primary Agriculture Cooperative Society",
+            "priority": "urgent",
+            "status": "under_review",
+            "assigned_staff": "Sunil Patil (Agri Extension Officer)",
+            "citizen_masked_name": "Tukaram S. K****",
+            "citizen_phone_masked": "+91 98221 •••••",
+            "description": "माझ्या कांदा पिकाचे अवकाळी पावसामुळे ७०% नुकसान झाले आहे. ७२ तास उलटून गेले पण ॲपवर तक्रार नोंदवता येत नाही. काय करावे?",
+            "ai_guidance": "Advised Section 15.2 of PMFBY Operational Guidelines: In case of network outage, farmer may submit offline Annexure-IV intimation notice directly to PACS Secretary or Bank within 7 days, backed by a village talathi endorsement.",
+            "staff_notes": [
+                {
+                    "id": "NOTE-001",
+                    "note": "Physical offline loss intimation received by Dindori PACS clerk.",
+                    "author_id": "USR-STF-014",
+                    "author_name": "Sunil Patil",
+                    "author_role": "STAFF",
+                    "created_at": "2026-03-10T10:00:00Z",
+                },
+                {
+                    "id": "NOTE-002",
+                    "note": "Forwarded to Insurance Company field surveyor Mr. G. Shinde.",
+                    "author_id": "USR-STF-014",
+                    "author_name": "Sunil Patil",
+                    "author_role": "STAFF",
+                    "created_at": "2026-03-11T14:30:00Z",
+                },
+            ],
+            "created_at": "2026-03-10T09:15:00Z",
+            "updated_at": "2026-03-11T14:30:00Z",
+        },
+        {
+            "id": "GRV-2026-002",
+            "conversation_id": None,
+            "category": "Financial",
+            "pacs_name": "Baramati Taluka Sahakari Kharedi Vikri Sangh",
+            "priority": "high",
+            "status": "submitted",
+            "assigned_staff": "Pooja Deshmukh",
+            "citizen_masked_name": "Anil B. J****",
+            "citizen_phone_masked": "+91 94230 •••••",
+            "description": "KCC कर्जाची वेळेत परतफेड करूनही ३% व्याज सवलत खात्यावर जमा झाली नाही.",
+            "ai_guidance": "Clarified RBI & NABARD guidelines on Interest Subvention Scheme (ISS). The 3% subvention is routed via DBT through DCCB after PACS submits audit reconciliation roll.",
+            "staff_notes": [],
+            "created_at": "2026-03-11T11:20:00Z",
+            "updated_at": "2026-03-11T11:20:00Z",
+        },
+        {
+            "id": "GRV-2026-003",
+            "conversation_id": None,
+            "category": "PACS Service",
+            "pacs_name": "Shirol Dairy & Multipurpose Cooperative",
+            "priority": "medium",
+            "status": "under_review",
+            "assigned_staff": "Ramesh Sawant",
+            "citizen_masked_name": "Nirmala D. M****",
+            "citizen_phone_masked": "+91 97654 •••••",
+            "description": "दूध संकलन केंद्रावर फॅट आणि एसएनएफ मशिन सदोष आहे. दररोज २ लिटर दूध कमी दाखवले जात आहे.",
+            "ai_guidance": "Highlighted Model By-law Rule 28 for Dairy Cooperatives: Society must maintain daily calibration register certified by standard weights and measures inspector and provide duplicate test slip on request.",
+            "staff_notes": [],
+            "created_at": "2026-03-08T08:00:00Z",
+            "updated_at": "2026-03-09T09:00:00Z",
+        },
+        {
+            "id": "GRV-2026-004",
+            "conversation_id": None,
+            "category": "Cooperative Issue",
+            "pacs_name": "Nashik District Central Cooperative Bank",
+            "priority": "low",
+            "status": "resolved",
+            "assigned_staff": "Shri Rajesh K. Sharma",
+            "citizen_masked_name": "Dnyaneshwar P****",
+            "citizen_phone_masked": "+91 91580 •••••",
+            "description": "सोसायटीच्या वार्षिक सर्वसाधारण सभेची (AGM) नोटीस वेळेत मिळाली नाही.",
+            "ai_guidance": "Under Section 75 of Maharashtra Cooperative Societies Act, minimum 14 days notice is statutory for AGM convening.",
+            "staff_notes": [
+                {
+                    "id": "NOTE-003",
+                    "note": "Resolved after society re-issued registered notice to member.",
+                    "author_id": "USR-ADM-001",
+                    "author_name": "Rajesh Sharma",
+                    "author_role": "ADMIN",
+                    "created_at": "2026-03-12T11:00:00Z",
+                }
+            ],
+            "created_at": "2026-03-05T14:10:00Z",
+            "updated_at": "2026-03-12T11:00:00Z",
+        },
+    ]
+    for c in cases:
+        _DEV_GRIEVANCES_FALLBACK[c["id"]] = c
+
+
+def is_operator_authorized_for_grievance(user: dict, grievance: dict) -> bool:
+    """
+    Evaluate RBAC rule:
+    ADMIN: Can view and manage all grievances across all PACS.
+    STAFF: Can view/manage grievances assigned to them OR belonging to their assigned PACS.
+    """
+    if not user:
+        return False
+    if user.get("role") == "ADMIN":
+        return True
+
+    user_pacs = (user.get("assigned_pacs") or "").strip().lower()
+    grv_pacs = (grievance.get("pacs_name") or "").strip().lower()
+    if user_pacs and grv_pacs and user_pacs == grv_pacs:
+        return True
+
+    assigned = (grievance.get("assigned_staff") or "").strip().lower()
+    user_email = (user.get("email") or "").strip().lower()
+    user_name = (user.get("full_name") or "").strip().lower()
+    if assigned:
+        if user_email and user_email == assigned:
+            return True
+        if user_name and (user_name in assigned or assigned in user_name):
+            return True
+        first_name = user_name.split()[0] if user_name else ""
+        if first_name and len(first_name) >= 3 and first_name in assigned:
+            return True
+
+    return False
+
+
+def list_admin_grievances(
+    page: int = 1,
+    page_size: int = 20,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    category: Optional[str] = None,
+    pacs: Optional[str] = None,
+    search: Optional[str] = None,
+    user: Optional[dict] = None,
+) -> dict:
+    """
+    List grievances with pagination, filtering, search, and strict RBAC enforcement.
+    """
+    _init_dev_grievances_fallback()
+    records: list[dict] = []
+
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            q = client.table("grievances").select("*").order("created_at", desc=True)
+            res = q.execute()
+            if res.data:
+                for row in res.data:
+                    # Enrich with fallback defaults if additive columns are not yet in DB
+                    row_id = str(row.get("id"))
+                    fallback_meta = _DEV_GRIEVANCES_FALLBACK.get(row_id, {})
+                    record = {
+                        "id": row_id,
+                        "conversation_id": row.get("conversation_id"),
+                        "category": row.get("category") or fallback_meta.get("category", "PACS Service"),
+                        "description": row.get("description") or fallback_meta.get("description", ""),
+                        "status": normalize_status(row.get("status")) or fallback_meta.get("status", "draft"),
+                        "priority": normalize_priority(row.get("priority")) or fallback_meta.get("priority", "medium"),
+                        "assigned_staff": row.get("assigned_staff") or fallback_meta.get("assigned_staff"),
+                        "pacs_name": row.get("pacs_name") or fallback_meta.get("pacs_name"),
+                        "citizen_masked_name": row.get("citizen_masked_name") or fallback_meta.get("citizen_masked_name", "Citizen (Protected)"),
+                        "citizen_phone_masked": row.get("citizen_phone_masked") or fallback_meta.get("citizen_phone_masked", "+91 98******45"),
+                        "staff_notes": row.get("staff_notes") or fallback_meta.get("staff_notes", []),
+                        "ai_guidance": row.get("ai_guidance") or fallback_meta.get("ai_guidance"),
+                        "created_at": row.get("created_at") or fallback_meta.get("created_at", datetime.now(timezone.utc).isoformat()),
+                        "updated_at": row.get("updated_at") or fallback_meta.get("updated_at", datetime.now(timezone.utc).isoformat()),
+                    }
+                    records.append(record)
+        except Exception as exc:
+            logger.warning("Supabase list grievances error (fallback engaged): %s", exc)
+
+    # Merge with dev fallback records that aren't already in records
+    existing_ids = {r["id"] for r in records}
+    for fb_id, fb_record in _DEV_GRIEVANCES_FALLBACK.items():
+        if fb_id not in existing_ids:
+            records.append(dict(fb_record))
+
+    # Apply RBAC filter
+    if user:
+        records = [r for r in records if is_operator_authorized_for_grievance(user, r)]
+
+    # Apply Query Filters
+    norm_status = normalize_status(status)
+    norm_priority = normalize_priority(priority) if priority else None
+
+    filtered = []
+    for r in records:
+        if norm_status and r.get("status") != norm_status:
+            continue
+        if norm_priority and r.get("priority") != norm_priority:
+            continue
+        if category and category.lower() != "all" and r.get("category", "").lower() != category.lower():
+            continue
+        if pacs and pacs.lower() not in (r.get("pacs_name") or "").lower():
+            continue
+        if search:
+            q_clean = search.strip().lower()
+            text_corpus = f"{r.get('id', '')} {r.get('description', '')} {r.get('citizen_masked_name', '')} {r.get('pacs_name', '')} {r.get('category', '')}".lower()
+            if q_clean not in text_corpus:
+                continue
+        filtered.append(r)
+
+    # Sort descending by created_at
+    filtered.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+    total = len(filtered)
+    page = max(1, page)
+    page_size = max(1, min(100, page_size))
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    items = filtered[start_idx:end_idx]
+
+    return {
+        "items": items,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+    }
+
+
+def get_admin_grievance_by_id(grievance_id: str, user: dict) -> Optional[dict]:
+    """
+    Retrieve single grievance details with conversation transcript and RBAC authorization check.
+    Raises PermissionError if operator is not authorized.
+    Returns None if grievance does not exist.
+    """
+    _init_dev_grievances_fallback()
+    record = None
+
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            res = client.table("grievances").select("*").eq("id", grievance_id).execute()
+            if res.data and len(res.data) > 0:
+                row = res.data[0]
+                fb = _DEV_GRIEVANCES_FALLBACK.get(grievance_id, {})
+                record = {
+                    "id": str(row.get("id")),
+                    "conversation_id": row.get("conversation_id"),
+                    "category": row.get("category") or fb.get("category", "PACS Service"),
+                    "description": row.get("description") or fb.get("description", ""),
+                    "status": normalize_status(row.get("status")) or fb.get("status", "draft"),
+                    "priority": normalize_priority(row.get("priority")) or fb.get("priority", "medium"),
+                    "assigned_staff": row.get("assigned_staff") or fb.get("assigned_staff"),
+                    "pacs_name": row.get("pacs_name") or fb.get("pacs_name"),
+                    "citizen_masked_name": row.get("citizen_masked_name") or fb.get("citizen_masked_name", "Citizen (Protected)"),
+                    "citizen_phone_masked": row.get("citizen_phone_masked") or fb.get("citizen_phone_masked", "+91 98******45"),
+                    "staff_notes": row.get("staff_notes") or fb.get("staff_notes", []),
+                    "ai_guidance": row.get("ai_guidance") or fb.get("ai_guidance"),
+                    "created_at": row.get("created_at") or fb.get("created_at", datetime.now(timezone.utc).isoformat()),
+                    "updated_at": row.get("updated_at") or fb.get("updated_at", datetime.now(timezone.utc).isoformat()),
+                }
+        except Exception as exc:
+            logger.debug("Supabase get_admin_grievance error: %s", exc)
+
+    if record is None:
+        if grievance_id in _DEV_GRIEVANCES_FALLBACK:
+            record = dict(_DEV_GRIEVANCES_FALLBACK[grievance_id])
+
+    if record is None:
         return None
 
-    try:
-        res = client.table("grievances").select("*").eq("id", grievance_id).execute()
-        if res.data and len(res.data) > 0:
-            return res.data[0]
+    # Enforce RBAC
+    if not is_operator_authorized_for_grievance(user, record):
+        raise PermissionError(f"Operator {user.get('email')} is not authorized to access grievance {grievance_id}.")
+
+    # Fetch linked conversation messages if conversation_id exists
+    conv_messages: list[dict] = []
+    conv_id = record.get("conversation_id")
+    if conv_id:
+        conv_messages = get_conversation_messages(str(conv_id))
+    record["conversation"] = conv_messages
+
+    return record
+
+
+def update_admin_grievance(grievance_id: str, updates: dict, user: dict) -> Optional[dict]:
+    """
+    Update grievance status, priority, or assigned staff with transition validation and RBAC.
+    Raises PermissionError if unauthorized.
+    Raises ValueError if status transition is invalid.
+    Returns updated record or None if not found.
+    """
+    record = get_admin_grievance_by_id(grievance_id, user)
+    if record is None:
         return None
-    except Exception as exc:
-        logger.error("Failed to fetch grievance %s: %s", grievance_id, exc)
+
+    current_status = record.get("status", "draft")
+    target_status = normalize_status(updates.get("status")) if updates.get("status") else None
+    target_priority = normalize_priority(updates.get("priority")) if updates.get("priority") else None
+    target_staff = updates.get("assigned_staff")
+
+    # Validate status transition
+    if target_status and target_status != current_status:
+        allowed = VALID_STATUS_LIFECYCLE.get(current_status, set())
+        if target_status not in allowed:
+            raise ValueError(
+                f"Invalid status transition from '{current_status}' to '{target_status}'. "
+                f"Allowed transitions: {sorted(list(allowed))}"
+            )
+        record["status"] = target_status
+
+    if target_priority:
+        record["priority"] = target_priority
+
+    if target_staff is not None:
+        record["assigned_staff"] = target_staff
+
+    record["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    # Persist in Supabase if possible
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            update_payload: dict[str, Any] = {"updated_at": record["updated_at"]}
+            if target_status:
+                update_payload["status"] = target_status
+            if target_priority:
+                update_payload["priority"] = target_priority
+            if target_staff is not None:
+                update_payload["assigned_staff"] = target_staff
+            client.table("grievances").update(update_payload).eq("id", grievance_id).execute()
+        except Exception as exc:
+            logger.debug("Supabase update_admin_grievance error (migration may be pending): %s", exc)
+
+    # Persist in fallback
+    _DEV_GRIEVANCES_FALLBACK[grievance_id] = record
+    return record
+
+
+def append_grievance_note(grievance_id: str, note_text: str, user: dict) -> Optional[dict]:
+    """
+    Append an internal verification note to grievance history.
+    Raises PermissionError if unauthorized.
+    """
+    record = get_admin_grievance_by_id(grievance_id, user)
+    if record is None:
         return None
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    note_id = f"NOTE-{_new_id()[:8].upper()}"
+    new_note = {
+        "id": note_id,
+        "note": note_text.strip(),
+        "author_id": str(user.get("id")),
+        "author_name": user.get("full_name") or user.get("email", "Operator"),
+        "author_role": user.get("role", "STAFF"),
+        "created_at": now_iso,
+    }
+
+    current_notes = list(record.get("staff_notes") or [])
+    current_notes.append(new_note)
+    record["staff_notes"] = current_notes
+    record["updated_at"] = now_iso
+
+    # Persist in Supabase if possible
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            client.table("grievances").update({
+                "staff_notes": current_notes,
+                "updated_at": now_iso,
+            }).eq("id", grievance_id).execute()
+        except Exception as exc:
+            logger.debug("Supabase append_grievance_note error: %s", exc)
+
+    _DEV_GRIEVANCES_FALLBACK[grievance_id] = record
+    return record
 
 
 # ── Knowledge Documents ───────────────────────────────────────────────────────
@@ -205,4 +635,163 @@ def get_knowledge_documents() -> list[dict]:
     except Exception as exc:
         logger.error("Failed to fetch knowledge documents: %s", exc)
         return []
+
+
+# ── Admin Users & Authentication (Phase 2A.1) ─────────────────────────────────
+
+# In-memory dev/demo fallback store if Supabase lacks additive columns or is offline
+_DEV_USERS_FALLBACK: dict[str, dict] = {}
+
+
+def _init_dev_users_fallback():
+    """Seed safe local/dev operator accounts if fallback store is empty."""
+    global _DEV_USERS_FALLBACK
+    if _DEV_USERS_FALLBACK:
+        return
+    try:
+        from app.config import get_settings
+        from app.core.security import get_password_hash
+        settings = get_settings()
+
+        admin_id = "00000000-0000-0000-0000-000000000001"
+        staff_id = "00000000-0000-0000-0000-000000000002"
+
+        _DEV_USERS_FALLBACK[settings.dev_admin_email.lower()] = {
+            "id": admin_id,
+            "email": settings.dev_admin_email,
+            "password_hash": get_password_hash(settings.dev_admin_password),
+            "full_name": "Shri Rajesh K. Sharma (State Registrar)",
+            "role": "ADMIN",
+            "assigned_pacs": None,
+            "is_active": True,
+            "created_at": "2026-01-01T00:00:00Z",
+        }
+
+        _DEV_USERS_FALLBACK[settings.dev_staff_email.lower()] = {
+            "id": staff_id,
+            "email": settings.dev_staff_email,
+            "password_hash": get_password_hash(settings.dev_staff_password),
+            "full_name": "Sunil Patil (Agri Extension Officer)",
+            "role": "STAFF",
+            "assigned_pacs": "Dindori Primary Agriculture Cooperative Society",
+            "is_active": True,
+            "created_at": "2026-01-01T00:00:00Z",
+        }
+    except Exception as exc:
+        logger.warning("Could not initialize dev users fallback: %s", exc)
+
+
+def get_user_by_email(email: str) -> Optional[dict]:
+    """
+    Fetch user row by email.
+    Queries Supabase users table, falling back to initialized dev registry if columns are missing.
+    """
+    if not email:
+        return None
+
+    clean_email = email.strip().lower()
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            res = client.table("users").select("*").eq("email", clean_email).limit(1).execute()
+            if res.data and len(res.data) > 0:
+                return res.data[0]
+        except Exception as exc:
+            # Check if error is missing column (migration pending in SQL editor)
+            logger.debug("Supabase users query by email failed (migration may be pending): %s", exc)
+
+    # Resilient fallback for local development / testing
+    _init_dev_users_fallback()
+    return _DEV_USERS_FALLBACK.get(clean_email)
+
+
+def get_user_by_id(user_id: str) -> Optional[dict]:
+    """
+    Fetch user row by UUID.
+    """
+    if not user_id:
+        return None
+
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            res = client.table("users").select("*").eq("id", user_id).limit(1).execute()
+            if res.data and len(res.data) > 0:
+                return res.data[0]
+        except Exception as exc:
+            logger.debug("Supabase users query by id failed: %s", exc)
+
+    _init_dev_users_fallback()
+    for u in _DEV_USERS_FALLBACK.values():
+        if u["id"] == user_id:
+            return u
+    return None
+
+
+def create_admin_user(
+    email: str,
+    password_hash: str,
+    full_name: str,
+    role: str = "STAFF",
+    assigned_pacs: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Persist an admin or staff user record.
+    Returns user UUID or None on error.
+    """
+    clean_email = email.strip().lower()
+    user_id = _new_id()
+
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            client.table("users").insert({
+                "id": user_id,
+                "email": clean_email,
+                "password_hash": password_hash,
+                "full_name": full_name,
+                "role": role,
+                "assigned_pacs": assigned_pacs,
+                "is_active": True,
+                "language": "en",
+            }).execute()
+            logger.info("Admin user created in Supabase: %s (%s)", user_id, clean_email)
+            return user_id
+        except Exception as exc:
+            logger.warning("Failed to insert admin user in Supabase: %s", exc)
+
+    # Register in fallback store
+    _init_dev_users_fallback()
+    _DEV_USERS_FALLBACK[clean_email] = {
+        "id": user_id,
+        "email": clean_email,
+        "password_hash": password_hash,
+        "full_name": full_name,
+        "role": role,
+        "assigned_pacs": assigned_pacs,
+        "is_active": True,
+        "created_at": "2026-01-01T00:00:00Z",
+    }
+    return user_id
+
+
+def update_user_last_login(user_id: str) -> bool:
+    """Record timestamp of successful login."""
+    from datetime import datetime, timezone
+    now_str = datetime.now(timezone.utc).isoformat()
+
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            client.table("users").update({"last_login": now_str}).eq("id", user_id).execute()
+            return True
+        except Exception as exc:
+            logger.debug("Could not update last_login on Supabase: %s", exc)
+
+    _init_dev_users_fallback()
+    for u in _DEV_USERS_FALLBACK.values():
+        if u["id"] == user_id:
+            u["last_login"] = now_str
+            return True
+    return False
 

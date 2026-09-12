@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import type { ChatMessage as ChatMessageType, LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import GuidanceRenderer from "./guidance/GuidanceRenderer";
 import SourcesAccordion from "./SourcesAccordion";
 import { generateGuidancePdf } from "../utils/pdfGenerator";
@@ -95,29 +96,15 @@ const ChatMessage: React.FC<Props> = ({
     }
   };
 
+  const t = useTranslation(message.language);
+
   const pdfBtnLabel = isGeneratingPdf
-    ? message.language === "hi"
-      ? "पीडीएफ बन रहा है..."
-      : message.language === "en"
-      ? "Generating PDF..."
-      : "PDF तयार होत आहे..."
-    : message.language === "hi"
-    ? "मार्गदर्शन PDF डाउनलोड करें"
-    : message.language === "en"
-    ? "Download Guidance PDF"
-    : "मार्गदर्शन PDF डाउनलोड करा";
+    ? t("chat.pdfGenerating")
+    : t("chat.downloadPdf");
 
   const speakBtnLabel = isSpeaking
-    ? message.language === "hi"
-      ? "रोकें"
-      : message.language === "en"
-      ? "Stop"
-      : "थांबवा"
-    : message.language === "hi"
-    ? "सुनें"
-    : message.language === "en"
-    ? "Read Aloud"
-    : "ऐकून घ्या";
+    ? t("chat.stop")
+    : t("chat.readAloud");
 
   const isOfflineFallback =
     !isUser &&
@@ -150,18 +137,18 @@ const ChatMessage: React.FC<Props> = ({
             {hasSources ? (
               <div className="grounded-tag grounded-tag--verified">
                 <ShieldCheckIcon size={14} color="#238477" />
-                <span>Source-backed guidance</span>
+                <span>{t("sources.sourceBackedGuidance")}</span>
               </div>
             ) : (
               <div className="grounded-tag grounded-tag--reference">
-                <span>Based on official information</span>
+                <span>{t("sources.basedOnOfficial")}</span>
               </div>
             )}
           </div>
         )}
 
         {/* Source Drawer */}
-        {hasSources && <SourcesAccordion sources={message.sources!} />}
+        {hasSources && <SourcesAccordion sources={message.sources!} language={message.language} />}
 
         {/* Assistant Action Toolbar */}
         {!isUser && (
@@ -203,7 +190,7 @@ const ChatMessage: React.FC<Props> = ({
                   aria-label="Copy response"
                 >
                   <CopyIcon size={14} />
-                  <span>Copy</span>
+                  <span>{t("common.copy")}</span>
                 </button>
               )}
             </div>

@@ -55,10 +55,14 @@ def query_ollama_llm(
             {"role": "user", "content": user_prompt},
         ],
         "stream": False,
+        "keep_alive": "15m",
+        "think": False,
         "options": {
             "temperature": temperature,
-            "num_predict": min(max_tokens, 1024),
-            "num_ctx": 4096,
+            "num_predict": min(max_tokens, 512),
+            "num_ctx": 2048,
+            "repeat_penalty": 1.15,
+            "top_p": 0.9,
         },
     }
 

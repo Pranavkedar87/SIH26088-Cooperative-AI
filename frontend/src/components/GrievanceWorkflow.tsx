@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import {
   ClipboardCheckIcon,
   CopyIcon,
@@ -29,6 +30,7 @@ const CATEGORIES: IssueCategory[] = [
 ];
 
 const GrievanceWorkflow: React.FC<Props> = ({ language, onSaveHistory }) => {
+  const t = useTranslation(language);
   const [step, setStep] = useState<number>(1);
   const [category, setCategory] = useState<IssueCategory>(CATEGORIES[0]);
   const [societyName, setSocietyName] = useState<string>("");
@@ -89,31 +91,23 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
           <ClipboardCheckIcon size={24} color="#176B5B" />
         </div>
         <div className="grievance-header__text">
-          <h3 className="grievance-title">
-            {language === "hi" ? "सहकारी शिकायत सहायता" : language === "mr" ? "सहकारी तक्रार निवारण मार्गदर्शक" : "Grievance Assistance"}
-          </h3>
-          <p className="grievance-sub">
-            {language === "hi"
-              ? "आधिकारिक प्रस्तुति के लिए संरचित शिकायत सारांश तैयार करें"
-              : language === "mr"
-              ? "अधिकृत सादरकरणासाठी रचनात्मक तक्रार सारांश तयार करा"
-              : "Tell us what happened to compile a formal complaint summary for District Deputy Registrar (DDR) submission"}
-          </p>
+          <h3 className="grievance-title">{t("grievance.title")}</h3>
+          <p className="grievance-sub">{t("grievance.subtitle")}</p>
         </div>
       </div>
 
       {/* Progress Node Line */}
       <div className="grievance-progress">
         <div className={`grievance-step-node ${step >= 1 ? "grievance-step-node--active" : ""}`}>
-          <span>1. Select Issue</span>
+          <span>1. {t("grievance.step1Label")}</span>
         </div>
         <div className="grievance-progress-line" />
         <div className={`grievance-step-node ${step >= 2 ? "grievance-step-node--active" : ""}`}>
-          <span>2. Enter Details</span>
+          <span>2. {t("grievance.step2Label")}</span>
         </div>
         <div className="grievance-progress-line" />
         <div className={`grievance-step-node ${step >= 3 ? "grievance-step-node--active" : ""}`}>
-          <span>3. Formal Summary</span>
+          <span>3. {t("grievance.step3Label")}</span>
         </div>
       </div>
 
@@ -122,7 +116,7 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
         {step === 1 && (
           <div className="grievance-panel">
             <h4 className="grievance-panel-heading">
-              {language === "hi" ? "अपनी शिकायत श्रेणी चुनें" : language === "mr" ? "तुमच्या तक्रारीचा प्रकार निवडा" : "Step 1: Select your complaint category"}
+              {t("grievance.step1Heading")}
             </h4>
             <div className="grievance-cat-list">
               {CATEGORIES.map((cat) => (
@@ -142,7 +136,7 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
               className="grievance-main-btn"
               onClick={() => setStep(2)}
             >
-              <span>{language === "hi" ? "विवरण दर्ज करें" : language === "mr" ? "तपशील नोंदवा" : "Enter Details"}</span>
+              <span>{t("grievance.enterDetails")}</span>
               <ArrowRightIcon size={16} color="#FFFFFF" />
             </button>
           </div>
@@ -151,51 +145,51 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
         {step === 2 && (
           <div className="grievance-panel">
             <h4 className="grievance-panel-heading">
-              {language === "hi" ? "समिति एवं घटना का विवरण दें" : language === "mr" ? "संस्था व समस्येचे वर्णन करा" : "Step 2: Describe the problem & society details"}
+              {t("grievance.step2Heading")}
             </h4>
 
             <div className="form-group">
               <label className="form-label">
-                {language === "hi" ? "सहकारी समिति का नाम:" : language === "mr" ? "सहकारी संस्थेचे नाव:" : "Name of Cooperative Society / PACS:"}
+                {t("grievance.societyName")}
               </label>
               <input
                 type="text"
                 className="form-input"
                 value={societyName}
                 onChange={(e) => setSocietyName(e.target.value)}
-                placeholder="e.g. Vividh Karyakari Seva Sahakari Sanstha Maryadit"
+                placeholder={t("grievance.societyPlaceholder")}
               />
             </div>
 
             <div className="form-group">
               <label className="form-label">
-                {language === "hi" ? "जिला / तालुका:" : language === "mr" ? "जिल्हा / तालुका:" : "District / Taluka:"}
+                {t("grievance.district")}
               </label>
               <input
                 type="text"
                 className="form-input"
                 value={district}
                 onChange={(e) => setDistrict(e.target.value)}
-                placeholder="e.g. Chhatrapati Sambhajinagar"
+                placeholder={t("grievance.districtPlaceholder")}
               />
             </div>
 
             <div className="form-group">
               <label className="form-label">
-                {language === "hi" ? "समस्या का विवरण दर्ज करें:" : language === "mr" ? "समस्येचे सविस्तर वर्णन करा:" : "Description of problem / incident:"}
+                {t("grievance.issueDescription")}
               </label>
               <textarea
                 className="form-textarea"
                 rows={4}
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
-                placeholder="Describe what happened, dates, loan account numbers, or refusal details…"
+                placeholder={t("grievance.issuePlaceholder")}
               />
             </div>
 
             <div className="grievance-btn-row">
               <button type="button" className="grievance-sec-btn" onClick={() => setStep(1)}>
-                ← {language === "hi" ? "पिछला" : language === "mr" ? "मागे" : "Previous"}
+                ← {t("common.back")}
               </button>
               <button
                 type="button"
@@ -205,7 +199,7 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
                   handleComplete();
                 }}
               >
-                <span>{language === "hi" ? "सारांश बनाएं" : language === "mr" ? "सारांश तयार करा" : "Generate Summary"}</span>
+                <span>{t("grievance.generateSummary")}</span>
                 <ArrowRightIcon size={16} color="#FFFFFF" />
               </button>
             </div>
@@ -215,7 +209,7 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
         {step === 3 && (
           <div className="grievance-panel">
             <h4 className="grievance-panel-heading">
-              {language === "hi" ? "आपकी संरचित शिकायत सारांश" : language === "mr" ? "तुमचा रचनात्मक तक्रार सारांश" : "YOUR GRIEVANCE SUMMARY"}
+              {t("grievance.step3Heading")}
             </h4>
 
             <pre className="summary-preview">{generatedSummary}</pre>
@@ -223,7 +217,7 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
             <div className="disclaimer-callout">
               <ShieldCheckIcon size={16} color="#F28C28" />
               <span>
-                <strong>Notice:</strong> SahkaarSetu provides structured complaint guidance based on official Maharashtra Cooperative rules. SahkaarSetu does not file official legal claims directly with court/government authorities.
+                {t("grievance.disclaimer")}
               </span>
             </div>
 
@@ -234,14 +228,14 @@ SahkaarSetu provides structured guidance and summary compilation based on offici
                 onClick={() => handleCopySummary(generatedSummary)}
               >
                 <CopyIcon size={14} color="#24323A" />
-                <span>{copied ? "✓ Copied!" : "Copy Summary"}</span>
+                <span>{copied ? t("common.copied") : t("grievance.copy")}</span>
               </button>
               <button
                 type="button"
                 className="grievance-main-btn"
                 onClick={() => handleDownloadSummary(generatedSummary)}
               >
-                <span>Download (.txt)</span>
+                <span>{t("grievance.download")}</span>
               </button>
             </div>
           </div>

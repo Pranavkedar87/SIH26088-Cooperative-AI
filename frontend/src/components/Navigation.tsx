@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { AppTab, LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import {
   HomeIcon,
   MessageSquareIcon,
@@ -18,24 +19,6 @@ interface Props {
   onOpenVoiceMode: () => void;
 }
 
-const VOICE_LABEL: Record<string, string> = {
-  en: "Ask by Voice",
-  hi: "बोलकर पूछें",
-  mr: "बोलून विचारा",
-  gu: "બોલીને પૂછો",
-  ta: "குரல் மூலம்",
-  bn: "ভয়েস দিয়ে",
-};
-
-const CAMERA_LABEL: Record<string, string> = {
-  en: "Camera",
-  hi: "कैमरा",
-  mr: "कॅमेरा",
-  gu: "કેમેરો",
-  ta: "கேமரா",
-  bn: "ক্যামেরা",
-};
-
 const Navigation: React.FC<Props> = ({
   activeTab,
   onTabChange,
@@ -44,6 +27,7 @@ const Navigation: React.FC<Props> = ({
 }) => {
   const [isCameraMenuOpen, setIsCameraMenuOpen] = useState(false);
   const [activeCameraMode, setActiveCameraMode] = useState<CameraMode | null>(null);
+  const t = useTranslation(language);
 
   // Close camera popover on Escape key
   useEffect(() => {
@@ -61,8 +45,8 @@ const Navigation: React.FC<Props> = ({
     setActiveCameraMode(mode);
   };
 
-  const voiceText = VOICE_LABEL[language] ?? VOICE_LABEL.en;
-  const cameraText = CAMERA_LABEL[language] ?? CAMERA_LABEL.en;
+  const voiceText = t("nav.voice");
+  const cameraText = t("nav.camera");
 
   return (
     <>
@@ -90,10 +74,8 @@ const Navigation: React.FC<Props> = ({
                   <ScanDocIcon size={18} color="#0F6B68" />
                 </div>
                 <div className="nav-camera-popover-text">
-                  <span className="nav-camera-popover-title">Scan Document</span>
-                  <span className="nav-camera-popover-desc">
-                    Capture forms, receipts & certificates
-                  </span>
+                  <span className="nav-camera-popover-title">{t("nav.scanDocument")}</span>
+                  <span className="nav-camera-popover-desc">{t("nav.scanDesc")}</span>
                 </div>
               </button>
 
@@ -109,10 +91,8 @@ const Navigation: React.FC<Props> = ({
                   <FaceScanIcon size={18} color="#0F6B68" />
                 </div>
                 <div className="nav-camera-popover-text">
-                  <span className="nav-camera-popover-title">Face Scan (Optional)</span>
-                  <span className="nav-camera-popover-desc">
-                    Assistant preview feature
-                  </span>
+                  <span className="nav-camera-popover-title">{t("nav.faceScan")}</span>
+                  <span className="nav-camera-popover-desc">{t("nav.faceScanDesc")}</span>
                 </div>
               </button>
             </div>
@@ -131,9 +111,7 @@ const Navigation: React.FC<Props> = ({
             <div className="nav-item__icon-wrapper">
               <HomeIcon size={20} color={activeTab === "home" ? "#123B5D" : "#68757D"} />
             </div>
-            <span className="nav-item__label">
-              {language === "hi" ? "गृह" : language === "mr" ? "मुख्य" : "Home"}
-            </span>
+            <span className="nav-item__label">{t("nav.home")}</span>
           </button>
 
           {/* 2. Ask AI */}
@@ -147,9 +125,7 @@ const Navigation: React.FC<Props> = ({
             <div className="nav-item__icon-wrapper">
               <MessageSquareIcon size={20} color={activeTab === "ask" ? "#123B5D" : "#68757D"} />
             </div>
-            <span className="nav-item__label">
-              {language === "hi" ? "प्रश्न पूछें" : language === "mr" ? "प्रश्न विचारा" : "Ask AI"}
-            </span>
+            <span className="nav-item__label">{t("nav.askAI")}</span>
           </button>
 
           {/* 3. CENTER: Floating Highlighted Navy Blue Voice Action */}
@@ -168,7 +144,7 @@ const Navigation: React.FC<Props> = ({
             </span>
           </div>
 
-          {/* 4. CAMERA BUTTON (Replaced Services) */}
+          {/* 4. CAMERA BUTTON */}
           <button
             type="button"
             className={`nav-item nav-camera-item ${isCameraMenuOpen ? "nav-item--active" : ""}`}
@@ -193,9 +169,7 @@ const Navigation: React.FC<Props> = ({
             <div className="nav-item__icon-wrapper">
               <ClipboardCheckIcon size={20} color={activeTab === "grievance" ? "#123B5D" : "#68757D"} />
             </div>
-            <span className="nav-item__label">
-              {language === "hi" ? "शिकायत" : language === "mr" ? "तक्रार" : "Grievance"}
-            </span>
+            <span className="nav-item__label">{t("nav.grievance")}</span>
           </button>
         </div>
       </nav>

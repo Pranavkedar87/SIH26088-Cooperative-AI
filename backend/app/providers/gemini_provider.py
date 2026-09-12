@@ -209,11 +209,11 @@ class GeminiProvider(AIProvider):
             prompt = self._build_prompt(request.message, request.language, intent)
 
             model_candidates = [
+                "gemini-flash-latest",
                 "gemini-2.5-flash",
                 "gemini-flash-lite-latest",
                 "gemini-2.5-flash-lite",
                 "gemini-3.5-flash-lite",
-                "gemini-flash-latest",
             ]
             response = None
             for model_name in model_candidates:
@@ -315,11 +315,11 @@ def query_gemini_llm(
 
         # Models verified working via REST API (fastest and most reliable first)
         models = [
+            "gemini-flash-latest",
             "gemini-2.5-flash",
             "gemini-flash-lite-latest",
             "gemini-2.5-flash-lite",
             "gemini-3.5-flash-lite",
-            "gemini-flash-latest",
         ]
 
         for model_name in models:

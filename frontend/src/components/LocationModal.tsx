@@ -1,5 +1,7 @@
 import React from "react";
+import type { LanguageCode } from "../types";
 import type { UserLocationData } from "../services/locationService";
+import { useTranslation } from "../i18n";
 import { MapPinIcon, XIcon, ShieldCheckIcon } from "./Icons";
 
 interface Props {
@@ -8,6 +10,7 @@ interface Props {
   locationData: UserLocationData;
   onRefreshLocation: () => void;
   isDetecting: boolean;
+  language?: LanguageCode;
 }
 
 export const LocationModal: React.FC<Props> = ({
@@ -16,7 +19,10 @@ export const LocationModal: React.FC<Props> = ({
   locationData,
   onRefreshLocation,
   isDetecting,
+  language = "en",
 }) => {
+  const t = useTranslation(language);
+
   if (!isOpen) return null;
 
   const isAvailable = locationData.status === "available";
@@ -27,9 +33,9 @@ export const LocationModal: React.FC<Props> = ({
         <div className="modal-header">
           <div className="modal-header-title">
             <MapPinIcon size={20} color="#0F6B68" />
-            <h3>Your Location</h3>
+            <h3>{t("location.title")}</h3>
           </div>
-          <button type="button" className="modal-close-btn" onClick={onClose} aria-label="Close">
+          <button type="button" className="modal-close-btn" onClick={onClose} aria-label={t("common.close")}>
             <XIcon size={18} />
           </button>
         </div>
@@ -43,16 +49,16 @@ export const LocationModal: React.FC<Props> = ({
 
               <div className="location-status-row">
                 <ShieldCheckIcon size={16} color="#10B981" />
-                <span className="status-enabled-text">Location services ● Enabled</span>
+                <span className="status-enabled-text">{t("location.servicesEnabled")}</span>
               </div>
             </div>
           ) : (
             <div className="location-info-card location-info-card--unavailable">
               <div className="location-main-text location-main-text--error">
-                Location unavailable
+                {t("location.unavailable")}
               </div>
               <p className="location-sub-text">
-                Enable location access to get more relevant cooperative assistance and regional schemes.
+                {t("location.enablePrompt")}
               </p>
             </div>
           )}
@@ -65,10 +71,12 @@ export const LocationModal: React.FC<Props> = ({
             onClick={onRefreshLocation}
             disabled={isDetecting}
           >
-            {isDetecting ? "Detecting location..." : isAvailable ? "Update Location" : "Enable Location"}
+            {isDetecting ? t("location.detecting") : isAvailable ? t("location.update") : t("location.enable")}
           </button>
         </div>
       </div>
     </div>
   );
 };
+
+export default LocationModal;

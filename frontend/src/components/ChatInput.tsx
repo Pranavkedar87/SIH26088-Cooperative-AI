@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import type { LanguageCode } from "../types";
+import { useTranslation } from "../i18n";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { CameraIcon, MicIcon, SendIcon, ScanDocIcon, FaceScanIcon } from "./Icons";
 import { CameraCaptureModal, type CameraMode } from "./CameraCaptureModal";
@@ -12,21 +13,10 @@ interface Props {
   onChange: (value: string) => void;
 }
 
-const PLACEHOLDER: Record<string, string> = {
-  en: "Ask me anything — schemes, science, history, or any topic…",
-  hi: "कुछ भी पूछें — योजनाएं, विज्ञान, इतिहास, या कोई भी विषय…",
-  mr: "काहीही विचारा — योजना, विज्ञान, इतिहास किंवा कोणताही विषय…",
-};
-
-const STT_STATUS_LABEL: Record<string, { listening: string; processing: string }> = {
-  en: { listening: "Listening… Speak now", processing: "Processing speech…" },
-  hi: { listening: "सुन रहा हूँ… अब बोलें", processing: "आवाज संसाधित हो रही है…" },
-  mr: { listening: "ऐकत आहे… आता बोला", processing: "आवाज प्रक्रिया सुरू आहे…" },
-};
-
 const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChange }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeCameraMode, setActiveCameraMode] = useState<CameraMode | null>(null);
+  const t = useTranslation(language);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -140,8 +130,8 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
                 <ScanDocIcon size={18} color="#0F6B68" />
               </div>
               <div className="camera-popover-text">
-                <span className="camera-popover-title">Scan Document</span>
-                <span className="camera-popover-desc">Capture records, forms, or certificates</span>
+                <span className="camera-popover-title">{t("nav.scanDocument")}</span>
+                <span className="camera-popover-desc">{t("nav.scanDesc")}</span>
               </div>
             </button>
 
@@ -157,8 +147,8 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
                 <FaceScanIcon size={18} color="#0F6B68" />
               </div>
               <div className="camera-popover-text">
-                <span className="camera-popover-title">Face Scan (Optional)</span>
-                <span className="camera-popover-desc">Additional camera feature preview</span>
+                <span className="camera-popover-title">{t("nav.faceScan")}</span>
+                <span className="camera-popover-desc">{t("nav.faceScanDesc")}</span>
               </div>
             </button>
           </div>
@@ -169,12 +159,12 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
       {status === "listening" && (
         <div className="stt-status-bar stt-status-bar--listening" role="status" aria-live="polite">
           <MicIcon size={14} color="#B94A48" />
-          <span>{(STT_STATUS_LABEL[language] ?? STT_STATUS_LABEL.en).listening}</span>
+          <span>{t("input.sttListening")}</span>
         </div>
       )}
       {status === "processing" && (
         <div className="stt-status-bar stt-status-bar--processing" role="status" aria-live="polite">
-          <span>{(STT_STATUS_LABEL[language] ?? STT_STATUS_LABEL.en).processing}</span>
+          <span>{t("input.sttProcessing")}</span>
         </div>
       )}
       {errorMessage && status === "error" && (
@@ -198,7 +188,7 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
           value={value}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder={PLACEHOLDER[language] ?? PLACEHOLDER.en}
+          placeholder={t("input.placeholder")}
           rows={1}
           disabled={isLoading}
           aria-label="Message input"
@@ -223,13 +213,13 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
           className={`input-btn mic-btn ${status === "listening" ? "mic-btn--active" : ""}`}
           onClick={handleMicClick}
           disabled={isLoading}
-          aria-label={status === "listening" ? "Stop voice input" : "Start voice input"}
+          aria-label={status === "listening" ? t("home.clickToStop") : t("home.clickToSpeak")}
           title={
             !isSupported
-              ? "Voice input not supported"
+              ? t("home.voiceNotSupported")
               : status === "listening"
-              ? "Listening… Click to stop"
-              : "Click to speak"
+              ? t("home.clickToStop")
+              : t("home.clickToSpeak")
           }
         >
           <MicIcon size={18} color={status === "listening" ? "#C53030" : "#0F6B68"} />
@@ -241,7 +231,7 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
           className="input-btn send-btn"
           onClick={handleSend}
           disabled={!value.trim() || isLoading}
-          aria-label="Send message"
+          aria-label={t("input.sendMessage")}
         >
           <SendIcon size={18} color="#FFFFFF" />
         </button>
