@@ -9,11 +9,13 @@ Design principles:
 """
 from __future__ import annotations
 
+import hashlib
 import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from app.config import get_settings
 from database.supabase import get_supabase_client
 
 logger = logging.getLogger(__name__)
@@ -618,7 +620,403 @@ def append_grievance_note(grievance_id: str, note_text: str, user: dict) -> Opti
     return record
 
 
-# ── Knowledge Documents ───────────────────────────────────────────────────────
+# ── Kiosks Fleet Monitoring (Phase 2A.3) ──────────────────────────────────────
+
+_DEV_KIOSKS_FALLBACK: dict[str, dict] = {}
+
+
+def compute_kiosk_key_hash(raw_key: str) -> str:
+    """Compute SHA-256 hex digest of kiosk machine key."""
+    return hashlib.sha256(raw_key.strip().encode("utf-8")).hexdigest()
+
+
+def _init_dev_kiosks_fallback() -> None:
+    if _DEV_KIOSKS_FALLBACK:
+        return
+
+    now = datetime.now(timezone.utc)
+    fresh_hb = now.isoformat()
+    # 20 minutes ago (exceeds 15 min threshold -> offline)
+    old_hb = datetime.fromtimestamp(now.timestamp() - 1200, tz=timezone.utc).isoformat()
+
+    seed_kiosks = [
+        {
+            "id": "KSK-001",
+            "name": "Nashik Central PACS Kiosk",
+            "location": "Dindori Road, Nashik",
+            "district": "Nashik",
+            "state": "Maharashtra",
+            "pacs_name": "Dindori Primary Agriculture Cooperative Society",
+            "status": "online",
+            "software_version": "v2.4.1",
+            "ip_address": "192.168.12.45",
+            "installation_date": "2025-08-15",
+            "uptime_percent": 99.4,
+            "health": {
+                "device": "ok",
+                "network": "online",
+                "printer": "ready",
+                "sync": "synced",
+            },
+            "last_heartbeat": fresh_hb,
+            "api_key_hash": compute_kiosk_key_hash("kiosk-secret-dindori-001"),
+            "notes": "Primary rural farmer kiosk with high Marathi voice usage.",
+            "created_at": "2025-08-15T09:00:00Z",
+            "updated_at": fresh_hb,
+        },
+        {
+            "id": "KSK-002",
+            "name": "Baramati Cooperative Touchpoint",
+            "location": "Market Yard, Baramati",
+            "district": "Pune",
+            "state": "Maharashtra",
+            "pacs_name": "Baramati Taluka Sahakari Kharedi Vikri Sangh",
+            "status": "online",
+            "software_version": "v2.4.1",
+            "ip_address": "192.168.14.88",
+            "installation_date": "2025-09-10",
+            "uptime_percent": 98.7,
+            "health": {
+                "device": "ok",
+                "network": "online",
+                "printer": "low_paper",
+                "sync": "synced",
+            },
+            "last_heartbeat": fresh_hb,
+            "api_key_hash": compute_kiosk_key_hash("kiosk-secret-baramati-002"),
+            "notes": "Heavy PMFBY claim assistance point. Thermal printer paper low.",
+            "created_at": "2025-09-10T10:00:00Z",
+            "updated_at": fresh_hb,
+        },
+        {
+            "id": "KSK-003",
+            "name": "Kolhapur Dudh Sahakari Point",
+            "location": "Shirol, Kolhapur",
+            "district": "Kolhapur",
+            "state": "Maharashtra",
+            "pacs_name": "Shirol Dairy & Multipurpose Cooperative",
+            "status": "offline",
+            "software_version": "v2.4.0",
+            "ip_address": "192.168.18.22",
+            "installation_date": "2025-10-04",
+            "uptime_percent": 97.2,
+            "health": {
+                "device": "ok",
+                "network": "weak",
+                "printer": "ready",
+                "sync": "synced",
+            },
+            "last_heartbeat": old_hb,
+            "api_key_hash": compute_kiosk_key_hash("kiosk-secret-shirol-003"),
+            "notes": "Dairy society kiosk. Network intermittent in valley zone.",
+            "created_at": "2025-10-04T11:00:00Z",
+            "updated_at": old_hb,
+        },
+        {
+            "id": "KSK-004",
+            "name": "Nashik District DCCB Touchpoint",
+            "location": "CBS Square, Nashik",
+            "district": "Nashik",
+            "state": "Maharashtra",
+            "pacs_name": "Nashik District Central Cooperative Bank",
+            "status": "maintenance",
+            "software_version": "v2.4.1",
+            "ip_address": "192.168.10.12",
+            "installation_date": "2025-07-20",
+            "uptime_percent": 95.8,
+            "health": {
+                "device": "degraded",
+                "network": "online",
+                "printer": "paper_jam",
+                "sync": "synced",
+            },
+            "last_heartbeat": fresh_hb,
+            "api_key_hash": compute_kiosk_key_hash("kiosk-secret-nashik-004"),
+            "notes": "Under scheduled maintenance for thermal printer replacement.",
+            "created_at": "2025-07-20T08:00:00Z",
+            "updated_at": fresh_hb,
+        },
+    ]
+
+    for k in seed_kiosks:
+        _DEV_KIOSKS_FALLBACK[k["id"]] = k
+
+
+def calculate_deterministic_kiosk_status(raw_status: str, last_heartbeat_iso: Optional[str]) -> str:
+    """
+    Deterministic offline classification rule:
+    - If status is 'maintenance', it strictly remains 'maintenance'.
+    - If last_heartbeat is within kiosk_offline_threshold_seconds (900s / 15 min), status is 'online'.
+    - If last_heartbeat is missing or older than 900s, status is 'offline'.
+    """
+    if (raw_status or "").lower() == "maintenance":
+        return "maintenance"
+    if not last_heartbeat_iso:
+        return "offline"
+
+    try:
+        hb_clean = last_heartbeat_iso.replace("Z", "+00:00")
+        hb_dt = datetime.fromisoformat(hb_clean)
+        now = datetime.now(timezone.utc)
+        threshold = get_settings().kiosk_offline_threshold_seconds
+        elapsed = (now - hb_dt).total_seconds()
+        if elapsed <= threshold:
+            return "online"
+        return "offline"
+    except Exception:
+        return "offline"
+
+
+def is_operator_authorized_for_kiosk(user: dict, kiosk: dict) -> bool:
+    """
+    RBAC enforcement:
+    - ADMIN: Full access to all kiosks across all PACS.
+    - STAFF: Can ONLY view or manage kiosks in their assigned PACS society.
+    """
+    if not user:
+        return False
+    if user.get("role") == "ADMIN":
+        return True
+
+    user_pacs = (user.get("assigned_pacs") or "").strip().lower()
+    kiosk_pacs = (kiosk.get("pacs_name") or "").strip().lower()
+    if user_pacs and kiosk_pacs and user_pacs == kiosk_pacs:
+        return True
+    return False
+
+
+def list_kiosks(
+    district: Optional[str] = None,
+    state: Optional[str] = None,
+    pacs: Optional[str] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    user: Optional[dict] = None,
+) -> list[dict]:
+    """
+    List kiosks with filtering and strict RBAC isolation for STAFF.
+    Production behavior: queries Supabase. If error in production, raises RuntimeError.
+    Development behavior: merges with _DEV_KIOSKS_FALLBACK.
+    """
+    settings = get_settings()
+    is_dev = settings.app_env.lower() in ("development", "dev", "test", "testing", "local")
+
+    records: list[dict] = []
+    client = get_supabase_client()
+    db_queried_successfully = False
+
+    if client is not None:
+        try:
+            res = client.table("kiosks").select("*").order("created_at", desc=True).execute()
+            if res.data is not None:
+                records = list(res.data)
+                db_queried_successfully = True
+        except Exception as exc:
+            logger.warning("Supabase kiosks query failed: %s", exc)
+            if not is_dev:
+                raise RuntimeError("Kiosk database is unavailable in production") from exc
+
+    if not db_queried_successfully:
+        if not is_dev:
+            raise RuntimeError("Kiosk database connection unavailable in production")
+        _init_dev_kiosks_fallback()
+        records = [dict(v) for v in _DEV_KIOSKS_FALLBACK.values()]
+    else:
+        # In dev, if table is empty, merge fallback
+        if is_dev and len(records) == 0:
+            _init_dev_kiosks_fallback()
+            records = [dict(v) for v in _DEV_KIOSKS_FALLBACK.values()]
+
+    # Apply deterministic status calculation to each kiosk
+    for r in records:
+        r["status"] = calculate_deterministic_kiosk_status(r.get("status"), r.get("last_heartbeat"))
+
+    # Apply RBAC filter
+    if user:
+        records = [r for r in records if is_operator_authorized_for_kiosk(user, r)]
+
+    # Apply query filters
+    filtered: list[dict] = []
+    for k in records:
+        if district and district.lower() != "all" and (k.get("district") or "").lower() != district.lower():
+            continue
+        if state and state.lower() != "all" and (k.get("state") or "").lower() != state.lower():
+            continue
+        if pacs and pacs.lower() not in (k.get("pacs_name") or "").lower():
+            continue
+        if status and status.lower() != "all" and k.get("status") != status.lower():
+            continue
+        if search:
+            q = search.strip().lower()
+            corpus = f"{k.get('id', '')} {k.get('name', '')} {k.get('location', '')} {k.get('pacs_name', '')} {k.get('district', '')}".lower()
+            if q not in corpus:
+                continue
+        filtered.append(k)
+
+    return filtered
+
+
+def get_kiosk_by_id(kiosk_id: str, user: dict) -> Optional[dict]:
+    """
+    Retrieve single kiosk with RBAC check.
+    Raises PermissionError if unauthorized STAFF tries to access kiosk outside their PACS.
+    Returns None if kiosk not found.
+    """
+    settings = get_settings()
+    is_dev = settings.app_env.lower() in ("development", "dev", "test", "testing", "local")
+
+    record = None
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            res = client.table("kiosks").select("*").eq("id", kiosk_id).execute()
+            if res.data and len(res.data) > 0:
+                record = res.data[0]
+        except Exception as exc:
+            logger.debug("Supabase get_kiosk_by_id error: %s", exc)
+            if not is_dev:
+                raise RuntimeError("Kiosk database is unavailable in production") from exc
+
+    if record is None and is_dev:
+        _init_dev_kiosks_fallback()
+        if kiosk_id in _DEV_KIOSKS_FALLBACK:
+            record = dict(_DEV_KIOSKS_FALLBACK[kiosk_id])
+
+    if record is None:
+        return None
+
+    # Calculate status
+    record["status"] = calculate_deterministic_kiosk_status(record.get("status"), record.get("last_heartbeat"))
+
+    # RBAC check
+    if not is_operator_authorized_for_kiosk(user, record):
+        raise PermissionError(f"Operator {user.get('email')} is not authorized to access kiosk {kiosk_id}.")
+
+    return record
+
+
+def update_kiosk_operational(kiosk_id: str, status: Optional[str], notes: Optional[str], user: dict) -> Optional[dict]:
+    """
+    Admin/Staff operational update: permits ONLY status and notes.
+    Rejects unauthorized access with PermissionError.
+    """
+    kiosk = get_kiosk_by_id(kiosk_id, user)
+    if kiosk is None:
+        return None
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    if status is not None:
+        kiosk["status"] = status.lower()
+    if notes is not None:
+        kiosk["notes"] = notes
+    kiosk["updated_at"] = now_iso
+
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            update_data: dict[str, Any] = {"updated_at": now_iso}
+            if status is not None:
+                update_data["status"] = status.lower()
+            if notes is not None:
+                update_data["notes"] = notes
+            client.table("kiosks").update(update_data).eq("id", kiosk_id).execute()
+        except Exception as exc:
+            logger.debug("Supabase update_kiosk_operational error: %s", exc)
+
+    _init_dev_kiosks_fallback()
+    if kiosk_id in _DEV_KIOSKS_FALLBACK:
+        _DEV_KIOSKS_FALLBACK[kiosk_id] = kiosk
+
+    return kiosk
+
+
+def process_kiosk_heartbeat(kiosk_id: str, telemetry: dict, provided_key: str) -> dict:
+    """
+    Process M2M heartbeat:
+    1. Authenticate device via per-kiosk api_key_hash (or KIOSK_HEARTBEAT_SECRET env override).
+    2. Update last_heartbeat, health, software_version, ip_address, updated_at.
+    3. Transition status from offline -> online (if status != 'maintenance').
+    Raises PermissionError if key is invalid.
+    Raises LookupError if kiosk ID not found.
+    """
+    settings = get_settings()
+    is_dev = settings.app_env.lower() in ("development", "dev", "test", "testing", "local")
+
+    kiosk = None
+    client = get_supabase_client()
+    if client is not None:
+        try:
+            res = client.table("kiosks").select("*").eq("id", kiosk_id).execute()
+            if res.data and len(res.data) > 0:
+                kiosk = res.data[0]
+        except Exception as exc:
+            logger.debug("Supabase heartbeat fetch error: %s", exc)
+
+    if kiosk is None and is_dev:
+        _init_dev_kiosks_fallback()
+        if kiosk_id in _DEV_KIOSKS_FALLBACK:
+            kiosk = dict(_DEV_KIOSKS_FALLBACK[kiosk_id])
+
+    if kiosk is None:
+        raise LookupError(f"Kiosk '{kiosk_id}' not found.")
+
+    # Validate credential
+    stored_hash = kiosk.get("api_key_hash")
+    key_valid = False
+    if provided_key:
+        if stored_hash and compute_kiosk_key_hash(provided_key) == stored_hash:
+            key_valid = True
+        elif settings.kiosk_heartbeat_secret and provided_key.strip() == settings.kiosk_heartbeat_secret:
+            key_valid = True
+
+    if not key_valid:
+        raise PermissionError(f"Invalid kiosk credentials for '{kiosk_id}'.")
+
+    # Update ONLY explicitly allowed telemetry fields
+    now_iso = datetime.now(timezone.utc).isoformat()
+    health_update = {
+        "device": telemetry.get("device_status") or "ok",
+        "network": telemetry.get("network_status") or "online",
+        "printer": telemetry.get("printer_status") or "ready",
+        "sync": telemetry.get("sync_status") or "synced",
+    }
+
+    kiosk["last_heartbeat"] = now_iso
+    kiosk["health"] = health_update
+    kiosk["updated_at"] = now_iso
+
+    if telemetry.get("software_version"):
+        kiosk["software_version"] = telemetry["software_version"]
+    if telemetry.get("ip_address"):
+        kiosk["ip_address"] = telemetry["ip_address"]
+
+    # Status rule: offline -> online, but NEVER remove maintenance automatically
+    if kiosk.get("status") != "maintenance":
+        kiosk["status"] = "online"
+
+    # Persist in Supabase if client available
+    if client is not None:
+        try:
+            client.table("kiosks").update({
+                "last_heartbeat": now_iso,
+                "health": health_update,
+                "updated_at": now_iso,
+                "status": kiosk["status"],
+                **({"software_version": kiosk["software_version"]} if telemetry.get("software_version") else {}),
+                **({"ip_address": kiosk["ip_address"]} if telemetry.get("ip_address") else {}),
+            }).eq("id", kiosk_id).execute()
+        except Exception as exc:
+            logger.debug("Supabase heartbeat update error: %s", exc)
+
+    if kiosk_id in _DEV_KIOSKS_FALLBACK:
+        _DEV_KIOSKS_FALLBACK[kiosk_id] = kiosk
+
+    return {
+        "status": "ok",
+        "kiosk_id": kiosk_id,
+        "received_at": now_iso,
+        "state": kiosk["status"],
+    }
 
 def get_knowledge_documents() -> list[dict]:
     """

@@ -5,6 +5,7 @@ All secrets are read from the .env file — never hard-coded.
 """
 from __future__ import annotations
 from functools import lru_cache
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,6 +54,10 @@ class Settings(BaseSettings):
     dev_admin_password: str = "SahkaarSetu@Admin2026"
     dev_staff_email: str = "staff@sahkaarsetu.local"
     dev_staff_password: str = "SahkaarSetu@Staff2026"
+
+    # ── Kiosk Fleet Monitoring (Phase 2A.3) ────────────────────────────────
+    kiosk_offline_threshold_seconds: int = 900  # 15 minutes deterministic threshold
+    kiosk_heartbeat_secret: Optional[str] = None  # Configured via KIOSK_HEARTBEAT_SECRET env var
 
 
 @lru_cache(maxsize=1)
