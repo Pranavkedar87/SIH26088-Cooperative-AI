@@ -5640,3 +5640,598 @@
   margin: 0 0 16px 0;
 }
 
+/* ── Phase 3A.3: 58mm Assistance Slip & Thermal Print Styles ─────────────── */
+
+/* Handoff Success Slip Action Card */
+.handoff-slip-action-card {
+  width: 100%;
+  box-sizing: border-box;
+  background: #F0FDF4;
+  border: 1.5px solid #86EFAC;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.slip-action-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.slip-action-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slip-action-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #166534;
+}
+
+.slip-action-subtitle {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: #15803D;
+}
+
+.slip-action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.handoff-view-slip-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #0F6B68;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.handoff-view-slip-btn:hover {
+  background: #0B4F4D;
+}
+
+.handoff-print-slip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #FFFFFF;
+  color: #1E293B;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.handoff-print-slip-btn:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+}
+
+/* ── Slip Modal & Wrapper ── */
+.slip-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.slip-modal-container {
+  background: transparent;
+  max-width: 380px;
+  width: 100%;
+  margin: auto;
+}
+
+.slip-view-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Screen Toolbar */
+.slip-toolbar {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+  border-radius: 10px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+.slip-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slip-toolbar-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #123B5D;
+}
+
+.slip-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slip-btn-print {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0F6B68;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.slip-btn-print:hover {
+  background: #0B4F4D;
+}
+
+.slip-btn-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.slip-btn-close:hover {
+  background: #E2E8F0;
+}
+
+/* ── Authentic 58mm Thermal Receipt Card (Screen) ── */
+#pacs-assistance-slip,
+.pacs-assistance-slip {
+  width: 100%;
+  max-width: 340px;
+  background: #FFFFFF;
+  color: #111827;
+  padding: 16px 14px;
+  border-radius: 4px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+  font-family: 'Courier New', Courier, monospace, monospace;
+  font-size: 11.5px;
+  line-height: 1.35;
+  box-sizing: border-box;
+  text-align: left;
+  border-top: 4px solid #123B5D;
+  position: relative;
+}
+
+.slip-header {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.slip-emblem {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.slip-header-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #0F172A;
+  line-height: 1.25;
+}
+
+.slip-header-sub {
+  font-size: 10px;
+  color: #475569;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.slip-divider-dashed {
+  border-bottom: 1px dashed #94A3B8;
+  margin: 8px 0;
+}
+
+.slip-ref-box {
+  text-align: center;
+  background: #F8FAFC;
+  border: 1px dashed #64748B;
+  border-radius: 4px;
+  padding: 6px 4px;
+  margin: 6px 0;
+}
+
+.slip-ref-label {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  color: #64748B;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.slip-ref-value {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: 1px;
+  margin: 2px 0;
+}
+
+.slip-timestamp {
+  font-size: 10px;
+  color: #64748B;
+}
+
+.slip-meta-table {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.slip-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.slip-meta-key {
+  font-weight: 700;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.slip-meta-val {
+  text-align: right;
+  color: #0F172A;
+  word-break: break-word;
+}
+
+.slip-meta-val--bold {
+  font-weight: 800;
+}
+
+.slip-category-badge {
+  font-weight: 700;
+  background: #E2E8F0;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10.5px;
+}
+
+.slip-section {
+  margin: 6px 0;
+}
+
+.slip-section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.slip-section-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #334155;
+  margin-bottom: 2px;
+}
+
+.slip-bhashini-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: #0F6B68;
+  background: #E6F4F1;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.slip-section-body {
+  font-size: 11px;
+  line-height: 1.35;
+  color: #1E293B;
+  background: #F8FAFC;
+  padding: 4px 6px;
+  border-left: 2px solid #64748B;
+  word-break: break-word;
+}
+
+.slip-query-text {
+  border-left-color: #3B82F6;
+}
+
+.slip-translated-text {
+  border-left-color: #0F6B68;
+  font-style: italic;
+}
+
+.slip-guidance-text {
+  border-left-color: #10B981;
+}
+
+.slip-sources-list {
+  list-style: none;
+  margin: 2px 0 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.slip-source-item {
+  font-size: 10px;
+  color: #475569;
+}
+
+.slip-qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: 8px 0;
+  padding: 6px 0;
+}
+
+.slip-qr-graphic {
+  background: #FFFFFF;
+  padding: 4px;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.slip-qr-graphic svg {
+  display: block;
+}
+
+.slip-qr-notice {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 2px;
+}
+
+.slip-qr-privacy {
+  font-size: 9px;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.slip-disclaimer {
+  font-size: 9px;
+  line-height: 1.3;
+  color: #64748B;
+  text-align: center;
+  margin: 6px 0;
+}
+
+.slip-footer-cutoff {
+  text-align: center;
+  font-size: 9px;
+  color: #94A3B8;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+/* ── @media print Layout (58mm Thermal Printer Target) ───────────────────── */
+@media print {
+  @page {
+    size: 58mm auto;
+    margin: 0;
+  }
+
+  /* Reset body and page */
+  html,
+  body {
+    width: 58mm !important;
+    min-width: 58mm !important;
+    max-width: 58mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+  }
+
+  /* Hide everything on the page by default */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Explicitly hide screen UI chrome */
+  header,
+  nav,
+  .app-header,
+  .app-nav,
+  .input-bar-container,
+  .chat-area,
+  .voice-mode-overlay,
+  .modal-backdrop,
+  .handoff-modal-container,
+  .slip-no-print,
+  .slip-toolbar {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Show only the assistance slip */
+  #pacs-assistance-slip,
+  #pacs-assistance-slip * {
+    visibility: visible !important;
+  }
+
+  #pacs-assistance-slip {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 54mm !important;
+    max-width: 54mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 1.5mm !important;
+    background: #FFFFFF !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-top: none !important;
+    border-radius: 0 !important;
+    font-family: 'Courier New', Courier, monospace, monospace !important;
+    font-size: 8pt !important;
+    line-height: 1.25 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #pacs-assistance-slip .slip-header-title {
+    font-size: 9pt !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  #pacs-assistance-slip .slip-header-sub {
+    font-size: 7pt !important;
+    color: #000000 !important;
+  }
+
+  #pacs-assistance-slip .slip-ref-box {
+    background: #FFFFFF !important;
+    border: 1px dashed #000000 !important;
+    padding: 2px !important;
+  }
+
+  #pacs-assistance-slip .slip-ref-label {
+    font-size: 7pt !important;
+    color: #000000 !important;
+  }
+
+  #pacs-assistance-slip .slip-ref-value {
+    font-size: 11pt !important;
+    font-weight: 900 !important;
+    color: #000000 !important;
+  }
+
+  #pacs-assistance-slip .slip-timestamp {
+    font-size: 7pt !important;
+    color: #000000 !important;
+  }
+
+  #pacs-assistance-slip .slip-divider-dashed {
+    border-bottom: 1px dashed #000000 !important;
+    margin: 3px 0 !important;
+  }
+
+  #pacs-assistance-slip .slip-meta-key,
+  #pacs-assistance-slip .slip-meta-val {
+    color: #000000 !important;
+    font-size: 7.5pt !important;
+  }
+
+  #pacs-assistance-slip .slip-category-badge {
+    background: transparent !important;
+    border: 1px solid #000000 !important;
+    padding: 0 2px !important;
+  }
+
+  #pacs-assistance-slip .slip-section-title {
+    font-size: 7.5pt !important;
+    font-weight: bold !important;
+    color: #000000 !important;
+  }
+
+  #pacs-assistance-slip .slip-section-body {
+    background: #FFFFFF !important;
+    border-left: 1.5px solid #000000 !important;
+    color: #000000 !important;
+    font-size: 7.5pt !important;
+    padding: 2px 4px !important;
+  }
+
+  #pacs-assistance-slip .slip-bhashini-tag {
+    background: transparent !important;
+    border: 1px solid #000000 !important;
+    color: #000000 !important;
+    font-size: 6.5pt !important;
+  }
+
+  #pacs-assistance-slip .slip-qr-box {
+    margin: 4px 0 !important;
+  }
+
+  #pacs-assistance-slip .slip-qr-graphic {
+    border: none !important;
+    padding: 0 !important;
+  }
+
+  #pacs-assistance-slip .slip-qr-graphic svg {
+    width: 28mm !important;
+    height: 28mm !important;
+    margin: 0 auto !important;
+  }
+
+  #pacs-assistance-slip .slip-qr-notice {
+    font-size: 7pt !important;
+    color: #000000 !important;
+  }
+
+  #pacs-assistance-slip .slip-qr-privacy {
+    font-size: 6.5pt !important;
+    color: #000000 !important;
+  }
+
+  #pacs-assistance-slip .slip-disclaimer {
+    font-size: 6.5pt !important;
+    line-height: 1.2 !important;
+    color: #000000 !important;
+  }
+
+  #pacs-assistance-slip .slip-footer-cutoff {
+    font-size: 6.5pt !important;
+    color: #000000 !important;
+  }
+}

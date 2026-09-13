@@ -5,14 +5,15 @@ import { submitHumanHandoff } from "../api/client";
 import {
   LandmarkIcon,
   XIcon,
-  ShieldCheckIcon,
   CheckCircleIcon,
   AlertTriangleIcon,
   CopyIcon,
   CheckIcon,
   FileTextIcon,
   InfoIcon,
+  PrinterIcon,
 } from "./Icons";
+import { AssistanceSlipView } from "./AssistanceSlipView";
 
 interface Props {
   isOpen: boolean;
@@ -55,6 +56,7 @@ export const HandoffModal: React.FC<Props> = ({
   const [response, setResponse] = useState<HumanHandoffResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [codeCopied, setCodeCopied] = useState<boolean>(false);
+  const [showSlipView, setShowSlipView] = useState<boolean>(false);
 
   // Sync initial query when opened
   useEffect(() => {
@@ -64,6 +66,7 @@ export const HandoffModal: React.FC<Props> = ({
       setResponse(null);
       setErrorMessage(null);
       setCodeCopied(false);
+      setShowSlipView(false);
     }
   }, [isOpen, initialQuery]);
 
@@ -405,18 +408,43 @@ export const HandoffModal: React.FC<Props> = ({
                 </div>
               )}
 
-              {/* Phase 3A.3 Placeholder */}
-              <div className="handoff-slip-placeholder">
-                <div className="slip-placeholder-header">
-                  <ShieldCheckIcon size={18} color="#0F6B68" />
-                  <span className="slip-placeholder-title">
-                    {t("handoff.slipPlaceholder")}
-                  </span>
+              {/* Phase 3A.3 Assistance Slip Card */}
+              {response.slip_data && (
+                <div className="handoff-slip-action-card">
+                  <div className="slip-action-header">
+                    <PrinterIcon size={20} color="#0F6B68" />
+                    <div className="slip-action-titles">
+                      <span className="slip-action-title">
+                        {t("handoff.slipReady")}
+                      </span>
+                      <span className="slip-action-subtitle">
+                        {t("handoff.slipReadyNotice")}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="slip-action-buttons">
+                    <button
+                      type="button"
+                      className="action-btn-primary handoff-view-slip-btn"
+                      onClick={() => setShowSlipView(true)}
+                    >
+                      <FileTextIcon size={16} color="#FFFFFF" />
+                      <span>{t("handoff.viewSlip")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="action-btn-secondary handoff-print-slip-btn"
+                      onClick={() => {
+                        setShowSlipView(true);
+                        setTimeout(() => window.print(), 200);
+                      }}
+                    >
+                      <PrinterIcon size={16} />
+                      <span>{t("handoff.printSlip")}</span>
+                    </button>
+                  </div>
                 </div>
-                <p className="slip-placeholder-text">
-                  {t("handoff.slipPlaceholderNotice")}
-                </p>
-              </div>
+              )}
 
               <div className="handoff-statutory-disclaimer">
                 {response.disclaimer}
@@ -467,6 +495,16 @@ export const HandoffModal: React.FC<Props> = ({
           )}
         </div>
       </div>
+
+      {/* 58mm Assistance Slip Preview / Print Modal */}
+      {showSlipView && response?.slip_data && (
+        <AssistanceSlipView
+          slipData={response.slip_data}
+          language={language}
+          onClose={() => setShowSlipView(false)}
+          isModal={true}
+        />
+      )}
     </div>
   );
 };
