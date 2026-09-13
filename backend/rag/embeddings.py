@@ -39,6 +39,8 @@ class GeminiEmbeddingProvider(EmbeddingProvider):
     Uses `gemini-embedding-001` configured to 768 output dimensions.
     """
 
+    model_name: str = DEFAULT_EMBEDDING_MODEL
+    vector_dim: int = EMBEDDING_DIMENSION
     _client: Optional[genai.Client] = None
 
     def _get_client(self) -> genai.Client:

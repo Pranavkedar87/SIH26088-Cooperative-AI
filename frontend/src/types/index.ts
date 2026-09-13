@@ -228,8 +228,11 @@ export type STTStatus = "idle" | "listening" | "processing" | "error" | "unsuppo
 
 export type VoiceState =
   | "IDLE"
+  | "READY"
   | "LISTENING"
   | "PROCESSING"
+  | "PROCESSING_SPEECH"
+  | "TRANSCRIPT_READY"
   | "THINKING"
   | "SPEAKING"
   | "FOLLOW_UP_LISTENING"

@@ -3,7 +3,7 @@ import type { LanguageCode, ChatMessage, VoiceState } from "../types";
 import { useTranslation } from "../i18n";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { useTextToSpeech } from "../hooks/useTextToSpeech";
-import { sendVoiceQuery, wakeUpBackend } from "../api/client";
+import { sendQuery, synthesizeSpeech, wakeUpBackend } from "../api/client";
 import { detectLanguageFromText } from "../utils/languageDetector";
 import {
   SahkaarSetuLogo,
@@ -94,32 +94,48 @@ export const VoiceModeView: React.FC<Props> = ({
     onEnd: handleTTSEnd,
   });
 
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const stopAllSpeech = useCallback(() => {
+    if (activeAudioRef.current) {
+      try {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.currentTime = 0;
+      } catch (e) {
+        // Ignore pause errors
+      }
+      activeAudioRef.current = null;
+    }
+    stopSpeaking();
+  }, [stopSpeaking]);
+
   const handleSpeechCaptured = async (text: string) => {
-    if (!text || !text.trim() || voiceStateRef.current === "PROCESSING" || voiceStateRef.current === "THINKING") {
+    if (!text || !text.trim() || voiceStateRef.current === "THINKING" || voiceStateRef.current === "SPEAKING") {
       return;
     }
 
-    const startTime = performance.now();
     const trimmed = text.trim();
-
-    stopSpeaking();
+    stopAllSpeech();
     unlockAudio();
 
+    // 1. Immediately show transcript in UI and set state to TRANSCRIPT_READY
     setUserTranscript(trimmed);
     setAiResponse(null); // Clear previous response card immediately for new turn
-    setVoiceState("PROCESSING");
+    setVoiceState("TRANSCRIPT_READY");
     setErrorMsg(null);
 
-    // 1. Detect language from spoken input
+    // 2. Detect language from spoken input
     const detectedLang = detectLanguageFromText(trimmed, activeLang);
     setActiveLang(detectedLang);
 
-    // 2. Transition to THINKING while querying backend
+    // 3. Briefly show TRANSCRIPT_READY then transition to THINKING while querying /api/query
+    await new Promise((r) => setTimeout(r, 400));
     setVoiceState("THINKING");
 
     try {
-      // Query backend with response_mode = "voice" targeting /api/voice/query
-      const response = await sendVoiceQuery({
+      const startTime = performance.now();
+      // Send query directly via canonical sendQuery targeting /api/query with response_mode="voice"
+      const response = await sendQuery({
         message: trimmed,
         language: detectedLang,
         session_id: sessionId,
@@ -150,22 +166,50 @@ export const VoiceModeView: React.FC<Props> = ({
 
       setAiResponse(assistantMsg);
 
-      // 3. Transition to SPEAKING state and trigger automatic TTS audio
+      // 4. Transition to SPEAKING state and trigger TTS audio (Bhashini primary -> client fallback)
       setVoiceState("SPEAKING");
       const targetLang = response.language || detectedLang;
 
-      speak(assistantMsg.id, cleanedSpoken, targetLang, () => {
-        console.info("[VOICE_STATE] Spoken response completed -> transitioning to FOLLOW_UP_LISTENING");
-        setVoiceState("FOLLOW_UP_LISTENING");
-      });
+      let playedBhashini = false;
+      try {
+        const synthRes = await synthesizeSpeech(cleanedSpoken, targetLang);
+        if (synthRes && synthRes.success && synthRes.audio_content) {
+          const audio = new Audio("data:audio/wav;base64," + synthRes.audio_content);
+          activeAudioRef.current = audio;
+          audio.onended = () => {
+            activeAudioRef.current = null;
+            console.info("[VOICE_STATE] Bhashini TTS finished naturally -> transitioning to FOLLOW_UP_LISTENING");
+            setVoiceState("FOLLOW_UP_LISTENING");
+          };
+          audio.onerror = (e) => {
+            activeAudioRef.current = null;
+            console.warn("[TTS] Bhashini audio playback error, falling back to browser TTS:", e);
+            speak(assistantMsg.id, cleanedSpoken, targetLang, () => {
+              setVoiceState("FOLLOW_UP_LISTENING");
+            });
+          };
+          await audio.play();
+          playedBhashini = true;
+          console.info("[TTS] Playing Bhashini TTS audio output");
+        }
+      } catch (synthErr) {
+        console.warn("[TTS] Bhashini synthesize notice, falling back to browser TTS:", synthErr);
+      }
+
+      if (!playedBhashini) {
+        speak(assistantMsg.id, cleanedSpoken, targetLang, () => {
+          console.info("[VOICE_STATE] Spoken response completed -> transitioning to FOLLOW_UP_LISTENING");
+          setVoiceState("FOLLOW_UP_LISTENING");
+        });
+      }
     } catch (err) {
-      console.error("[VOICE_ERROR] Voice processing error:", err);
+      console.error("[VOICE_ERROR] Voice query processing error:", err);
       setVoiceState("ERROR");
       setErrorMsg(
         detectedLang === "hi"
           ? "उत्तर तैयार करने में समस्या आई। पुनः प्रयास करें।"
           : detectedLang === "en"
-          ? "Could not process voice input. Please try again."
+          ? "Could not process voice query. Please try again."
           : "उत्तर तयार करताना अडचण आली. कृपया पुन्हा प्रयत्न करा."
       );
     }
@@ -180,7 +224,7 @@ export const VoiceModeView: React.FC<Props> = ({
   // Sync STT hook status & error messages into VoiceModeView state
   useEffect(() => {
     if (sttStatus === "processing") {
-      setVoiceState("PROCESSING");
+      setVoiceState("PROCESSING_SPEECH");
     } else if (sttStatus === "error" && sttError) {
       setVoiceState("ERROR");
       setErrorMsg(sttError);
@@ -202,9 +246,9 @@ export const VoiceModeView: React.FC<Props> = ({
     setVoiceState("LISTENING");
     return () => {
       stopListening();
-      stopSpeaking();
+      stopAllSpeech();
     };
-  }, []);
+  }, [stopAllSpeech, stopListening]);
 
   // Mic Orb click handler (Supports Interruption!)
   const handleOrbClick = () => {
@@ -213,26 +257,26 @@ export const VoiceModeView: React.FC<Props> = ({
     if (voiceState === "SPEAKING") {
       // INTERRUPT SPEAKING immediately and start listening for follow-up!
       console.info("[VOICE_INTERRUPT] User interrupted AI speech -> starting STT listening");
-      stopSpeaking();
+      stopAllSpeech();
       setUserTranscript("");
       setAiResponse(null);
       setErrorMsg(null);
       setVoiceState("FOLLOW_UP_LISTENING");
     } else if (voiceState === "LISTENING" || voiceState === "FOLLOW_UP_LISTENING") {
       stopListening();
-      setVoiceState("IDLE");
+      setVoiceState("READY");
     } else {
-      // IDLE or ERROR -> start listening
+      // READY, IDLE or ERROR -> start listening
       setUserTranscript("");
       setAiResponse(null);
       setErrorMsg(null);
-      stopSpeaking();
+      stopAllSpeech();
       setVoiceState("LISTENING");
     }
   };
 
   const handleStopSpeakingClick = () => {
-    stopSpeaking();
+    stopAllSpeech();
     setVoiceState("FOLLOW_UP_LISTENING");
   };
 
@@ -260,15 +304,30 @@ export const VoiceModeView: React.FC<Props> = ({
       hi: { label: "तैयार", tag: "माइक पर टैप करें" },
       en: { label: "Ready", tag: "Tap mic to speak" },
     },
+    READY: {
+      mr: { label: "तयार", tag: "मायक्रोफोनवर टॅप करा" },
+      hi: { label: "तैयार", tag: "माइक पर टैप करें" },
+      en: { label: "Ready", tag: "Tap mic to speak" },
+    },
     LISTENING: {
       mr: { label: "ऐकत आहे", tag: "तुमचा प्रश्न विचारा..." },
       hi: { label: "सुन रहा हूँ", tag: "अपना प्रश्न पूछें..." },
       en: { label: "Listening", tag: "Ask your question..." },
     },
     PROCESSING: {
-      mr: { label: "प्रोसेस करत आहे", tag: "भाषा आणि प्रश्न समजून घेत आहे..." },
-      hi: { label: "प्रोसेस कर रहा हूँ", tag: "भाषा और प्रश्न समझ रहा हूँ..." },
-      en: { label: "Processing", tag: "Understanding spoken input..." },
+      mr: { label: "आवाज प्रक्रिया", tag: "आवाज समजून घेत आहे..." },
+      hi: { label: "आवाज़ प्रोसेसिंग", tag: "आवाज़ समझ रहा हूँ..." },
+      en: { label: "Processing", tag: "Processing voice input..." },
+    },
+    PROCESSING_SPEECH: {
+      mr: { label: "आवाज प्रक्रिया", tag: "आवाज मजकुरात रूपांतरित करत आहे..." },
+      hi: { label: "आवाज़ प्रोसेसिंग", tag: "आवाज़ को टेक्स्ट में बदला जा रहा है..." },
+      en: { label: "Processing Speech", tag: "Transcribing audio via Groq Whisper..." },
+    },
+    TRANSCRIPT_READY: {
+      mr: { label: "प्रश्न नोंदवला", tag: "तुमचा प्रश्न नोंदवला गेला आहे" },
+      hi: { label: "प्रश्न दर्ज हुआ", tag: "आपका प्रश्न दर्ज किया गया है" },
+      en: { label: "Transcript Ready", tag: "Voice captured successfully" },
     },
     THINKING: {
       mr: { label: "माहिती शोधत आहे", tag: "सहकारी दस्तऐवज तपासत आहे..." },

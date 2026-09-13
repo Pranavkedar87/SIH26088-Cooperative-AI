@@ -31,6 +31,7 @@ from database.repository import (
     list_kiosks,
     process_kiosk_heartbeat,
     update_kiosk_operational,
+    create_audit_log,
 )
 
 logger = logging.getLogger(__name__)
@@ -207,6 +208,29 @@ async def patch_admin_kiosk(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Kiosk '{kiosk_id}' not found.",
+        )
+
+    if payload.status:
+        create_audit_log(
+            user=current_user,
+            action="KIOSK_STATUS_CHANGED",
+            entity_type="kiosk",
+            entity_id=kiosk_id,
+            details={
+                "new_status": payload.status,
+            },
+        )
+
+    if payload.notes:
+        create_audit_log(
+            user=current_user,
+            action="KIOSK_NOTE_UPDATED",
+            entity_type="kiosk",
+            entity_id=kiosk_id,
+            details={
+                "notes_length": len(payload.notes),
+                "notes_preview": payload.notes[:60],
+            },
         )
 
     return KioskResponse(**updated)

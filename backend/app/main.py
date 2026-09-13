@@ -31,6 +31,10 @@ from app.api.routes import (
     admin_auth,
     admin_grievances,
     kiosks,
+    admin_knowledge,
+    admin_analytics,
+    admin_notifications,
+    admin_audit,
 )
 
 # ── Settings ─────────────────────────────────────────────────────────────────
@@ -75,6 +79,12 @@ app.include_router(grievance.router)
 app.include_router(admin_auth.router)
 app.include_router(admin_grievances.router)
 app.include_router(kiosks.router)
+app.include_router(admin_knowledge.router)
+app.include_router(admin_analytics.router)
+app.include_router(admin_notifications.router)
+app.include_router(admin_audit.router)
+
+
 
 logger.info("Cooperative AI Assistant API started | env=%s", settings.app_env)
 

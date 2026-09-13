@@ -11,8 +11,10 @@ import time
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
+import base64
 import httpx
 from app.config import get_settings
+from app.providers.bhashini_provider import BhashiniProvider as BhashiniClient
 
 logger = logging.getLogger(__name__)
 
@@ -179,8 +181,55 @@ class GroqWhisperProvider(STTProvider):
         raise RuntimeError(f"All Groq Whisper STT models failed: {last_exception}")
 
 
-class BhashiniProvider(STTProvider):
-    """Optional Bhashini STT Provider (Extensible placeholder)."""
+class BhashiniSTTProvider(STTProvider):
+    """Concrete MeitY Bhashini ASR STT Provider."""
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.client = BhashiniClient(api_key=api_key)
+
+    @property
+    def is_configured(self) -> bool:
+        return self.client.is_configured
+
+    async def transcribe(
+        self,
+        audio_bytes: bytes,
+        filename: str = "speech.wav",
+        language: str = "mr",
+    ) -> STTResult:
+        start_time = time.perf_counter()
+        if not self.is_configured:
+            raise RuntimeError("BHASHINI_API_KEY is not configured in backend/.env")
+
+        mapped_lang = STT_LANG_MAPPING.get(language, language.split("-")[0] if "-" in language else language)
+        audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+        transcript = await self.client.transcribe_audio_base64(audio_b64, mapped_lang)
+        latency_ms = (time.perf_counter() - start_time) * 1000.0
+
+        if not transcript:
+            raise RuntimeError(f"Bhashini ASR returned empty transcript or failed for {mapped_lang}")
+
+        return STTResult(
+            transcript=transcript,
+            language=mapped_lang,
+            confidence=0.98,
+            provider="bhashini",
+            latency_ms=latency_ms,
+        )
+
+
+class HybridSTTProvider(STTProvider):
+    """
+    Hybrid STT Provider:
+    Attempts Bhashini ASR first as primary national sovereign provider.
+    Automatically falls back to Groq Whisper if Bhashini times out, fails,
+    or returns an empty transcript.
+    """
+
+    def __init__(self):
+        self.bhashini = BhashiniSTTProvider()
+        self.groq = GroqWhisperProvider()
 
     async def transcribe(
         self,
@@ -188,7 +237,37 @@ class BhashiniProvider(STTProvider):
         filename: str = "speech.webm",
         language: str = "mr",
     ) -> STTResult:
-        raise NotImplementedError("Bhashini STT provider is not enabled.")
+        mapped_lang = STT_LANG_MAPPING.get(language, language.split("-")[0] if "-" in language else language)
+
+        # 1. Primary: Bhashini ASR (if configured)
+        if self.bhashini.is_configured:
+            try:
+                logger.info(
+                    "[HYBRID_STT] Attempting primary Bhashini ASR | lang=%s | size=%d bytes",
+                    mapped_lang,
+                    len(audio_bytes),
+                )
+                res = await self.bhashini.transcribe(audio_bytes, filename, mapped_lang)
+                if res and res.transcript:
+                    logger.info(
+                        "[HYBRID_STT] Bhashini ASR succeeded | lang=%s | latency=%.2fms",
+                        mapped_lang,
+                        res.latency_ms,
+                    )
+                    return res
+            except Exception as exc:
+                logger.warning(
+                    "[HYBRID_STT] Primary Bhashini ASR failed or timed out: %s. Falling back to Groq Whisper.",
+                    exc,
+                )
+
+        # 2. Fallback: Groq Whisper STT
+        logger.info(
+            "[HYBRID_STT] Invoking fallback Groq Whisper STT | lang=%s | filename=%s",
+            mapped_lang,
+            filename,
+        )
+        return await self.groq.transcribe(audio_bytes, filename, mapped_lang)
 
 
 class BrowserSpeechProvider(STTProvider):

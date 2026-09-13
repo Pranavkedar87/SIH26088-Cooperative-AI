@@ -247,3 +247,47 @@ export async function transcribeAudio(
   throw new Error("Audio transcription timed out or backend is offline");
 }
 
+// ── Server-Side TTS Speech Synthesis (MeitY Bhashini) ────────────────────────
+
+export interface SynthesizeResponseData {
+  audio_content?: string | null;
+  audio_format: string;
+  language: string;
+  gender: string;
+  provider: string;
+  success: boolean;
+}
+
+export async function synthesizeSpeech(
+  text: string,
+  language: string,
+  gender: string = "female"
+): Promise<SynthesizeResponseData | null> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const res = await fetch(`${BASE_URL}/api/voice/synthesize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: text.slice(0, 800),
+        language,
+        gender,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data: SynthesizeResponseData = await res.json();
+      return data;
+    }
+  } catch (err) {
+    console.warn("[TTS] Server synthesis notice (falling back to client TTS):", err);
+  }
+  return null;
+}
+
+

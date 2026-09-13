@@ -47,6 +47,9 @@ class RetrievedChunk(TypedDict):
     year: Optional[int]
     page_number: Optional[str]
     section_number: Optional[str]
+    status: Optional[str]
+    version: Optional[str]
+    is_current: Optional[bool]
 
 
 # Grounded domain knowledge documents repository for local retrieval
@@ -63,6 +66,9 @@ LOCAL_KNOWLEDGE_DOCUMENTS: list[dict[str, Any]] = [
         "year": 2014,
         "verification_status": "OFFICIAL_NEEDS_VERIFICATION",
         "currentness_status": "NEEDS_VERIFICATION",
+        "status": "published",
+        "version": "v1.0",
+        "is_current": True,
         "precedence_tier": 60,
         "section_number": "By-law 65, 79, 91",
         "keywords": ["housing", "housing society", "flat", "maintenance", "cooperative housing", "गृहनिर्माण", "सोसायटी", "management rules"],
@@ -80,6 +86,9 @@ LOCAL_KNOWLEDGE_DOCUMENTS: list[dict[str, Any]] = [
         "year": 2022,
         "verification_status": "OFFICIAL_NEEDS_VERIFICATION",
         "currentness_status": "NEEDS_VERIFICATION",
+        "status": "published",
+        "version": "v1.0",
+        "is_current": True,
         "precedence_tier": 60,
         "section_number": "Chapter IV: Board Powers & Duties",
         "keywords": ["pacs by-law", "pacs board", "responsibilities of a pacs board", "board of directors", "pacs committee", "पैक्स उपनियम", "पॅक्स संचालक"],
@@ -97,6 +106,9 @@ LOCAL_KNOWLEDGE_DOCUMENTS: list[dict[str, Any]] = [
         "year": 1960,
         "verification_status": "OFFICIAL_NEEDS_VERIFICATION",
         "currentness_status": "NEEDS_VERIFICATION",
+        "status": "published",
+        "version": "v1.0",
+        "is_current": True,
         "precedence_tier": 100,
         "section_number": "Section 81, Section 91",
         "keywords": ["by-law", "bylaw", "cooperative law", "act", "section", "audit", "कायदा", "उपनियम"],
@@ -114,6 +126,9 @@ LOCAL_KNOWLEDGE_DOCUMENTS: list[dict[str, Any]] = [
         "year": None,
         "verification_status": "OFFICIAL_NEEDS_VERIFICATION",
         "currentness_status": "NEEDS_VERIFICATION",
+        "status": "published",
+        "version": "v1.0",
+        "is_current": True,
         "precedence_tier": 60,
         "section_number": None,
         "keywords": ["loan", "acres", "acre", "land", "pacs", "kcc", "crop loan", "कर्ज", "जमीन", "एकर", "पिक कर्ज"],
@@ -131,6 +146,9 @@ LOCAL_KNOWLEDGE_DOCUMENTS: list[dict[str, Any]] = [
         "year": None,
         "verification_status": "OFFICIAL_NEEDS_VERIFICATION",
         "currentness_status": "NEEDS_VERIFICATION",
+        "status": "published",
+        "version": "v1.0",
+        "is_current": True,
         "precedence_tier": 70,
         "section_number": "Clause 15: Claim Intimation",
         "keywords": ["pmfby", "fasal bima", "crop insurance", "deadline", "72 hours", "फसल बीमा", "पीक विमा", "पिक विमा"],
@@ -148,6 +166,9 @@ LOCAL_KNOWLEDGE_DOCUMENTS: list[dict[str, Any]] = [
         "year": None,
         "verification_status": "OFFICIAL_NEEDS_VERIFICATION",
         "currentness_status": "NEEDS_VERIFICATION",
+        "status": "published",
+        "version": "v1.0",
+        "is_current": True,
         "precedence_tier": 70,
         "section_number": None,
         "keywords": ["tractor", "mechanization", "farm machinery", "machinery", "sub-mission", "smam", "ट्रॅक्टर", "अनुदान", "यांत्रिकीकरण", "ट्रैक्टर", "सब्सिडी"],
@@ -273,6 +294,11 @@ def _enrich_chunk(chunk: dict) -> RetrievedChunk:
     year = chunk.get("year") or meta.get("year")
     page_num = chunk.get("page_number") or meta.get("page_number")
     sec_num = chunk.get("section_number") or meta.get("section_number")
+    doc_status = (chunk.get("status") or meta.get("status") or "published").lower()
+    doc_version = chunk.get("version") or meta.get("version") or "v1.0"
+    is_curr = chunk.get("is_current")
+    if is_curr is None:
+        is_curr = meta.get("is_current", True)
 
     return {
         "content": chunk.get("content", ""),
@@ -292,6 +318,9 @@ def _enrich_chunk(chunk: dict) -> RetrievedChunk:
         "year": year,
         "page_number": page_num,
         "section_number": sec_num,
+        "status": doc_status,
+        "version": doc_version,
+        "is_current": is_curr,
     }
 
 def _governance_sort_key(c: RetrievedChunk, query: str = "") -> tuple:
@@ -313,16 +342,17 @@ def _governance_sort_key(c: RetrievedChunk, query: str = "") -> tuple:
         juri_score = 0 if juri in ["INDIA", "MAHARASHTRA"] else 1
 
     # Applicability score
-    app_list = c.get("applicability") or []
+    app_list_upper = [str(a).upper() for a in (c.get("applicability") or [])]
     if any(w in q_lower for w in ["housing", "गृहनिर्माण"]):
-        app_score = 0 if "HOUSING" in app_list else (1 if "ALL_COOPERATIVES" in app_list else 2)
+        app_score = 0 if any("HOUSING" in a for a in app_list_upper) else (1 if any("ALL_COOPERATIVES" in a for a in app_list_upper) else 2)
     elif any(w in q_lower for w in ["pacs", "पैक्स", "पॅक्स"]):
-        app_score = 0 if "PACS" in app_list else (1 if "ALL_COOPERATIVES" in app_list else 2)
+        app_score = 0 if any("PACS" in a for a in app_list_upper) else (1 if any("ALL_COOPERATIVES" in a for a in app_list_upper) else 2)
     else:
-        app_score = 0 if "ALL_COOPERATIVES" in app_list else 1
+        app_score = 0 if any("ALL_COOPERATIVES" in a for a in app_list_upper) else 1
 
     # Currentness score
     curr_map = {
+        "CURRENT": 0,
         "ACTIVE_IN_FORCE": 0,
         "AMENDED": 1,
         "NEEDS_VERIFICATION": 2,
@@ -371,6 +401,12 @@ def _get_cached_chunks(client) -> list[dict]:
             if not chunk_vec:
                 continue
 
+            doc_id = str(row.get("document_id", ""))
+            from database.repository import get_knowledge_document_by_id, is_document_eligible_for_retrieval
+            doc_meta = get_knowledge_document_by_id(doc_id) if doc_id else None
+            if doc_meta and not is_document_eligible_for_retrieval(doc_meta):
+                continue
+
             if isinstance(chunk_vec, str):
                 try:
                     chunk_vec = json.loads(chunk_vec)
@@ -384,12 +420,22 @@ def _get_cached_chunks(client) -> list[dict]:
                 "id": row.get("id"),
                 "content": row.get("content", ""),
                 "document_id": str(row.get("document_id", "")),
-                "title": doc.get("title", "Official Source"),
-                "source_name": doc.get("source_name"),
-                "source_url": doc.get("source_url"),
+                "title": (doc_meta.get("title") if doc_meta else None) or doc.get("title") or meta.get("title") or "Official Source",
+                "source_name": (doc_meta.get("source_name") if doc_meta else None) or doc.get("source_name") or meta.get("source_name"),
+                "source_url": (doc_meta.get("source_url") if doc_meta else None) or doc.get("source_url") or meta.get("source_url"),
                 "document_type": doc_type,
                 "language": row.get("language"),
                 "embedding": chunk_vec,
+                "authority_level": (doc_meta.get("authority_level") if doc_meta else None) or meta.get("authority_level") or "STATE_GOVERNMENT",
+                "jurisdiction": (doc_meta.get("jurisdiction") if doc_meta else None) or meta.get("jurisdiction") or "MAHARASHTRA",
+                "applicability": (doc_meta.get("applicability") if doc_meta else None) or meta.get("applicability") or ["ALL_COOPERATIVES"],
+                "currentness_status": (doc_meta.get("currentness_status") if doc_meta else None) or meta.get("currentness_status") or "CURRENT",
+                "verification_status": (doc_meta.get("verification_status") if doc_meta else None) or meta.get("verification_status") or "VERIFIED_OFFICIAL",
+                "precedence_tier": (doc_meta.get("precedence_tier") if doc_meta else None) or meta.get("precedence_tier") or 80,
+                "version": (doc_meta.get("version") if doc_meta else None) or meta.get("version") or "v1.0",
+                "status": (doc_meta.get("status") if doc_meta else None) or meta.get("status") or "published",
+                "is_current": (doc_meta.get("is_current") if doc_meta else None) if (doc_meta and doc_meta.get("is_current") is not None) else meta.get("is_current", True),
+                "metadata": meta,
             })
 
         _CHUNKS_CACHE = new_cache
@@ -399,6 +445,13 @@ def _get_cached_chunks(client) -> list[dict]:
         logger.error("Error refreshing knowledge chunks cache: %s", exc)
 
     return _CHUNKS_CACHE
+
+
+def reset_chunks_cache():
+    """Invalidate memory cache of knowledge chunks to force fresh load from DB."""
+    global _CHUNKS_CACHE, _CACHE_TIMESTAMP
+    _CHUNKS_CACHE = []
+    _CACHE_TIMESTAMP = 0.0
 
 
 def retrieve_relevant_knowledge(
@@ -484,6 +537,28 @@ def retrieve_relevant_knowledge(
             doc_copy = doc.copy()
             doc_copy["similarity"] = 0.95
             results.append(doc_copy)
+
+    # 2.5 Phase 2B.1 Governed Knowledge Safety Gate:
+    # Strictly reject candidate chunks whose document is not published or not current.
+    # Draft, under_review, verified, review_due (if de-indexed), outdated, and superseded
+    # documents CANNOT participate in citizen retrieval.
+    from database.repository import is_document_eligible_for_retrieval, get_knowledge_document_by_id
+    governed_candidates = []
+    for item in results:
+        doc_id = str(item.get("document_id", ""))
+        doc_meta = get_knowledge_document_by_id(doc_id) if doc_id else None
+        if doc_meta:
+            if not is_document_eligible_for_retrieval(doc_meta):
+                continue
+        else:
+            st = (item.get("status") or "published").lower().strip()
+            is_curr = item.get("is_current")
+            if is_curr is None:
+                is_curr = True
+            if st != "published" or not is_curr:
+                continue
+        governed_candidates.append(item)
+    results = governed_candidates
 
     # 3. Governance Enrichment
     enriched_results = []

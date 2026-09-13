@@ -35,6 +35,14 @@ class DocumentItem(BaseModel):
     source_url: Optional[str] = None
     document_type: Optional[str] = None
     language: Optional[str] = None
+    status: Optional[str] = "published"
+    version: Optional[str] = "v1.0"
+    is_current: Optional[bool] = True
+    authority_level: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    verification_status: Optional[str] = None
+    currentness_status: Optional[str] = None
+    precedence_tier: Optional[int] = None
 
 
 class RetrievedChunkItem(BaseModel):
@@ -46,6 +54,9 @@ class RetrievedChunkItem(BaseModel):
     document_type: Optional[str] = None
     language: Optional[str] = None
     similarity: float
+    status: Optional[str] = None
+    version: Optional[str] = None
+    is_current: Optional[bool] = None
 
 
 class KnowledgeSearchResult(BaseModel):
@@ -56,12 +67,15 @@ class KnowledgeSearchResult(BaseModel):
 
 
 @router.get("/documents", response_model=list[DocumentItem])
-async def list_documents() -> list[DocumentItem]:
+async def list_documents(
+    status: Optional[str] = Query(None, description="Optional status filter"),
+    is_current: Optional[bool] = Query(None, description="Optional is_current filter"),
+) -> list[DocumentItem]:
     """
-    List all official cooperative documents registered in the knowledge base.
+    List official cooperative documents registered in the knowledge base.
     """
     try:
-        db_docs = get_knowledge_documents()
+        db_docs = get_knowledge_documents(status=status, is_current=is_current)
         if db_docs:
             return [
                 DocumentItem(
@@ -72,6 +86,14 @@ async def list_documents() -> list[DocumentItem]:
                     source_url=d.get("source_url"),
                     document_type=d.get("document_type"),
                     language=d.get("language"),
+                    status=d.get("status", "published"),
+                    version=d.get("version", "v1.0"),
+                    is_current=d.get("is_current", True),
+                    authority_level=d.get("authority_level"),
+                    jurisdiction=d.get("jurisdiction"),
+                    verification_status=d.get("verification_status"),
+                    currentness_status=d.get("currentness_status"),
+                    precedence_tier=d.get("precedence_tier"),
                 )
                 for d in db_docs
             ]
@@ -138,6 +160,9 @@ async def search_knowledge(
                 document_type=c.get("document_type"),
                 language=c.get("language"),
                 similarity=float(c.get("similarity", 0.0)),
+                status=c.get("status", "published"),
+                version=c.get("version", "v1.0"),
+                is_current=c.get("is_current", True),
             )
             for c in chunks
         ]

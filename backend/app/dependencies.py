@@ -26,15 +26,33 @@ def get_ai_provider() -> AIProvider:
     return GeminiProvider()
 
 
+from app.config import get_settings
+
+DEMO_ADMIN_USER: dict[str, Any] = {
+    "id": "USR-DEMO-ADMIN-001",
+    "email": "admin@sahkaarsetu.local",
+    "full_name": "SahkaarSetu Admin Demo",
+    "name": "SahkaarSetu Admin Demo",
+    "role": "ADMIN",
+    "assigned_pacs": None,
+    "is_active": True,
+}
+
+
 async def get_current_admin_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer_scheme),
 ) -> dict[str, Any]:
     """
     Validate JWT Bearer token and return the authenticated operator record.
-    Raises HTTP 401 if missing, invalid, or expired.
+    If admin_demo_mode is enabled and no token is provided, returns a neutral demo admin context.
+    Raises HTTP 401 if missing (in normal mode), invalid, or expired.
     Raises HTTP 403 if account is deactivated.
     """
+    settings = get_settings()
+
     if not credentials or not credentials.credentials:
+        if settings.admin_demo_mode:
+            return DEMO_ADMIN_USER.copy()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication credentials were not provided.",

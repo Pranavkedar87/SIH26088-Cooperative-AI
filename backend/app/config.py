@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     kiosk_offline_threshold_seconds: int = 900  # 15 minutes deterministic threshold
     kiosk_heartbeat_secret: Optional[str] = None  # Configured via KIOSK_HEARTBEAT_SECRET env var
 
+    # ── Admin Demo Mode ───────────────────────────────────────────────────
+    admin_demo_mode: bool = False
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

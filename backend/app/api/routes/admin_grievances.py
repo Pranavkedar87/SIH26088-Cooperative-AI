@@ -32,6 +32,7 @@ from database.repository import (
     get_admin_grievance_by_id,
     list_admin_grievances,
     update_admin_grievance,
+    create_audit_log,
 )
 
 logger = logging.getLogger(__name__)
@@ -130,6 +131,39 @@ async def update_grievance(
         current_user.get("email"),
         list(updates.keys()),
     )
+
+    # Record specific audit events based on modified fields
+    if "status" in updates:
+        create_audit_log(
+            user=current_user,
+            action="GRIEVANCE_STATUS_CHANGED",
+            entity_type="grievance",
+            entity_id=grievance_id,
+            details={
+                "new_status": updates["status"],
+            },
+        )
+    if "priority" in updates:
+        create_audit_log(
+            user=current_user,
+            action="GRIEVANCE_PRIORITY_CHANGED",
+            entity_type="grievance",
+            entity_id=grievance_id,
+            details={
+                "new_priority": updates["priority"],
+            },
+        )
+    if "assigned_staff" in updates:
+        create_audit_log(
+            user=current_user,
+            action="GRIEVANCE_ASSIGNED",
+            entity_type="grievance",
+            entity_id=grievance_id,
+            details={
+                "assigned_staff": updates["assigned_staff"],
+            },
+        )
+
     return AdminGrievanceDetailResponse(**updated)
 
 
@@ -162,4 +196,16 @@ async def add_note_to_grievance(
         current_user.get("email"),
         grievance_id,
     )
+
+    create_audit_log(
+        user=current_user,
+        action="GRIEVANCE_NOTE_ADDED",
+        entity_type="grievance",
+        entity_id=grievance_id,
+        details={
+            "note_length": len(payload.note),
+            "note_preview": payload.note[:60],
+        },
+    )
+
     return AdminGrievanceDetailResponse(**updated)

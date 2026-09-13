@@ -19,7 +19,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status
 from pydantic import BaseModel, Field
 from app.schemas.query import QueryResponse, SourceItem
-from app.providers.stt_provider import GroqWhisperProvider
+from app.providers.stt_provider import HybridSTTProvider
+from app.providers.bhashini_provider import BhashiniProvider
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +31,8 @@ from services.query_service import process_user_query
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 
-groq_stt_provider = GroqWhisperProvider()
+hybrid_stt_provider = HybridSTTProvider()
+bhashini_tts_provider = BhashiniProvider()
 
 
 class VoiceQueryRequest(BaseModel):
@@ -110,7 +112,7 @@ async def transcribe_audio(
             session_id,
         )
 
-        stt_result = await groq_stt_provider.transcribe(
+        stt_result = await hybrid_stt_provider.transcribe(
             audio_bytes=audio_bytes,
             filename=filename,
             language=language,
@@ -194,3 +196,86 @@ async def voice_query(body: VoiceQueryRequest) -> VoiceQueryResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while processing voice request.",
         ) from exc
+
+
+class SynthesizeRequest(BaseModel):
+    text: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="Text content to synthesize into speech audio.",
+        examples=["सहकार सेतू मध्ये आपले स्वागत आहे."],
+    )
+    language: str = Field(
+        default="mr",
+        description="Target ISO language code: en | hi | mr",
+    )
+    gender: Optional[str] = Field(
+        default="female",
+        description="Voice gender preference: female | male",
+    )
+
+
+class SynthesizeResponse(BaseModel):
+    audio_content: Optional[str] = Field(
+        default=None,
+        description="Base64 encoded WAV audio bytes for browser playback.",
+    )
+    audio_format: str = Field(default="wav", description="Audio format container.")
+    language: str = Field(..., description="Language code of synthesized audio.")
+    gender: str = Field(default="female", description="Voice gender used.")
+    provider: str = Field(default="bhashini", description="TTS Provider used (bhashini or client_fallback).")
+    success: bool = Field(default=True, description="Whether server-side TTS succeeded.")
+
+
+@router.post("/synthesize", response_model=SynthesizeResponse)
+async def synthesize_speech(body: SynthesizeRequest) -> SynthesizeResponse:
+    """
+    Multilingual Speech Synthesis Endpoint (TTS).
+
+    Synthesizes text into speech audio using MeitY Bhashini TTS.
+    If Bhashini TTS fails, returns success=False and audio_content=None,
+    allowing the frontend to smoothly fall back to browser speechSynthesis.
+    """
+    clean_text = body.text.strip()
+    if not clean_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Text to synthesize cannot be empty.",
+        )
+
+    logger.info(
+        "[TTS] Synthesize request received | lang=%s | gender=%s | text_len=%d",
+        body.language,
+        body.gender,
+        len(clean_text),
+    )
+
+    if bhashini_tts_provider.is_configured:
+        try:
+            tts_res = await bhashini_tts_provider.generate_speech_base64(
+                text=clean_text,
+                language_code=body.language,
+                gender=body.gender or "female",
+            )
+            if tts_res and tts_res.get("audio_content"):
+                return SynthesizeResponse(
+                    audio_content=tts_res["audio_content"],
+                    audio_format=tts_res.get("audio_format", "wav"),
+                    language=tts_res.get("language", body.language),
+                    gender=tts_res.get("gender", body.gender or "female"),
+                    provider="bhashini",
+                    success=True,
+                )
+        except Exception as exc:
+            logger.warning("[TTS] Bhashini TTS synthesis error: %s", exc)
+
+    logger.info("[TTS] Bhashini TTS unavailable or failed -> returning fallback flag")
+    return SynthesizeResponse(
+        audio_content=None,
+        audio_format="wav",
+        language=body.language,
+        gender=body.gender or "female",
+        provider="client_fallback",
+        success=False,
+    )
