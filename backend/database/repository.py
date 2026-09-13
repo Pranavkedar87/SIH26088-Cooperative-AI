@@ -13,6 +13,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from collections import Counter
@@ -31,6 +32,17 @@ logger = logging.getLogger(__name__)
 def _new_id() -> str:
     """Generate a new UUID v4 string."""
     return str(uuid.uuid4())
+
+
+def _is_valid_uuid(val: Optional[str]) -> bool:
+    """Check if string is a valid UUID to prevent Postgres 22P02 errors."""
+    if not val:
+        return False
+    try:
+        uuid.UUID(str(val))
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
 
 
 # ── Sessions ──────────────────────────────────────────────────────────────────
@@ -145,6 +157,26 @@ def get_conversation_messages(conversation_id: str) -> list[dict]:
         return []
 
 
+def mask_citizen_phone(phone: Optional[str]) -> str:
+    """Mask citizen phone number according to privacy guidelines."""
+    if not phone or not phone.strip():
+        return "+91 98******45"
+    cleaned = re.sub(r"[^\d+]", "", phone.strip())
+    if len(cleaned) >= 10:
+        return f"{cleaned[:6]} •••••"
+    return "+91 98******45"
+
+
+def mask_citizen_name(name: Optional[str]) -> str:
+    """Mask citizen name according to privacy guidelines."""
+    if not name or not name.strip():
+        return "Citizen (Protected)"
+    parts = name.strip().split()
+    if len(parts) == 1:
+        return f"{parts[0][0]}****"
+    return f"{parts[0]} {parts[-1][0]}****"
+
+
 # ── Grievances ────────────────────────────────────────────────────────────────
 
 def create_grievance(
@@ -152,26 +184,71 @@ def create_grievance(
     category: str,
     description: str,
     status: str = "draft",
+    pacs_name: Optional[str] = None,
+    citizen_name: Optional[str] = None,
+    citizen_phone: Optional[str] = None,
+    ai_guidance: Optional[str] = None,
+    priority: str = "medium",
+    reference_code: Optional[str] = None,
+    citizen_language: Optional[str] = None,
+    translated_summary: Optional[str] = None,
+    source_citations: Optional[list] = None,
 ) -> Optional[str]:
     """
-    Create a new grievance record in Supabase.
+    Create a new grievance or assistance record in Supabase with in-memory fallback.
     Returns grievance UUID string or None on failure.
+    Backward-compatible: all extended parameters are optional with defaults.
     """
     grievance_id = _new_id()
     now_iso = datetime.now(timezone.utc).isoformat()
+    masked_name = mask_citizen_name(citizen_name)
+    masked_phone = mask_citizen_phone(citizen_phone)
+
     client = get_supabase_client()
     if client is not None:
+        db_conv_id = conversation_id if _is_valid_uuid(conversation_id) else None
+        payload: dict[str, Any] = {
+            "id": grievance_id,
+            "conversation_id": db_conv_id,
+            "category": category,
+            "description": description,
+            "status": status,
+        }
+        if pacs_name is not None:
+            payload["pacs_name"] = pacs_name
+        if citizen_name is not None:
+            payload["citizen_masked_name"] = masked_name
+        if citizen_phone is not None:
+            payload["citizen_phone_masked"] = masked_phone
+        if ai_guidance is not None:
+            payload["ai_guidance"] = ai_guidance
+        if priority is not None:
+            payload["priority"] = priority
+        if citizen_language is not None:
+            payload["citizen_language"] = citizen_language
+        if translated_summary is not None:
+            payload["translated_summary"] = translated_summary
+        if reference_code is not None:
+            payload["reference_code"] = reference_code
+        if source_citations is not None:
+            payload["source_citations"] = source_citations
+
         try:
-            client.table("grievances").insert({
-                "id": grievance_id,
-                "conversation_id": conversation_id,
-                "category": category,
-                "description": description,
-                "status": status,
-            }).execute()
+            client.table("grievances").insert(payload).execute()
             logger.info("Grievance record created in Supabase: %s (category=%s)", grievance_id, category)
         except Exception as exc:
-            logger.warning("Failed to create grievance in Supabase (will use fallback): %s", exc)
+            logger.warning("Full grievance insert in Supabase failed (retrying core schema): %s", exc)
+            try:
+                core_payload = {
+                    "id": grievance_id,
+                    "conversation_id": db_conv_id,
+                    "category": category,
+                    "description": description,
+                    "status": status,
+                }
+                client.table("grievances").insert(core_payload).execute()
+            except Exception as core_exc:
+                logger.warning("Core grievance insert in Supabase failed (will use fallback): %s", core_exc)
 
     # Mirror into in-memory dev fallback for immediate administrative triage
     _init_dev_grievances_fallback()
@@ -181,13 +258,17 @@ def create_grievance(
         "category": category,
         "description": description,
         "status": status,
-        "priority": "medium",
+        "priority": priority or "medium",
         "assigned_staff": None,
-        "pacs_name": None,
-        "citizen_masked_name": "Citizen (Protected)",
-        "citizen_phone_masked": "+91 98******45",
+        "pacs_name": pacs_name,
+        "citizen_masked_name": masked_name,
+        "citizen_phone_masked": masked_phone,
         "staff_notes": [],
-        "ai_guidance": "Grievance recorded for administrative review.",
+        "ai_guidance": ai_guidance or "Grievance recorded for administrative review.",
+        "reference_code": reference_code,
+        "citizen_language": citizen_language or "mr",
+        "translated_summary": translated_summary,
+        "source_citations": source_citations or [],
         "created_at": now_iso,
         "updated_at": now_iso,
     }
@@ -196,20 +277,42 @@ def create_grievance(
 
 def get_grievance(grievance_id: str) -> Optional[dict]:
     """
-    Fetch a grievance record by UUID.
+    Fetch a grievance record by UUID with fallback enrichment.
     Returns dict or None if not found/error.
     """
+    _init_dev_grievances_fallback()
+    fallback_meta = _DEV_GRIEVANCES_FALLBACK.get(grievance_id, {})
+
     client = get_supabase_client()
     if client is not None:
         try:
             res = client.table("grievances").select("*").eq("id", grievance_id).execute()
             if res.data and len(res.data) > 0:
-                return res.data[0]
+                row = res.data[0]
+                return {
+                    "id": str(row.get("id")),
+                    "conversation_id": row.get("conversation_id") or fallback_meta.get("conversation_id"),
+                    "category": row.get("category") or fallback_meta.get("category", "PACS Service"),
+                    "description": row.get("description") or fallback_meta.get("description", ""),
+                    "status": normalize_status(row.get("status")) or fallback_meta.get("status", "draft"),
+                    "priority": normalize_priority(row.get("priority")) or fallback_meta.get("priority", "medium"),
+                    "assigned_staff": row.get("assigned_staff") or fallback_meta.get("assigned_staff"),
+                    "pacs_name": row.get("pacs_name") or fallback_meta.get("pacs_name"),
+                    "citizen_masked_name": row.get("citizen_masked_name") or fallback_meta.get("citizen_masked_name", "Citizen (Protected)"),
+                    "citizen_phone_masked": row.get("citizen_phone_masked") or fallback_meta.get("citizen_phone_masked", "+91 98******45"),
+                    "staff_notes": row.get("staff_notes") or fallback_meta.get("staff_notes", []),
+                    "ai_guidance": row.get("ai_guidance") or fallback_meta.get("ai_guidance"),
+                    "reference_code": row.get("reference_code") or fallback_meta.get("reference_code"),
+                    "citizen_language": row.get("citizen_language") or fallback_meta.get("citizen_language", "mr"),
+                    "translated_summary": row.get("translated_summary") or fallback_meta.get("translated_summary"),
+                    "source_citations": row.get("source_citations") or fallback_meta.get("source_citations", []),
+                    "created_at": row.get("created_at") or fallback_meta.get("created_at"),
+                    "updated_at": row.get("updated_at") or fallback_meta.get("updated_at"),
+                }
         except Exception as exc:
             logger.debug("Supabase get_grievance error: %s", exc)
 
-    _init_dev_grievances_fallback()
-    return _DEV_GRIEVANCES_FALLBACK.get(grievance_id)
+    return fallback_meta if fallback_meta else None
 
 
 # ── Admin Grievance Triage (Phase 2A.2) ────────────────────────────────────────
@@ -419,6 +522,10 @@ def list_admin_grievances(
                         "citizen_phone_masked": row.get("citizen_phone_masked") or fallback_meta.get("citizen_phone_masked", "+91 98******45"),
                         "staff_notes": row.get("staff_notes") or fallback_meta.get("staff_notes", []),
                         "ai_guidance": row.get("ai_guidance") or fallback_meta.get("ai_guidance"),
+                        "reference_code": row.get("reference_code") or fallback_meta.get("reference_code"),
+                        "citizen_language": row.get("citizen_language") or fallback_meta.get("citizen_language", "mr"),
+                        "translated_summary": row.get("translated_summary") or fallback_meta.get("translated_summary"),
+                        "source_citations": row.get("source_citations") or fallback_meta.get("source_citations", []),
                         "created_at": row.get("created_at") or fallback_meta.get("created_at", datetime.now(timezone.utc).isoformat()),
                         "updated_at": row.get("updated_at") or fallback_meta.get("updated_at", datetime.now(timezone.utc).isoformat()),
                     }
@@ -452,7 +559,7 @@ def list_admin_grievances(
             continue
         if search:
             q_clean = search.strip().lower()
-            text_corpus = f"{r.get('id', '')} {r.get('description', '')} {r.get('citizen_masked_name', '')} {r.get('pacs_name', '')} {r.get('category', '')}".lower()
+            text_corpus = f"{r.get('id', '')} {r.get('reference_code', '')} {r.get('description', '')} {r.get('citizen_masked_name', '')} {r.get('pacs_name', '')} {r.get('category', '')}".lower()
             if q_clean not in text_corpus:
                 continue
         filtered.append(r)
