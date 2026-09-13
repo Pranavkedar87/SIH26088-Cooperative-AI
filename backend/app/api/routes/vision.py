@@ -14,9 +14,11 @@ import os
 import sys
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status
 from pydantic import BaseModel, Field
 from app.schemas.query import QueryResponse
+from app.schemas.vision import VisionAnalyzeResponse
+from app.services.vision_service import analyze_document_bytes
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
@@ -67,3 +69,35 @@ async def vision_query(body: VisionQueryRequest) -> QueryResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while processing vision request.",
         ) from exc
+
+
+@router.post("/analyze", response_model=VisionAnalyzeResponse)
+async def analyze_document(
+    file: UploadFile = File(..., description="Document image file (JPEG, PNG, WebP, max 5MB)."),
+    language: str = Form("mr", description="Citizen language context: en | hi | mr"),
+    session_id: Optional[str] = Form(None, description="Optional session UUID"),
+) -> VisionAnalyzeResponse:
+    """
+    Multimodal Document Analysis & OCR Endpoint.
+
+    Accepts physical document photograph or upload (JPEG, PNG, WebP),
+    validates magic bytes, extracts structured cooperative fields using Gemini 2.5 Flash,
+    masks sensitive PII, refuses identity cards, and returns structured metadata.
+    """
+    try:
+        content_type = file.content_type or ""
+        image_bytes = await file.read()
+        return await analyze_document_bytes(
+            image_bytes=image_bytes,
+            declared_content_type=content_type,
+            requested_language=language,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Error in /api/vision/analyze: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Document analysis failed.",
+        ) from exc
+
