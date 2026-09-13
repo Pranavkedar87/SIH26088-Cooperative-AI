@@ -12,7 +12,9 @@ import {
   SpeakerIcon,
   ArrowRightIcon,
   ShieldCheckIcon,
+  LandmarkIcon,
 } from "./Icons";
+import HandoffModal from "./HandoffModal";
 
 interface Props {
   language: LanguageCode;
@@ -78,6 +80,7 @@ export const VoiceModeView: React.FC<Props> = ({
   const [userTranscript, setUserTranscript] = useState<string>("");
   const [aiResponse, setAiResponse] = useState<ChatMessage | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isHandoffOpen, setIsHandoffOpen] = useState<boolean>(false);
 
   const voiceStateRef = useRef<VoiceState>(voiceState);
   useEffect(() => {
@@ -484,6 +487,25 @@ export const VoiceModeView: React.FC<Props> = ({
                 </button>
               )}
 
+              {/* Human Handoff CTA: Get Help from PACS */}
+              {aiResponse &&
+                !["CASUAL_GREETING", "GREETING", "CASUAL_THANKS", "CASUAL_IDENTITY"].includes(
+                  (aiResponse.intent || "").toUpperCase()
+                ) && (
+                  <button
+                    type="button"
+                    className="voice-control-btn voice-control-btn--handoff"
+                    onClick={() => {
+                      stopAllSpeech();
+                      setIsHandoffOpen(true);
+                    }}
+                    aria-label={t("handoff.getHelpBtn")}
+                  >
+                    <LandmarkIcon size={16} color="#123B5D" />
+                    <span>{t("handoff.getHelpBtn")}</span>
+                  </button>
+                )}
+
               {/* Continuous Voice Assistant Indicator */}
               <div className="voice-continuous-indicator">
                 <span className="voice-continuous-dot" />
@@ -511,6 +533,20 @@ export const VoiceModeView: React.FC<Props> = ({
             <ArrowRightIcon size={14} />
           </button>
         </div>
+      )}
+
+      {/* Human Handoff Modal (Opens on top without breaking voice session) */}
+      {isHandoffOpen && aiResponse && (
+        <HandoffModal
+          isOpen={isHandoffOpen}
+          onClose={() => setIsHandoffOpen(false)}
+          language={activeLang}
+          initialQuery={userTranscript || aiResponse.content}
+          initialGuidance={aiResponse.content}
+          initialCitations={aiResponse.sources}
+          conversationId={sessionId}
+          category={aiResponse.intent || "PACS_SERVICE"}
+        />
       )}
     </div>
   );

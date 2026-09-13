@@ -249,3 +249,60 @@ export interface HistoryItem {
   language: LanguageCode;
   details?: string;
 }
+
+// ── Human Handoff (Phase 3A) ──────────────────────────────────────────────────
+
+export interface AssistanceSlipData {
+  header: string;
+  reference_code: string;
+  created_at: string;
+  pacs_name: string;
+  village?: string | null;
+  category: string;
+  citizen_masked_name: string;
+  citizen_phone_masked: string;
+  citizen_language: string;
+  officer_language: string;
+  original_query: string;
+  officer_translated_note: string;
+  ai_guidance_summary: string;
+  sources: string[];
+  qr_payload: string;
+  disclaimer: string;
+}
+
+export interface HumanHandoffRequest {
+  conversation_id?: string | null;
+  language: string;
+  target_officer_language?: string | null;
+  citizen_name?: string | null;
+  citizen_phone?: string | null;
+  pacs_name?: string | null;
+  village?: string | null;
+  category: string;
+  description: string;
+  ai_guidance?: string | null;
+  source_citations?: SourceItem[] | string[] | any[] | null;
+  priority?: "urgent" | "high" | "medium" | "low" | string;
+}
+
+export interface HumanHandoffResponse {
+  success: boolean;
+  grievance_id: string;
+  reference_code: string;
+  category: string;
+  pacs_name?: string | null;
+  village?: string | null;
+  citizen_masked_name: string;
+  citizen_phone_masked: string;
+  citizen_language: string;
+  officer_language: string;
+  original_description: string;
+  translated_summary?: string | null;
+  translation_status: "translated" | "untranslated_fallback" | "same_language" | string;
+  ai_guidance?: string | null;
+  source_citations?: any[];
+  slip_data: AssistanceSlipData;
+  disclaimer: string;
+  created_at: string;
+}

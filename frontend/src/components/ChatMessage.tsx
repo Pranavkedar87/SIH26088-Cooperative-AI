@@ -5,7 +5,8 @@ import GuidanceRenderer from "./guidance/GuidanceRenderer";
 import SourcesAccordion from "./SourcesAccordion";
 import { generateGuidancePdf } from "../utils/pdfGenerator";
 import { parseGuidance } from "../utils/guidanceParser";
-import { SpeakerIcon, PauseIcon, CopyIcon, ShieldCheckIcon, DownloadIcon } from "./Icons";
+import { SpeakerIcon, PauseIcon, CopyIcon, ShieldCheckIcon, DownloadIcon, LandmarkIcon } from "./Icons";
+import HandoffModal from "./HandoffModal";
 
 interface Props {
   message: ChatMessageType;
@@ -31,6 +32,7 @@ const ChatMessage: React.FC<Props> = ({
   const isUser = message.role === "user";
   const hasSources = !isUser && message.sources && message.sources.length > 0;
   const [isGeneratingPdf, setIsGeneratingPdf] = useState<boolean>(false);
+  const [isHandoffOpen, setIsHandoffOpen] = useState<boolean>(false);
 
   const handleSpeakClick = useCallback(() => {
     const textToSpeak =
@@ -112,6 +114,14 @@ const ChatMessage: React.FC<Props> = ({
       message.content
     );
 
+  const isCasualGreeting =
+    Boolean(message.intent) &&
+    ["CASUAL_GREETING", "GREETING", "CASUAL_THANKS", "CASUAL_IDENTITY"].includes(
+      message.intent!.toUpperCase()
+    );
+
+  const isSuitableForHandoff = !isUser && !isOfflineFallback && !isCasualGreeting;
+
   return (
     <div className={`chat-row chat-row--${message.role}`}>
       <div className="chat-card">
@@ -168,6 +178,19 @@ const ChatMessage: React.FC<Props> = ({
                 </button>
               )}
 
+              {/* Human Handoff: Get Help from PACS */}
+              {isSuitableForHandoff && (
+                <button
+                  type="button"
+                  className="action-btn action-btn--handoff"
+                  onClick={() => setIsHandoffOpen(true)}
+                  aria-label={t("handoff.getHelpBtn")}
+                >
+                  <LandmarkIcon size={14} color="#123B5D" />
+                  <span>{t("handoff.getHelpBtn")}</span>
+                </button>
+              )}
+
               {/* Voice Read Aloud CTA */}
               {onSpeak && (
                 <button
@@ -200,6 +223,20 @@ const ChatMessage: React.FC<Props> = ({
         {/* Timestamp */}
         <div className="chat-card__time">{formatTime(message.timestamp)}</div>
       </div>
+
+      {/* Human Handoff Modal */}
+      {isHandoffOpen && (
+        <HandoffModal
+          isOpen={isHandoffOpen}
+          onClose={() => setIsHandoffOpen(false)}
+          language={message.language}
+          initialQuery={userQuestion || message.content}
+          initialGuidance={message.content}
+          initialCitations={message.sources}
+          conversationId={null}
+          category={message.intent || "PACS_SERVICE"}
+        />
+      )}
     </div>
   );
 };

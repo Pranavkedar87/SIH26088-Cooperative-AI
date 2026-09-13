@@ -6,7 +6,7 @@
  * - Handles Safari / iOS "Load failed" & "Failed to fetch" errors gracefully.
  * - Synthesizes grounded fallback guidance if backend is completely offline.
  */
-import type { QueryRequest, QueryResponse } from "../types";
+import type { QueryRequest, QueryResponse, HumanHandoffRequest, HumanHandoffResponse } from "../types";
 
 const DEFAULT_PROD_URL = "https://sih26088-cooperative-ai.onrender.com";
 const DEFAULT_DEV_URL = "http://localhost:8000";
@@ -288,6 +288,38 @@ export async function synthesizeSpeech(
     console.warn("[TTS] Server synthesis notice (falling back to client TTS):", err);
   }
   return null;
+}
+
+// ── Human Handoff / "Get Help from PACS" (Phase 3A.2) ─────────────────────────
+
+export async function submitHumanHandoff(
+  payload: HumanHandoffRequest
+): Promise<HumanHandoffResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s timeout for Bhashini NMT + DB persistence
+
+  try {
+    const res = await fetch(`${BASE_URL}/api/grievance/handoff`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ detail: "Human handoff request failed" }));
+      const msg = errData.detail || `Server returned status ${res.status}`;
+      throw new Error(msg);
+    }
+
+    return await res.json();
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    console.error("[HANDOFF] Human handoff submission error:", err);
+    throw err;
+  }
 }
 
 
