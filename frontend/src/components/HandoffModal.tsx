@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
-import type { LanguageCode, SourceItem, HumanHandoffResponse } from "../types";
+import type { LanguageCode, SourceItem, HumanHandoffResponse, VisionAnalyzeResponse } from "../types";
 import { useTranslation } from "../i18n";
 import { submitHumanHandoff } from "../api/client";
+import {
+  mapDocumentCategory,
+  extractDocumentReference,
+  formatHandoffDescription,
+} from "../utils/documentContextFormatter";
 import {
   LandmarkIcon,
   XIcon,
@@ -24,6 +29,7 @@ interface Props {
   initialCitations?: SourceItem[];
   conversationId?: string | null;
   category?: string;
+  docResult?: VisionAnalyzeResponse | null;
 }
 
 type SubmissionState = "READY" | "SUBMITTING" | "SUCCESS" | "ERROR";
@@ -37,8 +43,12 @@ export const HandoffModal: React.FC<Props> = ({
   initialCitations = [],
   conversationId = null,
   category = "PACS_SERVICE",
+  docResult = null,
 }) => {
   const t = useTranslation(language);
+
+  // Compute document-aware category mapping (e.g. PMFBY_POLICY -> PMFBY)
+  const resolvedCategory = docResult ? mapDocumentCategory(docResult.document_type, category) : category;
 
   // Form Fields
   const [citizenName, setCitizenName] = useState<string>("");
@@ -49,7 +59,9 @@ export const HandoffModal: React.FC<Props> = ({
     // Intelligent default: if citizen is in Marathi or Hindi, officer language defaults to English (or vice versa)
     return language === "en" ? "mr" : "en";
   });
-  const [issueSummary, setIssueSummary] = useState<string>(initialQuery);
+  const [issueSummary, setIssueSummary] = useState<string>(() =>
+    docResult ? formatHandoffDescription(initialQuery, docResult) : initialQuery
+  );
 
   // Submission State
   const [state, setState] = useState<SubmissionState>("READY");
@@ -58,17 +70,21 @@ export const HandoffModal: React.FC<Props> = ({
   const [codeCopied, setCodeCopied] = useState<boolean>(false);
   const [showSlipView, setShowSlipView] = useState<boolean>(false);
 
-  // Sync initial query when opened
+  // Sync initial query and document context when opened
   useEffect(() => {
     if (isOpen) {
-      setIssueSummary(initialQuery || "");
+      setIssueSummary(
+        docResult
+          ? formatHandoffDescription(initialQuery || "", docResult)
+          : initialQuery || ""
+      );
       setState("READY");
       setResponse(null);
       setErrorMessage(null);
       setCodeCopied(false);
       setShowSlipView(false);
     }
-  }, [isOpen, initialQuery]);
+  }, [isOpen, initialQuery, docResult]);
 
   // Keyboard accessibility: Escape key closes modal (only when not submitting)
   const handleKeyDown = useCallback(
@@ -121,7 +137,7 @@ export const HandoffModal: React.FC<Props> = ({
         citizen_phone: citizenPhone.trim() || null,
         pacs_name: pacsName.trim() || null,
         village: village.trim() || null,
-        category: category,
+        category: resolvedCategory,
         description: descriptionText.slice(0, 3900),
         ai_guidance: initialGuidance ? initialGuidance.slice(0, 3900) : null,
         source_citations: citationsList.length > 0 ? citationsList : null,
@@ -205,6 +221,34 @@ export const HandoffModal: React.FC<Props> = ({
                     aria-label={t("handoff.querySummary")}
                   />
                 </div>
+
+                {docResult && !docResult.refusal_reason && docResult.document_type !== "IDENTITY_DOCUMENT" && (
+                  <div
+                    className="handoff-doc-context-row"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      padding: "0.4rem 0.6rem",
+                      backgroundColor: "#F0F9FF",
+                      border: "1px solid #BAE6FD",
+                      borderRadius: "6px",
+                      fontSize: "0.8rem",
+                      color: "#0369A1",
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>
+                      📄 {t("handoff.documentContextBadge")}:
+                    </span>
+                    <span>{docResult.document_type}</span>
+                    {extractDocumentReference(docResult) && (
+                      <span style={{ color: "#0284C7" }}>
+                        ({extractDocumentReference(docResult)})
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {initialCitations && initialCitations.length > 0 && (
                   <div className="handoff-sources-row">

@@ -298,4 +298,12 @@ export const hi: Record<string, string> = {
   "slip.disclaimer": "वैधानिक सूचना: यह पैक्स सहायता हेतु तैयार की गई सुविधा पर्ची है। यह सहकारी कानून के तहत औपचारिक शिकायत पंजीकरण नहीं है।",
   "slip.printBtn": "पर्ची प्रिंट करें (58mm)",
   "slip.closeBtn": "बंद करें",
+
+  // Document-Aware Human Handoff (Phase 3C.6)
+  "handoff.documentContextBadge": "दस्तावेज़ संदर्भ संलग्न",
+  "handoff.documentType": "दस्तावेज़ का प्रकार",
+  "handoff.documentRef": "दस्तावेज़ संदर्भ",
+  "handoff.documentNotice": "नागरिक द्वारा प्रदान किए गए दस्तावेज़ से निकाला गया। पैक्स कर्मचारियों की सहायता हेतु केवल संदर्भ जानकारी।",
+  "slip.documentType": "संलग्न दस्तावेज़",
+  "slip.documentRef": "दस्तावेज़ संदर्भ",
 };

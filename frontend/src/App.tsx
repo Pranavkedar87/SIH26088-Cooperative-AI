@@ -206,6 +206,7 @@ const App: React.FC = () => {
           intent: response.intent,
           answer_focus: response.answer_focus,
           suggested_followups: response.suggested_followups,
+          docResult: docResult || undefined,
         });
       } catch (err) {
         console.error("sendQuery error:", err);

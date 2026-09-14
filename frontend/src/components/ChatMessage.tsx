@@ -235,6 +235,7 @@ const ChatMessage: React.FC<Props> = ({
           initialCitations={message.sources}
           conversationId={null}
           category={message.intent || "PACS_SERVICE"}
+          docResult={message.docResult}
         />
       )}
     </div>

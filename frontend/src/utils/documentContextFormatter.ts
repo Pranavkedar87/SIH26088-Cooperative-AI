@@ -64,3 +64,102 @@ export function formatGroundedDocumentMessage(
   const trimmedContext = contextBlock.slice(0, availableForContext - 30) + "\n</untrusted_document_context>";
   return `${cleanQuestion}${trimmedContext}`;
 }
+
+/**
+ * Maps Vision DocumentType to an existing backend grievance category.
+ * Strictly uses existing categories without inventing unverified categories.
+ */
+export function mapDocumentCategory(
+  docType?: string | null,
+  fallbackCategory = "PACS_SERVICE"
+): string {
+  if (!docType) return fallbackCategory;
+
+  switch (docType) {
+    case "PMFBY_POLICY":
+      return "PMFBY";
+    case "LAND_RECORD_7_12":
+    case "FERTILIZER_RECEIPT":
+      return "AGRICULTURAL_SUPPORT";
+    case "COOPERATIVE_NOTICE":
+    case "PACS_MEMBERSHIP_FORM":
+      return "PACS_SERVICE";
+    case "LOAN_PASSBOOK":
+      return "FINANCIAL_LITERACY";
+    case "SUBSIDY_LETTER":
+      return "MINISTRY_SCHEME";
+    default:
+      return fallbackCategory;
+  }
+}
+
+/**
+ * Extracts a safe reference code from redacted key_fields (e.g. policy number, account number)
+ * without ever unmasking or fabricating values.
+ */
+export function extractDocumentReference(
+  docResult?: VisionAnalyzeResponse | null
+): string | null {
+  if (!docResult || !docResult.key_fields || docResult.document_type === "IDENTITY_DOCUMENT") {
+    return null;
+  }
+
+  const fields = docResult.key_fields;
+  const ref =
+    fields["policy_number"] ||
+    fields["application_number"] ||
+    fields["account_number"] ||
+    fields["survey_number"] ||
+    fields["receipt_number"] ||
+    fields["reference_number"] ||
+    null;
+
+  return ref ? String(ref).trim() : null;
+}
+
+/**
+ * Generates an enriched, factual human handoff description prefill from document context.
+ * Strict safety:
+ * - Does not fabricate data.
+ * - Suppresses rejected identity documents.
+ * - Accurately represents unverified/blurry status.
+ * - Distinguishes citizen question from AI guidance.
+ */
+export function formatHandoffDescription(
+  citizenQuestion: string,
+  docResult?: VisionAnalyzeResponse | null
+): string {
+  const cleanQ = citizenQuestion.trim();
+  if (!docResult || !docResult.success || docResult.document_type === "IDENTITY_DOCUMENT") {
+    return cleanQ;
+  }
+
+  const lines: string[] = [];
+  lines.push(`Citizen Query: ${cleanQ}`);
+
+  // Safe document type label
+  lines.push(`Attached Document Type: ${docResult.document_type}`);
+
+  // Safe document reference if present
+  const docRef = extractDocumentReference(docResult);
+  if (docRef) {
+    lines.push(`Document Reference: ${docRef}`);
+  }
+
+  // Readability notice if not clear
+  if (docResult.readability && docResult.readability !== "CLEAR") {
+    lines.push(`Image Readability Note: ${docResult.readability}`);
+  }
+
+  // Concise document summary if available (truncated to 150 chars)
+  if (docResult.document_summary && docResult.document_type !== "UNKNOWN") {
+    const cleanSummary = docResult.document_summary.replace(/[\r\n]+/g, " ").slice(0, 150);
+    lines.push(`Document Context: ${cleanSummary}`);
+  }
+
+  lines.push(
+    `[Note: Extracted from citizen-provided document. Information for PACS staff assistance review only.]`
+  );
+
+  return lines.join("\n");
+}

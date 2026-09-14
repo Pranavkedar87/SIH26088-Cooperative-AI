@@ -298,4 +298,12 @@ export const mr: Record<string, string> = {
   "slip.disclaimer": "वैधानिक सूचना: ही पॅक्स मदतीसाठी तयार केलेली सुविधा पावती आहे. ही सहकारी कायद्यांतर्गत अधिकृत तक्रार नोंदणी नाही.",
   "slip.printBtn": "पावती प्रिंट करा (58mm)",
   "slip.closeBtn": "बंद करा",
+
+  // Document-Aware Human Handoff (Phase 3C.6)
+  "handoff.documentContextBadge": "कागदपत्र संदर्भ जोडला",
+  "handoff.documentType": "कागदपत्राचा प्रकार",
+  "handoff.documentRef": "कागदपत्र संदर्भ",
+  "handoff.documentNotice": "नागरिकाने दिलेल्या कागदपत्रातून काढलेले. पॅक्स कर्मचाऱ्यांच्या मदतीसाठी केवळ संदर्भ माहिती.",
+  "slip.documentType": "जोडलेले कागदपत्र",
+  "slip.documentRef": "कागदपत्र संदर्भ",
 };

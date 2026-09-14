@@ -192,6 +192,7 @@ export interface ChatMessage {
   intent?: string;
   answer_focus?: string;
   suggested_followups?: SuggestedFollowup[];
+  docResult?: VisionAnalyzeResponse;
 }
 
 // ── API Contracts ─────────────────────────────────────────────────────────────

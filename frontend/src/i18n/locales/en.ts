@@ -298,4 +298,12 @@ export const en: Record<string, string> = {
   "slip.disclaimer": "Statutory Notice: This is a facilitation slip generated for PACS assistance. It does not constitute a formal grievance registration under cooperative law.",
   "slip.printBtn": "Print Slip (58mm)",
   "slip.closeBtn": "Close",
+
+  // Document-Aware Human Handoff (Phase 3C.6)
+  "handoff.documentContextBadge": "Document Context Attached",
+  "handoff.documentType": "Document Type",
+  "handoff.documentRef": "Document Reference",
+  "handoff.documentNotice": "Extracted from citizen-provided document. Reference information only for PACS staff assistance.",
+  "slip.documentType": "Attached Document",
+  "slip.documentRef": "Document Ref",
 };
