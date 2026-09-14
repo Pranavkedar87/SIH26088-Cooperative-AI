@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
-import type { ChatMessage, LanguageCode, AppTab, HistoryItem } from "./types";
+import type { ChatMessage, LanguageCode, AppTab, HistoryItem, VisionAnalyzeResponse } from "./types";
 import { sendQuery, wakeUpBackend } from "./api/client";
+import { formatGroundedDocumentMessage } from "./utils/documentContextFormatter";
 import { useTextToSpeech } from "./hooks/useTextToSpeech";
 import { Header } from "./components/Header";
 import { SideDrawer } from "./components/SideDrawer";
@@ -156,7 +157,7 @@ const App: React.FC = () => {
   );
 
   const handleSendQuery = useCallback(
-    async (text: string) => {
+    async (text: string, docResult?: VisionAnalyzeResponse) => {
       setError(null);
       setActiveTab("ask");
 
@@ -164,6 +165,7 @@ const App: React.FC = () => {
       // Falls back to the UI language selector if detection is ambiguous.
       const detectedLang = detectLanguageFromText(text, language);
 
+      // Display clean user question in the chat bubble UI
       addMessage({
         id: uid(),
         role: "user",
@@ -176,8 +178,11 @@ const App: React.FC = () => {
       saveHistoryItem(text.slice(0, 45) + (text.length > 45 ? "…" : ""), "User Query", undefined, "query");
 
       try {
+        // Embed untrusted document context safely into query payload if present
+        const queryMessage = docResult ? formatGroundedDocumentMessage(text, docResult) : text;
+
         const response = await sendQuery({
-          message: text,
+          message: queryMessage,
           language: detectedLang,
           session_id: sessionId,
         });
@@ -209,7 +214,7 @@ const App: React.FC = () => {
         setIsLoading(false);
       }
     },
-    [language, sessionId, addMessage, saveHistoryItem]
+    [language, sessionId, addMessage, saveHistoryItem, t]
   );
 
   const handleStartGuided = (flowId: string) => {
@@ -421,9 +426,8 @@ const App: React.FC = () => {
           onSend={handleSendQuery}
           value={inputValue}
           onChange={setInputValue}
-          onSelectDocumentQuestion={(q) => {
-            setActiveTab("ask");
-            setInputValue(q);
+          onSelectDocumentQuestion={(q, docResult) => {
+            handleSendQuery(q, docResult);
           }}
         />
       )}
@@ -438,9 +442,8 @@ const App: React.FC = () => {
         }}
         language={language}
         onOpenVoiceMode={() => setIsVoiceModeOpen(true)}
-        onSelectDocumentQuestion={(q) => {
-          setActiveTab("ask");
-          setInputValue(q);
+        onSelectDocumentQuestion={(q, docResult) => {
+          handleSendQuery(q, docResult);
         }}
       />
     </div>

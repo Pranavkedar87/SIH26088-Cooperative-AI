@@ -14,7 +14,7 @@ interface Props {
   onSend: (message: string) => void;
   value: string;
   onChange: (value: string) => void;
-  onSelectDocumentQuestion?: (question: string) => void;
+  onSelectDocumentQuestion?: (question: string, docResult?: VisionAnalyzeResponse) => void;
 }
 
 const ChatInput: React.FC<Props> = ({
@@ -348,13 +348,14 @@ const ChatInput: React.FC<Props> = ({
           result={scanResult}
           language={language}
           onSelectQuestion={(question) => {
+            const currentResult = scanResult;
             setScanState("READY");
             setScanResult(null);
             setScanError(null);
             if (onSelectDocumentQuestion) {
-              onSelectDocumentQuestion(question);
+              onSelectDocumentQuestion(question, currentResult || undefined);
             } else {
-              // Fallback: populate textarea or trigger send
+              // Fallback: populate textarea
               onChange(question);
             }
           }}

@@ -20,7 +20,7 @@ interface Props {
   onTabChange: (tab: AppTab) => void;
   language: LanguageCode;
   onOpenVoiceMode: () => void;
-  onSelectDocumentQuestion?: (question: string) => void;
+  onSelectDocumentQuestion?: (question: string, docResult?: VisionAnalyzeResponse) => void;
 }
 
 const Navigation: React.FC<Props> = ({
@@ -281,12 +281,13 @@ const Navigation: React.FC<Props> = ({
           result={scanResult}
           language={language}
           onSelectQuestion={(question) => {
-            // Close the modal and forward the selected question to parent (Chat/App)
+            // Close the modal and forward the selected question + document result to parent (Chat/App)
+            const currentResult = scanResult;
             setScanState("READY");
             setScanResult(null);
             setScanError(null);
             if (onSelectDocumentQuestion) {
-              onSelectDocumentQuestion(question);
+              onSelectDocumentQuestion(question, currentResult || undefined);
             }
           }}
           onRetake={() => {
