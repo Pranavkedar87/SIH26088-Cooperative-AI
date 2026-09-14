@@ -11,6 +11,7 @@ import {
   FaceScanIcon,
 } from "./Icons";
 import { CameraCaptureModal, type CameraMode } from "./CameraCaptureModal";
+import { DocumentAnalysisModal } from "./DocumentAnalysisModal";
 import { analyzeDocument } from "../api/client";
 import { compressAndResizeImage, MAX_UPLOAD_BYTES } from "../utils/imageOptimizer";
 
@@ -19,6 +20,7 @@ interface Props {
   onTabChange: (tab: AppTab) => void;
   language: LanguageCode;
   onOpenVoiceMode: () => void;
+  onSelectDocumentQuestion?: (question: string) => void;
 }
 
 const Navigation: React.FC<Props> = ({
@@ -26,15 +28,16 @@ const Navigation: React.FC<Props> = ({
   onTabChange,
   language,
   onOpenVoiceMode,
+  onSelectDocumentQuestion,
 }) => {
   const [isCameraMenuOpen, setIsCameraMenuOpen] = useState(false);
   const [activeCameraMode, setActiveCameraMode] = useState<CameraMode | null>(null);
   const t = useTranslation(language);
 
-  // Phase 3C.2 — DocumentScanState machine (Navigation copy)
+  // Phase 3C.2/3C.4 — DocumentScanState machine
   const [scanState, setScanState] = useState<DocumentScanState>("READY");
-  const [_scanResult, setScanResult] = useState<VisionAnalyzeResponse | null>(null);
-  const [_scanError, setScanError] = useState<string | null>(null);
+  const [scanResult, setScanResult] = useState<VisionAnalyzeResponse | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   // Phase 3C.3 — granular progress step for UX ("compressing" | "analyzing" | null)
   const [scanProcessingStep, setScanProcessingStep] = useState<"compressing" | "analyzing" | null>(null);
 
@@ -115,6 +118,21 @@ const Navigation: React.FC<Props> = ({
           <div className="vision-scan-toast" role="status" aria-live="polite">
             <span className="vision-scan-spinner" aria-hidden="true">⏳</span>
             <span>{scanProgressLabel}</span>
+          </div>
+        )}
+        {scanError && (
+          <div className="vision-scan-toast vision-scan-toast--error" role="alert">
+            <span aria-hidden="true">⚠️</span>
+            <span>{scanError}</span>
+            <button
+              type="button"
+              className="stt-dismiss-btn"
+              onClick={() => setScanError(null)}
+              aria-label="Dismiss error"
+              style={{ marginLeft: 8, background: "none", border: "none", color: "inherit", cursor: "pointer" }}
+            >
+              ×
+            </button>
           </div>
         )}
         {/* Floating popover menu directly above the Camera button */}
@@ -248,6 +266,36 @@ const Navigation: React.FC<Props> = ({
           onClose={() => setActiveCameraMode(null)}
           language={language}
           onCapture={activeCameraMode === "document_scan" ? handleDocumentCapture : undefined}
+        />
+      )}
+
+      {/* Phase 3C.4: Document Analysis & Confirmation Modal */}
+      {scanResult && scanState === "RESULT" && (
+        <DocumentAnalysisModal
+          isOpen={scanState === "RESULT" && Boolean(scanResult)}
+          onClose={() => {
+            setScanState("READY");
+            setScanResult(null);
+            setScanError(null);
+          }}
+          result={scanResult}
+          language={language}
+          onSelectQuestion={(question) => {
+            // Close the modal and forward the selected question to parent (Chat/App)
+            setScanState("READY");
+            setScanResult(null);
+            setScanError(null);
+            if (onSelectDocumentQuestion) {
+              onSelectDocumentQuestion(question);
+            }
+          }}
+          onRetake={() => {
+            // Close analysis and reopen camera in document_scan mode
+            setScanState("READY");
+            setScanResult(null);
+            setScanError(null);
+            setActiveCameraMode("document_scan");
+          }}
         />
       )}
     </>

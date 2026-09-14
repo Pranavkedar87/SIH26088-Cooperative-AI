@@ -134,6 +134,46 @@ export const en: Record<string, string> = {
   "camera.preparingImage": "Preparing image…",
   "camera.optimizedTooLarge": "Compressed image is still too large to upload. Please retake with better lighting.",
 
+  // Phase 3C.4 — Document Analysis Modal
+  "docAnalysis.title": "Document Analysis",
+  "docAnalysis.subtitle": "Extracted with SahkaarSetu Vision AI",
+  "docAnalysis.identified": "Document Identified",
+  "docAnalysis.type.PMFBY_POLICY": "PMFBY Crop Insurance Document",
+  "docAnalysis.type.LAND_RECORD_7_12": "7/12 Land Record",
+  "docAnalysis.type.COOPERATIVE_NOTICE": "Cooperative Notice",
+  "docAnalysis.type.PACS_MEMBERSHIP_FORM": "PACS Membership Form",
+  "docAnalysis.type.SUBSIDY_LETTER": "Government Scheme / Subsidy Letter",
+  "docAnalysis.type.FERTILIZER_RECEIPT": "Fertilizer Receipt",
+  "docAnalysis.type.LOAN_PASSBOOK": "Cooperative Loan Passbook",
+  "docAnalysis.type.IDENTITY_DOCUMENT": "Identity Document",
+  "docAnalysis.type.UNKNOWN": "Document Type Not Determined",
+
+  "docAnalysis.readability.CLEAR": "Legible & Extracted",
+  "docAnalysis.readability.BLURRY": "Image is blurry",
+  "docAnalysis.readability.CROPPED": "Document appears cropped",
+  "docAnalysis.readability.POOR_LIGHTING": "Poor lighting",
+  "docAnalysis.retakeWarning": "Please retake the photo with the full document visible and good lighting for accurate analysis.",
+
+  "docAnalysis.summaryTitle": "What this document appears to be",
+  "docAnalysis.summaryDisclaimer": "AI document interpretation — not an official government certification.",
+  
+  "docAnalysis.keyFieldsTitle": "Key Extracted Details",
+  "docAnalysis.extractedFromDoc": "Extracted from the uploaded document",
+  "docAnalysis.referenceNotice": "Reference information only — not an official verification.",
+  "docAnalysis.piiNotice": "Some sensitive personal information was detected and masked for privacy.",
+
+  "docAnalysis.identityRefusalTitle": "Identity Document Protected",
+  "docAnalysis.identityExplanation": "SahkaarSetu protects your privacy. Identity documents (Aadhaar, PAN, Voter ID) are not stored or analyzed. You can scan cooperative notices, PMFBY policies, land records, or loan passbooks instead.",
+  "docAnalysis.scanAnother": "Scan Another Document",
+
+  "docAnalysis.questionsTitle": "What would you like to know?",
+  "docAnalysis.customQuestionTitle": "Ask your own question",
+  "docAnalysis.customQuestionPlaceholder": "Type any question about this document...",
+  "docAnalysis.askButton": "Ask SahkaarSetu",
+  "docAnalysis.previewToggle": "Document Preview",
+  "docAnalysis.retake": "Retake",
+  "docAnalysis.close": "Close",
+
   // Location Modal
   "location.title": "Your Location",
   "location.servicesEnabled": "Location services ● Enabled",

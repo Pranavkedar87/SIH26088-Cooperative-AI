@@ -134,6 +134,46 @@ export const hi: Record<string, string> = {
   "camera.preparingImage": "छवि तैयार की जा रही है…",
   "camera.optimizedTooLarge": "संकुचित छवि भी बहुत बड़ी है। कृपया बेहतर रोशनी में पुनः प्रयास करें।",
 
+  // Phase 3C.4 — Document Analysis Modal
+  "docAnalysis.title": "दस्तावेज़ विश्लेषण",
+  "docAnalysis.subtitle": "सहकारसेतु विज़न एआई द्वारा निकाला गया",
+  "docAnalysis.identified": "दस्तावेज़ की पहचान हुई",
+  "docAnalysis.type.PMFBY_POLICY": "पीएमएफबीवाई फसल बीमा दस्तावेज़",
+  "docAnalysis.type.LAND_RECORD_7_12": "7/12 भू-अभिलेख / खतौनी",
+  "docAnalysis.type.COOPERATIVE_NOTICE": "सहकारी समिति नोटिस",
+  "docAnalysis.type.PACS_MEMBERSHIP_FORM": "पैक्स सदस्यता फॉर्म",
+  "docAnalysis.type.SUBSIDY_LETTER": "सरकारी योजना / सब्सिडी पत्र",
+  "docAnalysis.type.FERTILIZER_RECEIPT": "उर्वरक रसीद",
+  "docAnalysis.type.LOAN_PASSBOOK": "सहकारी ऋण पासबुक",
+  "docAnalysis.type.IDENTITY_DOCUMENT": "पहचान दस्तावेज़",
+  "docAnalysis.type.UNKNOWN": "दस्तावेज़ का प्रकार निर्धारित नहीं हुआ",
+
+  "docAnalysis.readability.CLEAR": "सुपाठ्य एवं निकाला गया",
+  "docAnalysis.readability.BLURRY": "छवि धुंधली है",
+  "docAnalysis.readability.CROPPED": "दस्तावेज़ कटा हुआ प्रतीत होता है",
+  "docAnalysis.readability.POOR_LIGHTING": "कम रोशनी",
+  "docAnalysis.retakeWarning": "सटीक विश्लेषण के लिए कृपया अच्छी रोशनी में पूरे दस्तावेज़ की फोटो पुनः लें।",
+
+  "docAnalysis.summaryTitle": "यह दस्तावेज़ क्या प्रतीत होता है",
+  "docAnalysis.summaryDisclaimer": "एआई दस्तावेज़ व्याख्या — आधिकारिक सरकारी प्रमाणीकरण नहीं।",
+  
+  "docAnalysis.keyFieldsTitle": "मुख्य निकाले गए विवरण",
+  "docAnalysis.extractedFromDoc": "अपलोड किए गए दस्तावेज़ से प्राप्त",
+  "docAnalysis.referenceNotice": "केवल संदर्भ हेतु — आधिकारिक सत्यापन नहीं।",
+  "docAnalysis.piiNotice": "गोपनीयता हेतु संवेदनशील व्यक्तिगत जानकारी मास्क की गई है।",
+
+  "docAnalysis.identityRefusalTitle": "पहचान दस्तावेज़ सुरक्षित",
+  "docAnalysis.identityExplanation": "सहकारसेतु आपकी गोपनीयता का सम्मान करता है। पहचान दस्तावेज़ (आधार, पैन, वोटर आईडी) संग्रहीत या विश्लेषित नहीं किए जाते। आप सहकारी नोटिस, पीएमएफबीवाई पॉलिसी या ऋण पासबुक स्कैन कर सकते हैं।",
+  "docAnalysis.scanAnother": "दूसरा दस्तावेज़ स्कैन करें",
+
+  "docAnalysis.questionsTitle": "आप क्या जानना चाहते हैं?",
+  "docAnalysis.customQuestionTitle": "अपना प्रश्न पूछें",
+  "docAnalysis.customQuestionPlaceholder": "इस दस्तावेज़ के बारे में कोई भी प्रश्न लिखें...",
+  "docAnalysis.askButton": "सहकारसेतु से पूछें",
+  "docAnalysis.previewToggle": "दस्तावेज़ पूर्वावलोकन",
+  "docAnalysis.retake": "पुनः लें",
+  "docAnalysis.close": "बंद करें",
+
   // Location Modal
   "location.title": "आपका स्थान",
   "location.servicesEnabled": "स्थान सेवाएं ● सक्षम",

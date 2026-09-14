@@ -134,6 +134,46 @@ export const mr: Record<string, string> = {
   "camera.preparingImage": "प्रतिमा तयार करत आहे…",
   "camera.optimizedTooLarge": "संकुचित प्रतिमा अजूनही खूप मोठी आहे. कृपया चांगल्या प्रकाशात पुन्हा प्रयत्न करा.",
 
+  // Phase 3C.4 — Document Analysis Modal
+  "docAnalysis.title": "कागदपत्र विश्लेषण",
+  "docAnalysis.subtitle": "सहकारसेतू व्हिजन एआय द्वारे काढलेले",
+  "docAnalysis.identified": "कागदपत्राची ओळख पटली",
+  "docAnalysis.type.PMFBY_POLICY": "पीएमएफबीवाय पीक विमा कागदपत्र",
+  "docAnalysis.type.LAND_RECORD_7_12": "७/१२ जमीन उतारा / सातबारा",
+  "docAnalysis.type.COOPERATIVE_NOTICE": "सहकारी संस्था नोटीस",
+  "docAnalysis.type.PACS_MEMBERSHIP_FORM": "पॅक्स सभासद अर्ज",
+  "docAnalysis.type.SUBSIDY_LETTER": "सरकारी योजना / अनुदान पत्र",
+  "docAnalysis.type.FERTILIZER_RECEIPT": "खत पावती",
+  "docAnalysis.type.LOAN_PASSBOOK": "सहकारी कर्ज पासबुक",
+  "docAnalysis.type.IDENTITY_DOCUMENT": "ओळखपत्र",
+  "docAnalysis.type.UNKNOWN": "कागदपत्राचा प्रकार ओळखता आला नाही",
+
+  "docAnalysis.readability.CLEAR": "सुवाच्य आणि काढलेले",
+  "docAnalysis.readability.BLURRY": "प्रतिमा अस्पष्ट आहे",
+  "docAnalysis.readability.CROPPED": "कागदपत्र कापलेले दिसते",
+  "docAnalysis.readability.POOR_LIGHTING": "कमी प्रकाश",
+  "docAnalysis.retakeWarning": "अचूक विश्लेषणासाठी कृपया चांगल्या प्रकाशात संपूर्ण कागदपत्राचा फोटो पुन्हा घ्या.",
+
+  "docAnalysis.summaryTitle": "हे कागदपत्र काय आहे",
+  "docAnalysis.summaryDisclaimer": "एआय कागदपत्र विश्लेषण — अधिकृत सरकारी प्रमाणीकरण नाही.",
+  
+  "docAnalysis.keyFieldsTitle": "मुख्य तपशील",
+  "docAnalysis.extractedFromDoc": "अपलोड केलेल्या कागदपत्रातून काढलेले",
+  "docAnalysis.referenceNotice": "केवळ संदर्भासाठी — अधिकृत पडताळणी नाही.",
+  "docAnalysis.piiNotice": "गोपनीयतेसाठी संवेदनशील वैयक्तिक माहिती मुखवटा (मास्क) केली आहे.",
+
+  "docAnalysis.identityRefusalTitle": "ओळख कागदपत्र सुरक्षित",
+  "docAnalysis.identityExplanation": "सहकारसेतू तुमच्या गोपनीयतेचे रक्षण करते. ओळखपत्रे (आधार, पॅन, मतदार ओळखपत्र) जतन किंवा प्रक्रिया केली जात नाहीत. तुम्ही त्याऐवजी सहकारी नोटिसा, पीक विमा पॉलिसी किंवा कर्ज पासबुक स्कॅन करू शकता.",
+  "docAnalysis.scanAnother": "दुसरे कागदपत्र स्कॅन करा",
+
+  "docAnalysis.questionsTitle": "तुम्हाला काय जाणून घ्यायचे आहे?",
+  "docAnalysis.customQuestionTitle": "तुमचा स्वतःचा प्रश्न विचारा",
+  "docAnalysis.customQuestionPlaceholder": "या कागदपत्राबद्दल कोणताही प्रश्न लिहा...",
+  "docAnalysis.askButton": "सहकारसेतूला विचारा",
+  "docAnalysis.previewToggle": "कागदपत्र पूर्वावलोकन",
+  "docAnalysis.retake": "पुन्हा घ्या",
+  "docAnalysis.close": "बंद करा",
+
   // Location Modal
   "location.title": "तुमचे स्थान",
   "location.servicesEnabled": "स्थान सेवा ● सुरू",

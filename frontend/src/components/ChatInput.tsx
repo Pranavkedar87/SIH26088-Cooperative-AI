@@ -4,6 +4,7 @@ import { useTranslation } from "../i18n";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { CameraIcon, MicIcon, SendIcon, ScanDocIcon, FaceScanIcon } from "./Icons";
 import { CameraCaptureModal, type CameraMode } from "./CameraCaptureModal";
+import { DocumentAnalysisModal } from "./DocumentAnalysisModal";
 import { analyzeDocument } from "../api/client";
 import { compressAndResizeImage, MAX_UPLOAD_BYTES } from "../utils/imageOptimizer";
 
@@ -13,17 +14,25 @@ interface Props {
   onSend: (message: string) => void;
   value: string;
   onChange: (value: string) => void;
+  onSelectDocumentQuestion?: (question: string) => void;
 }
 
-const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChange }) => {
+const ChatInput: React.FC<Props> = ({
+  language,
+  isLoading,
+  onSend,
+  value,
+  onChange,
+  onSelectDocumentQuestion,
+}) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeCameraMode, setActiveCameraMode] = useState<CameraMode | null>(null);
   const t = useTranslation(language);
 
-  // Phase 3C.2 — DocumentScanState machine (ChatInput copy)
+  // Phase 3C.2/3C.4 — DocumentScanState machine (ChatInput copy)
   const [scanState, setScanState] = useState<DocumentScanState>("READY");
-  const [_scanResult, setScanResult] = useState<VisionAnalyzeResponse | null>(null);
-  const [_scanError, setScanError] = useState<string | null>(null);
+  const [scanResult, setScanResult] = useState<VisionAnalyzeResponse | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   // Phase 3C.3 — granular progress step ("compressing" | "analyzing" | null)
   const [scanProcessingStep, setScanProcessingStep] = useState<"compressing" | "analyzing" | null>(null);
 
@@ -172,6 +181,19 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
           <span>{scanProgressLabel}</span>
         </div>
       )}
+      {scanError && (
+        <div className="stt-status-bar stt-status-bar--error" role="alert">
+          <span>{scanError}</span>
+          <button
+            type="button"
+            className="stt-dismiss-btn"
+            onClick={() => setScanError(null)}
+            aria-label="Dismiss error"
+          >
+            ×
+          </button>
+        </div>
+      )}
       {/* Popover Action Menu */}
       {isMenuOpen && (
         <>
@@ -311,6 +333,37 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
           onClose={() => setActiveCameraMode(null)}
           language={language}
           onCapture={activeCameraMode === "document_scan" ? handleDocumentCapture : undefined}
+        />
+      )}
+
+      {/* Phase 3C.4: Document Analysis & Confirmation Modal */}
+      {scanResult && scanState === "RESULT" && (
+        <DocumentAnalysisModal
+          isOpen={scanState === "RESULT" && Boolean(scanResult)}
+          onClose={() => {
+            setScanState("READY");
+            setScanResult(null);
+            setScanError(null);
+          }}
+          result={scanResult}
+          language={language}
+          onSelectQuestion={(question) => {
+            setScanState("READY");
+            setScanResult(null);
+            setScanError(null);
+            if (onSelectDocumentQuestion) {
+              onSelectDocumentQuestion(question);
+            } else {
+              // Fallback: populate textarea or trigger send
+              onChange(question);
+            }
+          }}
+          onRetake={() => {
+            setScanState("READY");
+            setScanResult(null);
+            setScanError(null);
+            setActiveCameraMode("document_scan");
+          }}
         />
       )}
     </div>

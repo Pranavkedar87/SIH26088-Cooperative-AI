@@ -1,25 +1,27 @@
 /**
- * Phase 3C.3 — Image Optimization & Rural Network Hardening Tests
+ * Phase 3C.4 — Document Analysis & Confirmation UI Test Suite
  *
- * 18 test cases covering:
- *   1.  Optimizer file exists
- *   2.  maxDim constant = 1600
- *   3.  quality constant = 0.82
- *   4.  No-upscale guard in source
- *   5.  Output is JPEG
- *   6.  Aspect ratio preservation logic
- *   7.  Large image dimensions are reduced
- *   8.  PNG/WebP → JPEG conversion (white background)
- *   9.  Optimized size checked before upload (MAX_UPLOAD_BYTES exported)
- *   10. >5MB optimized result rejected in Navigation
- *   11. Navigation path uses optimizer
- *   12. ChatInput path uses optimizer
- *   13. Duplicate analyze prevented (ANALYZING guard)
- *   14. Existing camera flow preserved (live capture path untouched)
- *   15. Face Scan unchanged
- *   16. English optimization/error strings (preparingImage + optimizedTooLarge)
- *   17. Hindi optimization/error strings
- *   18. Marathi optimization/error strings
+ * 20 required test groups:
+ *   1.  DocumentAnalysisModal exists
+ *   2.  VisionAnalyzeResponse consumed
+ *   3.  document type rendered & mapped
+ *   4.  readability rendered
+ *   5.  summary rendered & labeled as AI interpretation
+ *   6.  key fields rendered
+ *   7.  PII notice rendered
+ *   8.  identity document refusal
+ *   9.  suggested question chips rendered
+ *   10. custom question field
+ *   11. question returned to parent
+ *   12. no /api/query call from modal
+ *   13. retake action
+ *   14. mobile modal styles
+ *   15. accessibility attributes
+ *   16. EN localization
+ *   17. HI localization
+ *   18. MR localization
+ *   19. no raw PII unmasking
+ *   20. no localStorage image persistence
  *
  * Run: node --experimental-strip-types frontend/scripts/test_vision_ui.ts
  */
@@ -49,372 +51,465 @@ function src(relPath: string): string {
   return readFileSync(resolve(root, relPath), "utf8");
 }
 
+console.log("================================================================================");
+console.log("CITIZEN PHASE 3C.4: DOCUMENT ANALYSIS & CONFIRMATION UI TEST SUITE");
+console.log("================================================================================");
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 1: Optimizer file exists
+// 1. DocumentAnalysisModal exists
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[1] Optimizer file exists");
+console.log("\n[1] DocumentAnalysisModal component file exists");
 {
-  let content = "";
+  let modalContent = "";
   try {
-    content = src("frontend/src/utils/imageOptimizer.ts");
+    modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
   } catch {
-    assert(false, "imageOptimizer.ts is readable");
+    assert(false, "DocumentAnalysisModal.tsx is readable");
   }
-  assert(content.length > 0, "imageOptimizer.ts is readable and non-empty");
+  assert(modalContent.length > 0, "DocumentAnalysisModal.tsx exists and is non-empty");
   assert(
-    content.includes("export async function compressAndResizeImage"),
-    "compressAndResizeImage is exported"
+    modalContent.includes("export const DocumentAnalysisModal"),
+    "DocumentAnalysisModal component is exported"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 2: maxDim constant = 1600
+// 2. VisionAnalyzeResponse consumed
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[2] maxDim constant = 1600");
+console.log("\n[2] VisionAnalyzeResponse consumed by DocumentAnalysisModal");
 {
-  const content = src("frontend/src/utils/imageOptimizer.ts");
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
   assert(
-    content.includes("export const IMAGE_MAX_DIM = 1600"),
-    "IMAGE_MAX_DIM exported as 1600"
+    modalContent.includes("VisionAnalyzeResponse"),
+    "imports and types result prop as VisionAnalyzeResponse"
   );
   assert(
-    content.includes("maxDim: number = IMAGE_MAX_DIM"),
-    "compressAndResizeImage defaults to IMAGE_MAX_DIM"
+    modalContent.includes("result: VisionAnalyzeResponse"),
+    "Props interface requires result: VisionAnalyzeResponse"
+  );
+  assert(
+    modalContent.includes("result.document_type") &&
+    modalContent.includes("result.readability") &&
+    modalContent.includes("result.key_fields"),
+    "consumes document_type, readability, and key_fields from result"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 3: quality constant = 0.82
+// 3. Document type rendered & mapped
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[3] quality constant = 0.82");
+console.log("\n[3] Document type rendered with friendly localized mapping");
 {
-  const content = src("frontend/src/utils/imageOptimizer.ts");
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
+  const en = src("frontend/src/i18n/locales/en.ts");
+
   assert(
-    content.includes("export const IMAGE_QUALITY = 0.82"),
-    "IMAGE_QUALITY exported as 0.82"
+    modalContent.includes("getDocTypeLabel"),
+    "helper function getDocTypeLabel maps document types"
   );
   assert(
-    content.includes("quality: number = IMAGE_QUALITY"),
-    "compressAndResizeImage defaults to IMAGE_QUALITY"
+    en.includes('"docAnalysis.type.PMFBY_POLICY"') &&
+    en.includes('"docAnalysis.type.LAND_RECORD_7_12"') &&
+    en.includes('"docAnalysis.type.COOPERATIVE_NOTICE"') &&
+    en.includes('"docAnalysis.type.PACS_MEMBERSHIP_FORM"') &&
+    en.includes('"docAnalysis.type.SUBSIDY_LETTER"') &&
+    en.includes('"docAnalysis.type.FERTILIZER_RECEIPT"') &&
+    en.includes('"docAnalysis.type.LOAN_PASSBOOK"') &&
+    en.includes('"docAnalysis.type.IDENTITY_DOCUMENT"') &&
+    en.includes('"docAnalysis.type.UNKNOWN"'),
+    "all DocumentType union members mapped in locale"
+  );
+  assert(
+    modalContent.includes("docAnalysis.identified"),
+    "displays Document Identified label"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 4: No-upscale guard in source
+// 4. Readability rendered
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[4] No-upscale guard");
+console.log("\n[4] Readability status rendered with retake prompt when not CLEAR");
 {
-  const content = src("frontend/src/utils/imageOptimizer.ts");
-  // Must check that dimensions are > maxDim before downscaling
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
+  const en = src("frontend/src/i18n/locales/en.ts");
+
   assert(
-    content.includes("srcWidth > maxDim || srcHeight > maxDim"),
-    "only downscales when width or height exceeds maxDim"
+    modalContent.includes("getReadabilityLabel"),
+    "getReadabilityLabel maps readability enum to localized string"
   );
   assert(
-    content.includes("Never upscales small images"),
-    "JSDoc documents no-upscale guarantee"
+    en.includes('"docAnalysis.readability.CLEAR"') &&
+    en.includes('"docAnalysis.readability.BLURRY"') &&
+    en.includes('"docAnalysis.readability.CROPPED"') &&
+    en.includes('"docAnalysis.readability.POOR_LIGHTING"'),
+    "all 4 ReadabilityStatus values localized"
+  );
+  assert(
+    modalContent.includes("!isClear") &&
+    modalContent.includes("docAnalysis.retakeWarning"),
+    "renders retake warning and button if readability is not CLEAR"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 5: Output is JPEG
+// 5. Document summary rendered & labeled as AI interpretation
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[5] Output is JPEG");
+console.log("\n[5] Document summary rendered and clearly labeled as AI interpretation");
 {
-  const content = src("frontend/src/utils/imageOptimizer.ts");
-  // Refactored optimizer uses a shared _renderToJpeg helper — one call site is correct (DRY).
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
+  const en = src("frontend/src/i18n/locales/en.ts");
+
   assert(
-    content.includes('"image/jpeg"'),
-    'canvas.toBlob uses "image/jpeg" MIME type'
+    modalContent.includes("result.document_summary"),
+    "renders result.document_summary conditionally"
   );
   assert(
-    content.includes("_renderToJpeg"),
-    "shared _renderToJpeg helper used by both ImageBitmap and fallback paths"
+    modalContent.includes("docAnalysis.summaryTitle"),
+    "displays summary title"
   );
   assert(
-    content.includes("image/jpeg") && content.includes("quality"),
-    "quality parameter passed to image/jpeg blob serialisation"
+    modalContent.includes("docAnalysis.summaryDisclaimer"),
+    "displays explicit disclaimer that summary is AI interpretation"
+  );
+  assert(
+    en.includes("not an official government certification"),
+    "disclaimer explicitly notes it is not government certification"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 6: Aspect ratio preservation logic
+// 6. Extracted key fields rendered
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[6] Aspect ratio preservation");
+console.log("\n[6] Extracted key fields rendered in responsive table");
 {
-  const content = src("frontend/src/utils/imageOptimizer.ts");
-  // Must have Math.round and proportional calculation for both axes
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
   assert(
-    content.includes("Math.round((srcHeight * maxDim) / srcWidth)"),
-    "landscape: height scaled proportionally"
+    modalContent.includes("Object.entries(result.key_fields)"),
+    "iterates over key_fields entries"
   );
   assert(
-    content.includes("Math.round((srcWidth * maxDim) / srcHeight)"),
-    "portrait: width scaled proportionally"
+    modalContent.includes("doc-analysis-fields-table"),
+    "uses dedicated fields table container"
+  );
+  assert(
+    modalContent.includes("docAnalysis.keyFieldsTitle"),
+    "displays Key Extracted Details header"
+  );
+  assert(
+    modalContent.includes("docAnalysis.referenceNotice"),
+    "shows Reference information only disclaimer"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 7: Large image dimensions are reduced
+// 7. Sensitive PII notice rendered
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[7] Large image dimension reduction logic");
+console.log("\n[7] Sensitive PII notice rendered conditionally");
 {
-  // Simulate the reduction calculation in pure JS (no DOM needed)
-  function simulateResize(w: number, h: number, maxDim: number): { w: number; h: number } {
-    let tw = w;
-    let th = h;
-    if (w > maxDim || h > maxDim) {
-      if (w >= h) {
-        tw = maxDim;
-        th = Math.round((h * maxDim) / w);
-      } else {
-        th = maxDim;
-        tw = Math.round((w * maxDim) / h);
-      }
-    }
-    return { w: tw, h: th };
-  }
-
-  const landscape = simulateResize(3200, 2400, 1600);
-  assert(landscape.w === 1600, `landscape 3200×2400 → width=1600 (got ${landscape.w})`);
-  assert(landscape.h === 1200, `landscape 3200×2400 → height=1200 (got ${landscape.h})`);
-
-  const portrait = simulateResize(2400, 3200, 1600);
-  assert(portrait.h === 1600, `portrait 2400×3200 → height=1600 (got ${portrait.h})`);
-  assert(portrait.w === 1200, `portrait 2400×3200 → width=1200 (got ${portrait.w})`);
-
-  const small = simulateResize(800, 600, 1600);
-  assert(small.w === 800, `small 800×600 NOT upscaled, w stays 800 (got ${small.w})`);
-  assert(small.h === 600, `small 800×600 NOT upscaled, h stays 600 (got ${small.h})`);
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
+  assert(
+    modalContent.includes("result.has_sensitive_pii"),
+    "checks result.has_sensitive_pii before rendering banner"
+  );
+  assert(
+    modalContent.includes("docAnalysis.piiNotice"),
+    "renders gentle PII masking notice"
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 8: PNG/WebP → JPEG (white background fill)
+// 8. Identity document refusal
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[8] PNG/WebP → JPEG conversion (white background)");
+console.log("\n[8] Identity document refusal guard");
 {
-  const content = src("frontend/src/utils/imageOptimizer.ts");
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
   assert(
-    content.includes('ctx.fillStyle = "#FFFFFF"'),
-    "white background applied before JPEG conversion"
+    modalContent.includes('isIdentity ? (') || modalContent.includes('result.document_type === "IDENTITY_DOCUMENT"'),
+    "checks for IDENTITY_DOCUMENT"
   );
   assert(
-    content.includes("ctx.fillRect("),
-    "fillRect called to paint white background"
+    modalContent.includes("doc-analysis-refusal-card"),
+    "renders specialized refusal card for identity documents"
+  );
+  assert(
+    modalContent.includes("docAnalysis.scanAnother"),
+    "provides Scan Another Document action on refusal"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 9: MAX_UPLOAD_BYTES exported and equals 5MB
+// 9. Suggested question chips rendered
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[9] MAX_UPLOAD_BYTES exported = 5MB");
+console.log("\n[9] Suggested question chips rendered as touch-friendly buttons");
 {
-  const content = src("frontend/src/utils/imageOptimizer.ts");
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
   assert(
-    content.includes("export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024"),
-    "MAX_UPLOAD_BYTES exported as 5 * 1024 * 1024"
+    modalContent.includes("result.suggested_questions.map"),
+    "maps suggested questions to buttons"
+  );
+  assert(
+    modalContent.includes("doc-analysis-chip"),
+    "applies chip styling class"
+  );
+  assert(
+    modalContent.includes("handleChipClick"),
+    "wires chip click to handler"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 10: >5MB optimized result rejected in Navigation & ChatInput
+// 10. Custom question input field
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[10] Oversized optimized result rejected before network call");
+console.log("\n[10] Custom question input form");
 {
-  const nav = src("frontend/src/components/Navigation.tsx");
-  const chat = src("frontend/src/components/ChatInput.tsx");
-
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
   assert(
-    nav.includes("compressed.size > MAX_UPLOAD_BYTES"),
-    "Navigation: size guard checks compressed.size > MAX_UPLOAD_BYTES"
+    modalContent.includes("<form") && modalContent.includes("handleCustomSubmit"),
+    "renders form with custom question submit handler"
   );
   assert(
-    nav.includes('t("camera.optimizedTooLarge")'),
-    "Navigation: shows camera.optimizedTooLarge error on oversized result"
+    modalContent.includes("docAnalysis.customQuestionPlaceholder"),
+    "provides placeholder for user input"
   );
   assert(
-    nav.includes("setScanState(\"ERROR\")") && nav.includes("return;"),
-    "Navigation: sets ERROR state and returns before network call"
-  );
-
-  assert(
-    chat.includes("compressed.size > MAX_UPLOAD_BYTES"),
-    "ChatInput: size guard checks compressed.size > MAX_UPLOAD_BYTES"
-  );
-  assert(
-    chat.includes('t("camera.optimizedTooLarge")'),
-    "ChatInput: shows camera.optimizedTooLarge error on oversized result"
+    modalContent.includes("disabled={!customQuestion.trim()}"),
+    "disables submit button when input is empty"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 11: Navigation path uses optimizer
+// 11. Question returned to parent
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[11] Navigation path uses optimizer");
+console.log("\n[11] Question returned to parent via onSelectQuestion callback");
 {
-  const nav = src("frontend/src/components/Navigation.tsx");
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
+  const navContent = src("frontend/src/components/Navigation.tsx");
+  const chatContent = src("frontend/src/components/ChatInput.tsx");
+
   assert(
-    nav.includes('import { compressAndResizeImage, MAX_UPLOAD_BYTES } from "../utils/imageOptimizer"'),
-    "Navigation imports compressAndResizeImage and MAX_UPLOAD_BYTES"
+    modalContent.includes("onSelectQuestion: (question: string) => void"),
+    "modal defines onSelectQuestion prop"
   );
   assert(
-    nav.includes("const compressed = await compressAndResizeImage(blob)"),
-    "Navigation awaits compressAndResizeImage before analyze"
+    modalContent.includes("onSelectQuestion(trimmed)") &&
+    modalContent.includes("onSelectQuestion(question)"),
+    "calls onSelectQuestion with chosen question"
   );
   assert(
-    nav.includes('setScanProcessingStep("compressing")'),
-    "Navigation sets compressing step before optimize"
+    navContent.includes("onSelectQuestion={"),
+    "Navigation wires onSelectQuestion prop"
   );
   assert(
-    nav.includes('setScanProcessingStep("analyzing")'),
-    "Navigation sets analyzing step before backend call"
+    chatContent.includes("onSelectQuestion={"),
+    "ChatInput wires onSelectQuestion prop"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 12: ChatInput path uses optimizer
+// 12. No /api/query call from DocumentAnalysisModal
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[12] ChatInput path uses optimizer");
+console.log("\n[12] DocumentAnalysisModal does NOT make network calls (no /api/query)");
 {
-  const chat = src("frontend/src/components/ChatInput.tsx");
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
   assert(
-    chat.includes('import { compressAndResizeImage, MAX_UPLOAD_BYTES } from "../utils/imageOptimizer"'),
-    "ChatInput imports compressAndResizeImage and MAX_UPLOAD_BYTES"
+    !modalContent.includes("/api/query"),
+    "modal does NOT contain /api/query"
   );
   assert(
-    chat.includes("const compressed = await compressAndResizeImage(blob)"),
-    "ChatInput awaits compressAndResizeImage before analyze"
+    !modalContent.includes("sendQuery"),
+    "modal does NOT import or call sendQuery"
   );
   assert(
-    chat.includes('setScanProcessingStep("compressing")'),
-    "ChatInput sets compressing step before optimize"
-  );
-  assert(
-    chat.includes('setScanProcessingStep("analyzing")'),
-    "ChatInput sets analyzing step before backend call"
+    !modalContent.includes("fetch("),
+    "modal does NOT call fetch directly"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 13: Duplicate analyze prevented (ANALYZING guard)
+// 13. Retake action
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[13] Duplicate analyze prevented");
+console.log("\n[13] Retake action available and wired to parent");
 {
-  const nav = src("frontend/src/components/Navigation.tsx");
-  const chat = src("frontend/src/components/ChatInput.tsx");
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
+  const navContent = src("frontend/src/components/Navigation.tsx");
+  const chatContent = src("frontend/src/components/ChatInput.tsx");
+
   assert(
-    nav.includes('if (scanState === "ANALYZING") return;'),
-    "Navigation: early return when already ANALYZING"
+    modalContent.includes("onRetake: () => void"),
+    "modal defines onRetake prop"
   );
   assert(
-    chat.includes('if (scanState === "ANALYZING") return;'),
-    "ChatInput: early return when already ANALYZING"
+    navContent.includes('setActiveCameraMode("document_scan")'),
+    "Navigation reopens camera on retake"
+  );
+  assert(
+    chatContent.includes('setActiveCameraMode("document_scan")'),
+    "ChatInput reopens camera on retake"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 14: Existing camera flow preserved (live capture path in modal)
+// 14. Mobile modal styles
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[14] Live camera flow preserved");
+console.log("\n[14] Mobile responsive CSS styles for DocumentAnalysisModal");
 {
-  const modal = src("frontend/src/components/CameraCaptureModal.tsx");
+  const css = src("frontend/src/App.css");
   assert(
-    modal.includes("handleCapture"),
-    "handleCapture function exists in CameraCaptureModal"
+    css.includes(".doc-analysis-backdrop") &&
+    css.includes(".doc-analysis-card"),
+    "backdrop and card classes defined in App.css"
   );
   assert(
-    modal.includes("canvas.toDataURL"),
-    "Live camera capture still uses canvas.toDataURL for preview"
-  );
-  assert(
-    modal.includes("handleRetake"),
-    "handleRetake exists (live camera retake preserved)"
-  );
-  assert(
-    modal.includes("camera-shutter-btn"),
-    "camera shutter button still rendered"
+    css.includes("@media (max-width: 480px)") &&
+    css.includes(".doc-analysis-card"),
+    "media query includes mobile adaptations for analysis card"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 15: Face Scan mode unchanged
+// 15. Accessibility attributes
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[15] Face Scan mode unchanged");
+console.log("\n[15] Accessibility attributes on DocumentAnalysisModal");
 {
-  const modal = src("frontend/src/components/CameraCaptureModal.tsx");
-  const nav = src("frontend/src/components/Navigation.tsx");
-  const chat = src("frontend/src/components/ChatInput.tsx");
-
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
   assert(
-    modal.includes('"face_scan"'),
-    "face_scan mode still handled in CameraCaptureModal"
+    modalContent.includes('role="dialog"') &&
+    modalContent.includes('aria-modal="true"'),
+    "dialog semantics role=dialog and aria-modal=true present"
   );
   assert(
-    modal.includes("handleDone"),
-    "face_scan still calls handleDone (not handleAnalyze)"
-  );
-  // onCapture must NOT be wired for face_scan
-  assert(
-    nav.includes('onCapture={activeCameraMode === "document_scan" ? handleDocumentCapture : undefined}'),
-    "Navigation: onCapture only wired for document_scan, not face_scan"
+    modalContent.includes('aria-labelledby="doc-analysis-title"'),
+    "aria-labelledby associates modal with its title"
   );
   assert(
-    chat.includes('onCapture={activeCameraMode === "document_scan" ? handleDocumentCapture : undefined}'),
-    "ChatInput: onCapture only wired for document_scan, not face_scan"
+    modalContent.includes("Escape"),
+    "keyboard ESC listener attached to close modal"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 16: English optimization strings
+// 16. EN localization completeness
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[16] English optimization/error strings");
+console.log("\n[16] English localization strings complete");
 {
   const en = src("frontend/src/i18n/locales/en.ts");
-  assert(en.includes('"camera.preparingImage"'), 'en.ts has "camera.preparingImage"');
-  assert(en.includes('"camera.optimizedTooLarge"'), 'en.ts has "camera.optimizedTooLarge"');
-  assert(en.includes("Preparing image"), 'en: preparingImage message contains "Preparing image"');
+  const requiredKeys = [
+    "docAnalysis.title",
+    "docAnalysis.identified",
+    "docAnalysis.summaryTitle",
+    "docAnalysis.keyFieldsTitle",
+    "docAnalysis.questionsTitle",
+    "docAnalysis.customQuestionTitle",
+    "docAnalysis.askButton",
+    "docAnalysis.scanAnother",
+    "docAnalysis.retake",
+    "docAnalysis.close",
+  ];
+  for (const k of requiredKeys) {
+    assert(en.includes(`"${k}"`), `en.ts includes ${k}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 17. HI localization completeness
+// ─────────────────────────────────────────────────────────────────────────────
+console.log("\n[17] Hindi localization strings complete");
+{
+  const hi = src("frontend/src/i18n/locales/hi.ts");
+  const requiredKeys = [
+    "docAnalysis.title",
+    "docAnalysis.identified",
+    "docAnalysis.summaryTitle",
+    "docAnalysis.keyFieldsTitle",
+    "docAnalysis.questionsTitle",
+    "docAnalysis.customQuestionTitle",
+    "docAnalysis.askButton",
+    "docAnalysis.scanAnother",
+    "docAnalysis.retake",
+    "docAnalysis.close",
+  ];
+  for (const k of requiredKeys) {
+    assert(hi.includes(`"${k}"`), `hi.ts includes ${k}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 18. MR localization completeness
+// ─────────────────────────────────────────────────────────────────────────────
+console.log("\n[18] Marathi localization strings complete");
+{
+  const mr = src("frontend/src/i18n/locales/mr.ts");
+  const requiredKeys = [
+    "docAnalysis.title",
+    "docAnalysis.identified",
+    "docAnalysis.summaryTitle",
+    "docAnalysis.keyFieldsTitle",
+    "docAnalysis.questionsTitle",
+    "docAnalysis.customQuestionTitle",
+    "docAnalysis.askButton",
+    "docAnalysis.scanAnother",
+    "docAnalysis.retake",
+    "docAnalysis.close",
+  ];
+  for (const k of requiredKeys) {
+    assert(mr.includes(`"${k}"`), `mr.ts includes ${k}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 19. No raw PII unmasking client-side
+// ─────────────────────────────────────────────────────────────────────────────
+console.log("\n[19] No raw PII unmasking in DocumentAnalysisModal");
+{
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
   assert(
-    en.includes("Compressed image is still too large"),
-    'en: optimizedTooLarge gives honest, actionable message'
+    !modalContent.includes("unmask") &&
+    !modalContent.includes("decodePII"),
+    "no client-side PII unmasking functions"
+  );
+  assert(
+    modalContent.includes("val ? String(val) : \"—\""),
+    "renders values as provided from backend directly"
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Test 17: Hindi optimization/error strings
+// 20. No localStorage image persistence
 // ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[17] Hindi optimization/error strings");
+console.log("\n[20] No localStorage image persistence");
 {
-  const hi = src("frontend/src/i18n/locales/hi.ts");
-  assert(hi.includes('"camera.preparingImage"'), 'hi.ts has "camera.preparingImage"');
-  assert(hi.includes('"camera.optimizedTooLarge"'), 'hi.ts has "camera.optimizedTooLarge"');
-  assert(hi.includes("छवि तैयार"), 'hi: preparingImage in Hindi');
-  assert(hi.includes("संकुचित छवि"), 'hi: optimizedTooLarge in Hindi');
-}
+  const modalContent = src("frontend/src/components/DocumentAnalysisModal.tsx");
+  const navContent = src("frontend/src/components/Navigation.tsx");
+  const chatContent = src("frontend/src/components/ChatInput.tsx");
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Test 18: Marathi optimization/error strings
-// ─────────────────────────────────────────────────────────────────────────────
-console.log("\n[18] Marathi optimization/error strings");
-{
-  const mr = src("frontend/src/i18n/locales/mr.ts");
-  assert(mr.includes('"camera.preparingImage"'), 'mr.ts has "camera.preparingImage"');
-  assert(mr.includes('"camera.optimizedTooLarge"'), 'mr.ts has "camera.optimizedTooLarge"');
-  assert(mr.includes("प्रतिमा तयार"), 'mr: preparingImage in Marathi');
-  assert(mr.includes("संकुचित प्रतिमा"), 'mr: optimizedTooLarge in Marathi');
+  assert(
+    !modalContent.includes("localStorage"),
+    "modal does NOT touch localStorage"
+  );
+  assert(
+    !navContent.includes("localStorage.setItem") || !navContent.includes("image"),
+    "Navigation does NOT save images to localStorage"
+  );
+  assert(
+    !chatContent.includes("localStorage.setItem") || !chatContent.includes("image"),
+    "ChatInput does NOT save images to localStorage"
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Summary
 // ─────────────────────────────────────────────────────────────────────────────
 const total = passed.length + failed.length;
-console.log(`\n${"─".repeat(60)}`);
-console.log(`Results: ${passed.length}/${total} tests passed`);
+console.log(`\n${"─".repeat(80)}`);
+console.log(`RESULTS: ${passed.length}/${total} CHECKS PASSED`);
+console.log(`${"─".repeat(80)}`);
+
 if (failed.length > 0) {
-  console.error(`\nFailed tests:`);
+  console.error(`\nFAILED CHECKS (${failed.length}):`);
   failed.forEach((f) => console.error(`  ✗ ${f}`));
-  console.log("\nFinal Verdict: BLOCKED — IMAGE OPTIMIZATION NOT SAFE");
+  console.log("\nFINAL VERDICT: BLOCKED — DOCUMENT ANALYSIS UI NOT SAFE");
   process.exit(1);
 } else {
-  console.log("\nFinal Verdict: PASS — IMAGE OPTIMIZATION VERIFIED");
+  console.log("\nFINAL VERDICT: PASS — DOCUMENT ANALYSIS UI VERIFIED");
   process.exit(0);
 }

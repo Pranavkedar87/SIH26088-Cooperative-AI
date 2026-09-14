@@ -421,6 +421,10 @@ const App: React.FC = () => {
           onSend={handleSendQuery}
           value={inputValue}
           onChange={setInputValue}
+          onSelectDocumentQuestion={(q) => {
+            setActiveTab("ask");
+            setInputValue(q);
+          }}
         />
       )}
 
@@ -434,6 +438,10 @@ const App: React.FC = () => {
         }}
         language={language}
         onOpenVoiceMode={() => setIsVoiceModeOpen(true)}
+        onSelectDocumentQuestion={(q) => {
+          setActiveTab("ask");
+          setInputValue(q);
+        }}
       />
     </div>
   );
