@@ -119,6 +119,17 @@ export const mr: Record<string, string> = {
   "camera.retake": "पुन्हा घ्या",
   "camera.permissionDenied": "कॅमेरा परवानगी नाकारली. कृपया परवानगी द्या.",
   "camera.notAvailable": "या उपकरणावर कॅमेरा उपलब्ध नाही.",
+  // Phase 3C.2 — Vision upload & analysis strings
+  "camera.uploadGallery": "गॅलरीतून अपलोड करा",
+  "camera.analyze": "कागदपत्र विश्लेषण करा",
+  "camera.analyzing": "विश्लेषण सुरू आहे...",
+  "camera.privacyNotice": "प्रतिमा केवळ कागदपत्र विश्लेषणासाठी वापरली जाते. संग्रहित केली जात नाही.",
+  "camera.identityRefused": "गोपनीयतेसाठी ओळख कागदपत्रे प्रक्रिया केली जात नाहीत.",
+  "camera.retakeOrChoose": "पुन्हा घ्या किंवा दुसरी प्रतिमा निवडा",
+  "camera.analysisFailed": "कागदपत्र विश्लेषण अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
+  "camera.fileTooBig": "प्रतिमा फाइल खूप मोठी आहे (जास्तीत जास्त 5MB).",
+  "camera.unsupportedFormat": "कृपया JPEG, PNG किंवा WebP स्वरूप वापरा.",
+  "camera.permissionFallback": "कॅमेरा उपलब्ध नाही. कृपया गॅलरीतून अपलोड करा.",
 
   // Location Modal
   "location.title": "तुमचे स्थान",

@@ -306,3 +306,44 @@ export interface HumanHandoffResponse {
   disclaimer: string;
   created_at: string;
 }
+
+// ── Vision / Document Scanning (Phase 3C) ────────────────────────────────────
+
+export type DocumentType =
+  | "PMFBY_POLICY"
+  | "LAND_RECORD_7_12"
+  | "COOPERATIVE_NOTICE"
+  | "PACS_MEMBERSHIP_FORM"
+  | "SUBSIDY_LETTER"
+  | "FERTILIZER_RECEIPT"
+  | "LOAN_PASSBOOK"
+  | "IDENTITY_DOCUMENT"
+  | "UNKNOWN";
+
+export type ReadabilityStatus =
+  | "CLEAR"
+  | "BLURRY"
+  | "CROPPED"
+  | "POOR_LIGHTING";
+
+export interface VisionAnalyzeResponse {
+  success: boolean;
+  document_type: DocumentType;
+  readability: ReadabilityStatus;
+  detected_language: string;
+  key_fields: Record<string, string | null>;
+  document_summary?: string | null;
+  suggested_questions: string[];
+  has_sensitive_pii: boolean;
+  refusal_reason?: string | null;
+  processing_time_ms?: number | null;
+}
+
+export type DocumentScanState =
+  | "READY"
+  | "CAPTURING"
+  | "IMAGE_READY"
+  | "ANALYZING"
+  | "RESULT"
+  | "ERROR";
+

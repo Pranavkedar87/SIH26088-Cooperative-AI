@@ -18,6 +18,8 @@ interface CameraCaptureModalProps {
   isOpen: boolean;
   onClose: () => void;
   language: LanguageCode;
+  /** Phase 3C.2: called with the captured/uploaded JPEG Blob for document_scan mode */
+  onCapture?: (blob: Blob) => void;
 }
 
 const LABELS = {
@@ -38,9 +40,9 @@ const LABELS = {
       mr: "कागदपत्र कॅप्चर भविष्यातील ओसीआर आणि संस्थागत प्रक्रियेसाठी सज्ज आहे.",
     },
     capturedMessage: {
-      en: "Document image captured successfully. Document analysis interface extension point is active.",
-      hi: "दस्तावेज़ छवि सफलतापूर्वक कैप्चर की गई।",
-      mr: "कागदपत्र प्रतिमा यशस्वीपणे कॅप्चर झाली.",
+      en: "Document image captured. Review and tap 'Analyze Document' to continue.",
+      hi: "दस्तावेज़ छवि कैप्चर की गई। 'दस्तावेज़ विश्लेषण करें' पर टैप करें।",
+      mr: "कागदपत्र प्रतिमा कॅप्चर झाली. 'कागदपत्र विश्लेषण करा' वर टॅप करा.",
     },
   },
   face_scan: {
@@ -67,62 +69,86 @@ const LABELS = {
   },
 };
 
+// Accepted image types for file picker
+const ACCEPTED_IMAGE_TYPES = "image/jpeg,image/png,image/webp";
+const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB hard limit
+
 export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
   mode,
   isOpen,
   onClose,
   language,
+  onCapture,
 }) => {
   const t = useTranslation(language);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  /** Blob corresponding to capturedImage — only populated in document_scan mode */
+  const capturedBlobRef = useRef<Blob | null>(null);
   const [cameraFacing, setCameraFacing] = useState<"user" | "environment">(
     mode === "document_scan" ? "environment" : "user"
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  /** true when camera permission was denied and we show gallery-only fallback */
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  /** Validation error shown below the file input */
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Start live stream
-  const startCamera = useCallback(async (facing: "user" | "environment") => {
-    setErrorMsg(null);
-    setCapturedImage(null);
-    try {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
+  const startCamera = useCallback(
+    async (facing: "user" | "environment") => {
+      setErrorMsg(null);
+      setPermissionDenied(false);
+      setCapturedImage(null);
+      capturedBlobRef.current = null;
+      setFileError(null);
+      try {
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
 
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Camera API is not supported by your browser environment.");
-      }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera API is not supported by your browser environment.");
+        }
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: facing,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: facing,
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
 
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+        setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      } catch (err: unknown) {
+        console.warn("Camera access note:", err);
+        const isDenied =
+          err instanceof Error &&
+          (err.name === "NotAllowedError" || err.name === "PermissionDeniedError");
+        if (isDenied && mode === "document_scan") {
+          // Show gallery-only fallback for document scanning
+          setPermissionDenied(true);
+          setErrorMsg(null);
+        } else {
+          setErrorMsg(
+            isDenied
+              ? "Camera permission was denied. Please allow camera access in your browser settings to scan."
+              : "Camera not available or not detected in this environment."
+          );
+        }
       }
-    } catch (err: unknown) {
-      console.warn("Camera access note:", err);
-      const isDenied =
-        err instanceof Error &&
-        (err.name === "NotAllowedError" || err.name === "PermissionDeniedError");
-      setErrorMsg(
-        isDenied
-          ? "Camera permission was denied. Please allow camera access in your browser settings to scan."
-          : "Camera not available or not detected in this environment."
-      );
-    }
-  }, [stream]);
+    },
+    [stream, mode]
+  );
 
   // Clean up streams
   const stopCamera = useCallback(() => {
@@ -137,11 +163,16 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
     if (isOpen) {
       const initialFacing = mode === "document_scan" ? "environment" : "user";
       setCameraFacing(initialFacing);
+      setPermissionDenied(false);
+      setFileError(null);
       startCamera(initialFacing);
     } else {
       stopCamera();
       setCapturedImage(null);
+      capturedBlobRef.current = null;
       setErrorMsg(null);
+      setPermissionDenied(false);
+      setFileError(null);
     }
     return () => {
       stopCamera();
@@ -155,7 +186,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
     startCamera(nextFacing);
   };
 
-  // Capture frame
+  // Capture frame from video stream
   const handleCapture = () => {
     setIsCapturing(true);
     if (videoRef.current && canvasRef.current) {
@@ -168,6 +199,17 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
         setCapturedImage(dataUrl);
+
+        // Store blob for document scan analysis
+        if (mode === "document_scan") {
+          canvas.toBlob(
+            (blob) => {
+              capturedBlobRef.current = blob;
+            },
+            "image/jpeg",
+            0.9
+          );
+        }
       }
     } else {
       // Fallback placeholder preview if camera stream not rendered
@@ -180,13 +222,67 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
 
   const handleRetake = () => {
     setCapturedImage(null);
+    capturedBlobRef.current = null;
+    setFileError(null);
+    if (permissionDenied) {
+      // Stay in gallery fallback — just clear the preview
+      return;
+    }
     startCamera(cameraFacing);
+  };
+
+  // Gallery / file upload handler
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate size
+    if (file.size > MAX_FILE_BYTES) {
+      setFileError(t("camera.fileTooBig"));
+      e.target.value = "";
+      return;
+    }
+
+    // Validate MIME type
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      setFileError(t("camera.unsupportedFormat"));
+      e.target.value = "";
+      return;
+    }
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setCapturedImage(dataUrl);
+    };
+    reader.readAsDataURL(file);
+
+    // Store blob reference
+    capturedBlobRef.current = file;
+    // Reset input value so the same file can be re-selected if needed
+    e.target.value = "";
+  };
+
+  // "Analyze Document" — emit blob to parent
+  const handleAnalyze = () => {
+    if (!onCapture || !capturedBlobRef.current) return;
+    onCapture(capturedBlobRef.current);
+    onClose();
+  };
+
+  // "Done" for face_scan — just close (legacy behavior unchanged)
+  const handleDone = () => {
+    onClose();
   };
 
   if (!isOpen) return null;
 
   const currentLabels = LABELS[mode];
   const langKey = language in currentLabels.title ? language : "en";
+  const isDocumentScan = mode === "document_scan";
 
   return (
     <div className="camera-modal-backdrop" role="dialog" aria-modal="true">
@@ -218,11 +314,34 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
           </button>
         </div>
 
+        {/* Privacy Notice — document_scan only */}
+        {isDocumentScan && (
+          <div className="camera-privacy-notice" role="note">
+            <span>🔒 {t("camera.privacyNotice")}</span>
+          </div>
+        )}
+
         {/* Viewfinder / Capture Box */}
         <div className="camera-viewfinder-container">
           {!capturedImage ? (
             <>
-              {errorMsg ? (
+              {/* Permission-denied gallery fallback (document_scan only) */}
+              {isDocumentScan && permissionDenied ? (
+                <div className="camera-error-view">
+                  <AlertTriangleIcon size={32} color="#F28C28" />
+                  <p className="camera-error-text">{t("camera.permissionFallback")}</p>
+                  <button
+                    type="button"
+                    className="camera-action-btn camera-btn-primary"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {t("camera.uploadGallery")}
+                  </button>
+                  {fileError && (
+                    <p className="camera-file-error" role="alert">{fileError}</p>
+                  )}
+                </div>
+              ) : errorMsg ? (
                 <div className="camera-error-view">
                   <AlertTriangleIcon size={32} color="#F28C28" />
                   <p className="camera-error-text">{errorMsg}</p>
@@ -285,6 +404,18 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
         {/* Hidden offscreen canvas for snapshot rendering */}
         <canvas ref={canvasRef} style={{ display: "none" }} />
 
+        {/* Hidden file input for gallery/file upload */}
+        {isDocumentScan && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED_IMAGE_TYPES}
+            style={{ display: "none" }}
+            aria-hidden="true"
+            onChange={handleFileChange}
+          />
+        )}
+
         {/* Informative Disclaimer / Future Readiness Banner */}
         <div className="camera-disclaimer-banner">
           <p>
@@ -301,38 +432,74 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
         {/* Controls Footer */}
         <div className="camera-modal-footer">
           {!capturedImage ? (
-            <div className="camera-controls-row">
-              <button
-                type="button"
-                className="camera-tool-btn"
-                onClick={handleFlipCamera}
-                title={t("common.flip")}
-                aria-label={t("common.flip")}
-              >
-                <FlipCameraIcon size={18} color="#123B5D" />
-                <span>{t("common.flip")}</span>
-              </button>
+            /* === Live camera controls (or gallery fallback controls) === */
+            isDocumentScan && permissionDenied ? (
+              /* Gallery-only fallback footer */
+              <div className="camera-captured-actions">
+                <button
+                  type="button"
+                  className="camera-action-btn camera-btn-secondary"
+                  onClick={onClose}
+                >
+                  <span>{t("common.cancel")}</span>
+                </button>
+                <button
+                  type="button"
+                  className="camera-action-btn camera-btn-primary"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <span>{t("camera.uploadGallery")}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="camera-controls-row">
+                <button
+                  type="button"
+                  className="camera-tool-btn"
+                  onClick={handleFlipCamera}
+                  title={t("common.flip")}
+                  aria-label={t("common.flip")}
+                >
+                  <FlipCameraIcon size={18} color="#123B5D" />
+                  <span>{t("common.flip")}</span>
+                </button>
 
-              <button
-                type="button"
-                className="camera-shutter-btn"
-                onClick={handleCapture}
-                disabled={isCapturing}
-                aria-label="Capture photo"
-              >
-                <div className="shutter-inner" />
-              </button>
+                <button
+                  type="button"
+                  className="camera-shutter-btn"
+                  onClick={handleCapture}
+                  disabled={isCapturing}
+                  aria-label="Capture photo"
+                >
+                  <div className="shutter-inner" />
+                </button>
 
-              <button
-                type="button"
-                className="camera-tool-btn"
-                onClick={onClose}
-                aria-label={t("common.cancel")}
-              >
-                <span>{t("common.cancel")}</span>
-              </button>
-            </div>
+                {/* Gallery upload button — document_scan only */}
+                {isDocumentScan ? (
+                  <button
+                    type="button"
+                    className="camera-tool-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    aria-label={t("camera.uploadGallery")}
+                    title={t("camera.uploadGallery")}
+                  >
+                    <span style={{ fontSize: "18px" }}>🖼️</span>
+                    <span>{t("camera.uploadGallery")}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="camera-tool-btn"
+                    onClick={onClose}
+                    aria-label={t("common.cancel")}
+                  >
+                    <span>{t("common.cancel")}</span>
+                  </button>
+                )}
+              </div>
+            )
           ) : (
+            /* === Preview / post-capture controls === */
             <div className="camera-captured-actions">
               <button
                 type="button"
@@ -342,17 +509,38 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
                 <RotateCcwIcon size={16} color="#123B5D" />
                 <span>{t("camera.retake")}</span>
               </button>
-              <button
-                type="button"
-                className="camera-action-btn camera-btn-primary"
-                onClick={onClose}
-              >
-                <CheckIcon size={16} color="#FFFFFF" />
-                <span>{t("common.done")}</span>
-              </button>
+
+              {/* document_scan → Analyze; face_scan → Done (legacy) */}
+              {isDocumentScan && onCapture ? (
+                <button
+                  type="button"
+                  className="camera-action-btn camera-btn-primary"
+                  onClick={handleAnalyze}
+                  disabled={!capturedBlobRef.current}
+                >
+                  <CheckIcon size={16} color="#FFFFFF" />
+                  <span>{t("camera.analyze")}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="camera-action-btn camera-btn-primary"
+                  onClick={handleDone}
+                >
+                  <CheckIcon size={16} color="#FFFFFF" />
+                  <span>{t("common.done")}</span>
+                </button>
+              )}
             </div>
           )}
         </div>
+
+        {/* File error shown outside footer when in live camera mode */}
+        {fileError && !permissionDenied && (
+          <p className="camera-file-error" role="alert" style={{ padding: "4px 16px 8px" }}>
+            {fileError}
+          </p>
+        )}
       </div>
     </div>
   );

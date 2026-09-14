@@ -119,6 +119,17 @@ export const en: Record<string, string> = {
   "camera.retake": "Retake",
   "camera.permissionDenied": "Camera access was denied. Please allow camera permissions.",
   "camera.notAvailable": "Camera is not available on this device.",
+  // Phase 3C.2 — Vision upload & analysis strings
+  "camera.uploadGallery": "Upload from Gallery",
+  "camera.analyze": "Analyze Document",
+  "camera.analyzing": "Analyzing...",
+  "camera.privacyNotice": "Image used only for document analysis. Not stored.",
+  "camera.identityRefused": "Identity documents not processed for privacy.",
+  "camera.retakeOrChoose": "Retake or Choose Another",
+  "camera.analysisFailed": "Document analysis failed. Please try again.",
+  "camera.fileTooBig": "Image file is too large (max 5MB).",
+  "camera.unsupportedFormat": "Please use JPEG, PNG or WebP format.",
+  "camera.permissionFallback": "Camera unavailable. Please upload from gallery instead.",
 
   // Location Modal
   "location.title": "Your Location",

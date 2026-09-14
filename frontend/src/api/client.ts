@@ -6,7 +6,13 @@
  * - Handles Safari / iOS "Load failed" & "Failed to fetch" errors gracefully.
  * - Synthesizes grounded fallback guidance if backend is completely offline.
  */
-import type { QueryRequest, QueryResponse, HumanHandoffRequest, HumanHandoffResponse } from "../types";
+import type {
+  QueryRequest,
+  QueryResponse,
+  HumanHandoffRequest,
+  HumanHandoffResponse,
+  VisionAnalyzeResponse,
+} from "../types";
 
 const DEFAULT_PROD_URL = "https://sih26088-cooperative-ai.onrender.com";
 const DEFAULT_DEV_URL = "http://localhost:8000";
@@ -322,4 +328,39 @@ export async function submitHumanHandoff(
   }
 }
 
+// ── Document Vision Analysis (Phase 3C.2) ─────────────────────────────────────
 
+export async function analyzeDocument(
+  imageBlob: Blob,
+  language: string = "en"
+): Promise<VisionAnalyzeResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s — Gemini multimodal
+
+  try {
+    const form = new FormData();
+    // Do NOT set Content-Type manually — let fetch auto-set multipart/form-data boundary
+    form.append("file", imageBlob, "document.jpg");
+    form.append("language", language);
+
+    const res = await fetch(`${BASE_URL}/api/vision/analyze`, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ detail: "Vision analysis failed" }));
+      const msg = errData.detail || `Server returned status ${res.status}`;
+      throw new Error(msg);
+    }
+
+    return await res.json();
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    console.error("[VISION] Document analysis error:", err);
+    throw err;
+  }
+}

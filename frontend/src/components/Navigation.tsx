@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import type { AppTab, LanguageCode } from "../types";
+import React, { useState, useEffect, useCallback } from "react";
+import type { AppTab, LanguageCode, DocumentScanState, VisionAnalyzeResponse } from "../types";
 import { useTranslation } from "../i18n";
 import {
   HomeIcon,
@@ -11,6 +11,8 @@ import {
   FaceScanIcon,
 } from "./Icons";
 import { CameraCaptureModal, type CameraMode } from "./CameraCaptureModal";
+import { analyzeDocument } from "../api/client";
+import { compressAndResizeImage } from "../utils/imageOptimizer";
 
 interface Props {
   activeTab: AppTab;
@@ -29,6 +31,11 @@ const Navigation: React.FC<Props> = ({
   const [activeCameraMode, setActiveCameraMode] = useState<CameraMode | null>(null);
   const t = useTranslation(language);
 
+  // Phase 3C.2 — DocumentScanState machine (Navigation copy)
+  const [scanState, setScanState] = useState<DocumentScanState>("READY");
+  const [_scanResult, setScanResult] = useState<VisionAnalyzeResponse | null>(null);
+  const [_scanError, setScanError] = useState<string | null>(null);
+
   // Close camera popover on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -44,6 +51,34 @@ const Navigation: React.FC<Props> = ({
     setIsCameraMenuOpen(false);
     setActiveCameraMode(mode);
   };
+
+  /**
+   * Phase 3C.2 — Blob received from CameraCaptureModal (document_scan only).
+   * Parent owns API call; modal is decoupled from network logic.
+   */
+  const handleDocumentCapture = useCallback(
+    async (blob: Blob) => {
+      if (scanState === "ANALYZING") return; // prevent double-submission
+      setScanState("ANALYZING");
+      setScanError(null);
+      setScanResult(null);
+
+      try {
+        // Compress before upload
+        const compressed = await compressAndResizeImage(blob);
+        const result = await analyzeDocument(compressed, language);
+        setScanResult(result);
+        setScanState("RESULT");
+        // Phase 3C.3 will consume result — extension point active
+        console.info("[VISION] Analysis complete:", result.document_type, result.readability);
+      } catch (err: any) {
+        console.error("[VISION] Nav analysis error:", err);
+        setScanError(err?.message || t("camera.analysisFailed"));
+        setScanState("ERROR");
+      }
+    },
+    [scanState, language, t]
+  );
 
   const voiceText = t("nav.voice");
   const cameraText = t("nav.camera");
@@ -181,6 +216,7 @@ const Navigation: React.FC<Props> = ({
           isOpen={Boolean(activeCameraMode)}
           onClose={() => setActiveCameraMode(null)}
           language={language}
+          onCapture={activeCameraMode === "document_scan" ? handleDocumentCapture : undefined}
         />
       )}
     </>

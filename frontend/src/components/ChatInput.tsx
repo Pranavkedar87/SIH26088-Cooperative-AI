@@ -1,9 +1,11 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
-import type { LanguageCode } from "../types";
+import type { LanguageCode, DocumentScanState, VisionAnalyzeResponse } from "../types";
 import { useTranslation } from "../i18n";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { CameraIcon, MicIcon, SendIcon, ScanDocIcon, FaceScanIcon } from "./Icons";
 import { CameraCaptureModal, type CameraMode } from "./CameraCaptureModal";
+import { analyzeDocument } from "../api/client";
+import { compressAndResizeImage } from "../utils/imageOptimizer";
 
 interface Props {
   language: LanguageCode;
@@ -17,6 +19,11 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeCameraMode, setActiveCameraMode] = useState<CameraMode | null>(null);
   const t = useTranslation(language);
+
+  // Phase 3C.2 — DocumentScanState machine (ChatInput copy)
+  const [scanState, setScanState] = useState<DocumentScanState>("READY");
+  const [_scanResult, setScanResult] = useState<VisionAnalyzeResponse | null>(null);
+  const [_scanError, setScanError] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -103,6 +110,32 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
     setIsMenuOpen(false);
     setActiveCameraMode(mode);
   };
+
+  /**
+   * Phase 3C.2 — Blob received from CameraCaptureModal (document_scan only).
+   * Parent owns API call; modal is decoupled from network logic.
+   */
+  const handleDocumentCapture = useCallback(
+    async (blob: Blob) => {
+      if (scanState === "ANALYZING") return;
+      setScanState("ANALYZING");
+      setScanError(null);
+      setScanResult(null);
+
+      try {
+        const compressed = await compressAndResizeImage(blob);
+        const result = await analyzeDocument(compressed, language);
+        setScanResult(result);
+        setScanState("RESULT");
+        console.info("[VISION] ChatInput analysis complete:", result.document_type, result.readability);
+      } catch (err: any) {
+        console.error("[VISION] ChatInput analysis error:", err);
+        setScanError(err?.message || t("camera.analysisFailed"));
+        setScanState("ERROR");
+      }
+    },
+    [scanState, language, t]
+  );
 
   return (
     <div className="input-bar-container">
@@ -244,6 +277,7 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
           isOpen={Boolean(activeCameraMode)}
           onClose={() => setActiveCameraMode(null)}
           language={language}
+          onCapture={activeCameraMode === "document_scan" ? handleDocumentCapture : undefined}
         />
       )}
     </div>
