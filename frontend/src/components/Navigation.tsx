@@ -12,7 +12,7 @@ import {
 } from "./Icons";
 import { CameraCaptureModal, type CameraMode } from "./CameraCaptureModal";
 import { analyzeDocument } from "../api/client";
-import { compressAndResizeImage } from "../utils/imageOptimizer";
+import { compressAndResizeImage, MAX_UPLOAD_BYTES } from "../utils/imageOptimizer";
 
 interface Props {
   activeTab: AppTab;
@@ -35,6 +35,8 @@ const Navigation: React.FC<Props> = ({
   const [scanState, setScanState] = useState<DocumentScanState>("READY");
   const [_scanResult, setScanResult] = useState<VisionAnalyzeResponse | null>(null);
   const [_scanError, setScanError] = useState<string | null>(null);
+  // Phase 3C.3 — granular progress step for UX ("compressing" | "analyzing" | null)
+  const [scanProcessingStep, setScanProcessingStep] = useState<"compressing" | "analyzing" | null>(null);
 
   // Close camera popover on Escape key
   useEffect(() => {
@@ -53,8 +55,9 @@ const Navigation: React.FC<Props> = ({
   };
 
   /**
-   * Phase 3C.2 — Blob received from CameraCaptureModal (document_scan only).
-   * Parent owns API call; modal is decoupled from network logic.
+   * Phase 3C.2/3C.3 — Blob received from CameraCaptureModal (document_scan only).
+   * Parent owns the full pipeline:
+   *   Blob → compress (Phase 3C.3: size guard) → analyzeDocument → state update
    */
   const handleDocumentCapture = useCallback(
     async (blob: Blob) => {
@@ -64,17 +67,30 @@ const Navigation: React.FC<Props> = ({
       setScanResult(null);
 
       try {
-        // Compress before upload
+        // Phase 3C.3 — Step 1: compress & resize (show "Preparing image…")
+        setScanProcessingStep("compressing");
         const compressed = await compressAndResizeImage(blob);
+
+        // Phase 3C.3 — Size guard: reject before network call
+        if (compressed.size > MAX_UPLOAD_BYTES) {
+          setScanError(t("camera.optimizedTooLarge"));
+          setScanState("ERROR");
+          setScanProcessingStep(null);
+          return;
+        }
+
+        // Phase 3C.3 — Step 2: analyze (show "Analyzing document…")
+        setScanProcessingStep("analyzing");
         const result = await analyzeDocument(compressed, language);
         setScanResult(result);
         setScanState("RESULT");
-        // Phase 3C.3 will consume result — extension point active
+        setScanProcessingStep(null);
         console.info("[VISION] Analysis complete:", result.document_type, result.readability);
       } catch (err: any) {
         console.error("[VISION] Nav analysis error:", err);
         setScanError(err?.message || t("camera.analysisFailed"));
         setScanState("ERROR");
+        setScanProcessingStep(null);
       }
     },
     [scanState, language, t]
@@ -83,9 +99,24 @@ const Navigation: React.FC<Props> = ({
   const voiceText = t("nav.voice");
   const cameraText = t("nav.camera");
 
+  // Phase 3C.3 — progress label derived from scanProcessingStep
+  const scanProgressLabel =
+    scanProcessingStep === "compressing"
+      ? t("camera.preparingImage")
+      : scanProcessingStep === "analyzing"
+      ? t("camera.analyzing")
+      : null;
+
   return (
     <>
       <nav className="app-nav" aria-label="Primary Navigation">
+        {/* Phase 3C.3 — document scan progress toast */}
+        {scanProgressLabel && (
+          <div className="vision-scan-toast" role="status" aria-live="polite">
+            <span className="vision-scan-spinner" aria-hidden="true">⏳</span>
+            <span>{scanProgressLabel}</span>
+          </div>
+        )}
         {/* Floating popover menu directly above the Camera button */}
         {isCameraMenuOpen && (
           <>

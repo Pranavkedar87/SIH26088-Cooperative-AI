@@ -122,7 +122,7 @@ export const mr: Record<string, string> = {
   // Phase 3C.2 — Vision upload & analysis strings
   "camera.uploadGallery": "गॅलरीतून अपलोड करा",
   "camera.analyze": "कागदपत्र विश्लेषण करा",
-  "camera.analyzing": "विश्लेषण सुरू आहे...",
+  "camera.analyzing": "कागदपत्र विश्लेषण सुरू आहे…",
   "camera.privacyNotice": "प्रतिमा केवळ कागदपत्र विश्लेषणासाठी वापरली जाते. संग्रहित केली जात नाही.",
   "camera.identityRefused": "गोपनीयतेसाठी ओळख कागदपत्रे प्रक्रिया केली जात नाहीत.",
   "camera.retakeOrChoose": "पुन्हा घ्या किंवा दुसरी प्रतिमा निवडा",
@@ -130,6 +130,9 @@ export const mr: Record<string, string> = {
   "camera.fileTooBig": "प्रतिमा फाइल खूप मोठी आहे (जास्तीत जास्त 5MB).",
   "camera.unsupportedFormat": "कृपया JPEG, PNG किंवा WebP स्वरूप वापरा.",
   "camera.permissionFallback": "कॅमेरा उपलब्ध नाही. कृपया गॅलरीतून अपलोड करा.",
+  // Phase 3C.3 — Image optimization progress & errors
+  "camera.preparingImage": "प्रतिमा तयार करत आहे…",
+  "camera.optimizedTooLarge": "संकुचित प्रतिमा अजूनही खूप मोठी आहे. कृपया चांगल्या प्रकाशात पुन्हा प्रयत्न करा.",
 
   // Location Modal
   "location.title": "तुमचे स्थान",

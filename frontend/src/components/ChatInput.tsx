@@ -5,7 +5,7 @@ import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import { CameraIcon, MicIcon, SendIcon, ScanDocIcon, FaceScanIcon } from "./Icons";
 import { CameraCaptureModal, type CameraMode } from "./CameraCaptureModal";
 import { analyzeDocument } from "../api/client";
-import { compressAndResizeImage } from "../utils/imageOptimizer";
+import { compressAndResizeImage, MAX_UPLOAD_BYTES } from "../utils/imageOptimizer";
 
 interface Props {
   language: LanguageCode;
@@ -24,6 +24,8 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
   const [scanState, setScanState] = useState<DocumentScanState>("READY");
   const [_scanResult, setScanResult] = useState<VisionAnalyzeResponse | null>(null);
   const [_scanError, setScanError] = useState<string | null>(null);
+  // Phase 3C.3 — granular progress step ("compressing" | "analyzing" | null)
+  const [scanProcessingStep, setScanProcessingStep] = useState<"compressing" | "analyzing" | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -112,8 +114,9 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
   };
 
   /**
-   * Phase 3C.2 — Blob received from CameraCaptureModal (document_scan only).
-   * Parent owns API call; modal is decoupled from network logic.
+   * Phase 3C.2/3C.3 — Blob received from CameraCaptureModal (document_scan only).
+   * Parent owns the full pipeline:
+   *   Blob → compress (Phase 3C.3: size guard) → analyzeDocument → state update
    */
   const handleDocumentCapture = useCallback(
     async (blob: Blob) => {
@@ -123,22 +126,52 @@ const ChatInput: React.FC<Props> = ({ language, isLoading, onSend, value, onChan
       setScanResult(null);
 
       try {
+        // Phase 3C.3 — Step 1: compress & resize (show "Preparing image…")
+        setScanProcessingStep("compressing");
         const compressed = await compressAndResizeImage(blob);
+
+        // Phase 3C.3 — Size guard: reject before network call
+        if (compressed.size > MAX_UPLOAD_BYTES) {
+          setScanError(t("camera.optimizedTooLarge"));
+          setScanState("ERROR");
+          setScanProcessingStep(null);
+          return;
+        }
+
+        // Phase 3C.3 — Step 2: analyze (show "Analyzing document…")
+        setScanProcessingStep("analyzing");
         const result = await analyzeDocument(compressed, language);
         setScanResult(result);
         setScanState("RESULT");
+        setScanProcessingStep(null);
         console.info("[VISION] ChatInput analysis complete:", result.document_type, result.readability);
       } catch (err: any) {
         console.error("[VISION] ChatInput analysis error:", err);
         setScanError(err?.message || t("camera.analysisFailed"));
         setScanState("ERROR");
+        setScanProcessingStep(null);
       }
     },
     [scanState, language, t]
   );
 
+  // Phase 3C.3 — progress label derived from scanProcessingStep
+  const scanProgressLabel =
+    scanProcessingStep === "compressing"
+      ? t("camera.preparingImage")
+      : scanProcessingStep === "analyzing"
+      ? t("camera.analyzing")
+      : null;
+
   return (
     <div className="input-bar-container">
+      {/* Phase 3C.3 — document scan progress badge */}
+      {scanProgressLabel && (
+        <div className="stt-status-bar stt-status-bar--processing vision-scan-progress" role="status" aria-live="polite">
+          <span aria-hidden="true">⏳</span>
+          <span>{scanProgressLabel}</span>
+        </div>
+      )}
       {/* Popover Action Menu */}
       {isMenuOpen && (
         <>

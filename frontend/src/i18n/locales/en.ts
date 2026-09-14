@@ -122,7 +122,7 @@ export const en: Record<string, string> = {
   // Phase 3C.2 — Vision upload & analysis strings
   "camera.uploadGallery": "Upload from Gallery",
   "camera.analyze": "Analyze Document",
-  "camera.analyzing": "Analyzing...",
+  "camera.analyzing": "Analyzing document…",
   "camera.privacyNotice": "Image used only for document analysis. Not stored.",
   "camera.identityRefused": "Identity documents not processed for privacy.",
   "camera.retakeOrChoose": "Retake or Choose Another",
@@ -130,6 +130,9 @@ export const en: Record<string, string> = {
   "camera.fileTooBig": "Image file is too large (max 5MB).",
   "camera.unsupportedFormat": "Please use JPEG, PNG or WebP format.",
   "camera.permissionFallback": "Camera unavailable. Please upload from gallery instead.",
+  // Phase 3C.3 — Image optimization progress & errors
+  "camera.preparingImage": "Preparing image…",
+  "camera.optimizedTooLarge": "Compressed image is still too large to upload. Please retake with better lighting.",
 
   // Location Modal
   "location.title": "Your Location",
