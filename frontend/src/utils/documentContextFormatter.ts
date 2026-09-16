@@ -60,7 +60,10 @@ export function formatGroundedDocumentMessage(
   }
 
   // If too long, trim contextBlock gracefully while preserving full user question
-  const availableForContext = Math.max(200, 1900 - cleanQuestion.length);
+  const availableForContext = 1900 - cleanQuestion.length;
+  if (availableForContext < 80) {
+    return cleanQuestion.slice(0, 1900);
+  }
   const trimmedContext = contextBlock.slice(0, availableForContext - 30) + "\n</untrusted_document_context>";
   return `${cleanQuestion}${trimmedContext}`;
 }
