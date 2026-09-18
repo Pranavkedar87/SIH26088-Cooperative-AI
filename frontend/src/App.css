@@ -2310,6 +2310,64 @@
   background: var(--color-primary-light);
 }
 
+.camera-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Document scan processing / error toast ────────────────────────────── */
+.vision-scan-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-primary-dark, #0b253a);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  pointer-events: auto;
+  animation: visionToastSlideUp 0.2s ease-out;
+  max-width: 90vw;
+}
+
+.vision-scan-toast--error {
+  background: #c62828;
+}
+
+.vision-scan-spinner {
+  display: inline-block;
+  animation: visionSpinnerPulse 1.2s infinite ease-in-out;
+}
+
+@keyframes visionToastSlideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes visionSpinnerPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
 /* ── Mobile Input & Camera Layout Adjustments ───────────────────────────── */
 @media (max-width: 480px) {
   .input-bar-container {

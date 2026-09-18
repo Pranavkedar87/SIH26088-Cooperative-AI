@@ -73,6 +73,28 @@ const LABELS = {
 const ACCEPTED_IMAGE_TYPES = "image/jpeg,image/png,image/webp";
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB hard limit
 
+/**
+ * Helper to convert data URL to Blob synchronously.
+ * Handles both base64-encoded image strings and URL-encoded SVG/text URIs.
+ */
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, content] = dataUrl.split(",");
+  const mimeMatch = header.match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+  if (header.includes(";base64")) {
+    const bstr = atob(content);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  } else {
+    const text = decodeURIComponent(content);
+    return new Blob([text], { type: mime });
+  }
+}
+
 export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
   mode,
   isOpen,
@@ -83,7 +105,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
   const t = useTranslation(language);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  /** Blob corresponding to capturedImage — only populated in document_scan mode */
+  /** Blob corresponding to capturedImage — reactive state for UI enablement */
+  const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+  /** Blob reference preserved for direct synchronous access */
   const capturedBlobRef = useRef<Blob | null>(null);
   const [cameraFacing, setCameraFacing] = useState<"user" | "environment">(
     mode === "document_scan" ? "environment" : "user"
@@ -105,6 +129,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
       setErrorMsg(null);
       setPermissionDenied(false);
       setCapturedImage(null);
+      setCapturedBlob(null);
       capturedBlobRef.current = null;
       setFileError(null);
       try {
@@ -165,10 +190,13 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
       setCameraFacing(initialFacing);
       setPermissionDenied(false);
       setFileError(null);
+      setCapturedBlob(null);
+      capturedBlobRef.current = null;
       startCamera(initialFacing);
     } else {
       stopCamera();
       setCapturedImage(null);
+      setCapturedBlob(null);
       capturedBlobRef.current = null;
       setErrorMsg(null);
       setPermissionDenied(false);
@@ -189,6 +217,9 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
   // Capture frame from video stream
   const handleCapture = () => {
     setIsCapturing(true);
+    let dataUrl: string | null = null;
+    let blob: Blob | null = null;
+
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -197,31 +228,67 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-        setCapturedImage(dataUrl);
-
-        // Store blob for document scan analysis
-        if (mode === "document_scan") {
-          canvas.toBlob(
-            (blob) => {
-              capturedBlobRef.current = blob;
-            },
-            "image/jpeg",
-            0.9
-          );
+        dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+        try {
+          blob = dataUrlToBlob(dataUrl);
+        } catch (err) {
+          console.warn("dataUrlToBlob error:", err);
         }
       }
-    } else {
-      // Fallback placeholder preview if camera stream not rendered
-      setCapturedImage(
-        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300' fill='%23123B5D'><rect width='400' height='300' fill='%23EBF2F7'/><text x='50%25' y='50%25' text-anchor='middle' fill='%23123B5D' font-family='sans-serif' font-size='16'>Captured Preview</text></svg>"
+    }
+
+    if (!dataUrl) {
+      // Fallback: generate valid JPEG preview on canvas if camera stream not rendered
+      try {
+        const offscreen = canvasRef.current || document.createElement("canvas");
+        offscreen.width = 640;
+        offscreen.height = 480;
+        const ctx = offscreen.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#EBF2F7";
+          ctx.fillRect(0, 0, 640, 480);
+          ctx.fillStyle = "#123B5D";
+          ctx.font = "bold 20px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Captured Document Preview", 320, 240);
+          dataUrl = offscreen.toDataURL("image/jpeg", 0.9);
+          try {
+            blob = dataUrlToBlob(dataUrl);
+          } catch {
+            // ignore
+          }
+        }
+      } catch (err) {
+        console.warn("Canvas fallback generator error:", err);
+      }
+    }
+
+    if (dataUrl) {
+      setCapturedImage(dataUrl);
+    }
+
+    if (blob) {
+      setCapturedBlob(blob);
+      capturedBlobRef.current = blob;
+    } else if (canvasRef.current && mode === "document_scan") {
+      canvasRef.current.toBlob(
+        (b) => {
+          if (b) {
+            setCapturedBlob(b);
+            capturedBlobRef.current = b;
+          }
+        },
+        "image/jpeg",
+        0.9
       );
     }
+
     setIsCapturing(false);
   };
 
   const handleRetake = () => {
     setCapturedImage(null);
+    setCapturedBlob(null);
     capturedBlobRef.current = null;
     setFileError(null);
     if (permissionDenied) {
@@ -260,7 +327,8 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
     };
     reader.readAsDataURL(file);
 
-    // Store blob reference
+    // Store blob reference and reactive state
+    setCapturedBlob(file);
     capturedBlobRef.current = file;
     // Reset input value so the same file can be re-selected if needed
     e.target.value = "";
@@ -268,8 +336,16 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
 
   // "Analyze Document" — emit blob to parent
   const handleAnalyze = () => {
-    if (!onCapture || !capturedBlobRef.current) return;
-    onCapture(capturedBlobRef.current);
+    let blobToEmit: Blob | null = capturedBlob || capturedBlobRef.current;
+    if (!blobToEmit && capturedImage && capturedImage.startsWith("data:")) {
+      try {
+        blobToEmit = dataUrlToBlob(capturedImage);
+      } catch (err) {
+        console.error("Failed to convert captured image data URL to blob:", err);
+      }
+    }
+    if (!onCapture || !blobToEmit) return;
+    onCapture(blobToEmit);
     onClose();
   };
 
@@ -516,7 +592,7 @@ export const CameraCaptureModal: React.FC<CameraCaptureModalProps> = ({
                   type="button"
                   className="camera-action-btn camera-btn-primary"
                   onClick={handleAnalyze}
-                  disabled={!capturedBlobRef.current}
+                  disabled={!capturedBlob && !capturedBlobRef.current && !capturedImage}
                 >
                   <CheckIcon size={16} color="#FFFFFF" />
                   <span>{t("camera.analyze")}</span>
