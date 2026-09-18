@@ -200,6 +200,19 @@ def run_tests():
     record(19, "Existing GET /api/grievance/{id}/summary Compatibility", passed, f"Status: {res_c_sum.status_code}")
 
     print("=" * 60)
+
+    # [TEARDOWN] Restore GRV-2026-001 state for test isolation
+    client.patch(
+        "/api/admin/grievances/GRV-2026-001",
+        headers=admin_headers,
+        json={"status": "under_review"}
+    )
+    client.patch(
+        "/api/admin/grievances/GRV-2026-001",
+        headers=admin_headers,
+        json={"priority": "urgent"}
+    )
+    
     failed = [r for r in results if not r[2]]
     if failed:
         print(f"FAILED: {len(failed)} tests failed.")

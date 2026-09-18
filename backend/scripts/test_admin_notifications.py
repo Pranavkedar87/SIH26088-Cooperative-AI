@@ -43,6 +43,7 @@ from app.schemas.admin_notification import (
     AdminNotificationReadResponse,
 )
 from database.supabase import get_supabase_client
+from database.repository import _DEV_GRIEVANCES_FALLBACK
 from database.repository import (
     get_admin_notifications,
     mark_admin_notification_read,
@@ -143,6 +144,21 @@ def run_tests():
             for n in data1.get("notifications", [])
         )
     record(7, "Maintenance kiosk generates maintenance alert", has_maint_alert, f"Kiosk: {maint_kiosk['id'] if maint_kiosk else 'None'}")
+
+    
+    # Inject a temporary urgent grievance
+    test_grv_id = "test-grv-urgent-99"
+    _DEV_GRIEVANCES_FALLBACK[test_grv_id] = {
+        "id": test_grv_id,
+        "priority": "urgent",
+        "status": "under_review",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "description": "Test urgent grievance",
+    }
+    
+    # Reload notifications
+    res1 = client.get("/api/admin/notifications", headers=admin_headers)
+    data1 = res1.json() if res1.status_code == 200 else {}
 
     # Test 8: Urgent grievance generates critical alert
     grvs = list_admin_grievances(page=1, page_size=200).get("items", [])
